@@ -1,0 +1,24 @@
+{
+  "name": "dosdeobfuscator",
+  "version": "0.1.0",
+  "description": "A CMD.EXE/DOS de-obfuscation library and command line utility.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "dos",
+    "deobfuscator",
+    "cmd.exe",
+    "comspec",
+    "dosdeobfuscator"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "jison-lex": "^0.3.4"
+  }
+}

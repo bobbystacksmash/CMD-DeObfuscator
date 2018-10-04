@@ -1,0 +1,6 @@
+* DOS De-Obfuscator
+
+** ABOUT
+
+DOS DeObfuscator is a node.js library and command-line utility
+designed to remove as much CMD.EXE obfuscation as possible.
