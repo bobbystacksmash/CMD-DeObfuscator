@@ -13,3 +13,4 @@ DOS DeObfuscator have come from FireEye's paper.
 ** Reading Material
 
  - [[https://stackoverflow.com/questions/4094699/how-does-the-windows-command-interpreter-cmd-exe-parse-scripts][How does the Windows Command Interpreter (CMD.EXE) parse scripts?]]
+ - [[https://msdn.microsoft.com/en-us/library/a1y7w461.aspx][WINAPI Parsing C Command-Line Arguments]]

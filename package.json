@@ -4,7 +4,7 @@
   "description": "A CMD.EXE/DOS de-obfuscation library and command line utility.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+      "test": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/**/*_test.js"
   },
   "keywords": [
     "dos",
@@ -16,9 +16,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "mocha": "^5.2.0"
+    "chai": "^4.2.0",
+    "expect": "^23.6.0",
+    "mocha": "^5.2.0",
+    "mocha-cli": "^1.0.1",
+    "nodemon": "^1.18.4"
   },
   "dependencies": {
+    "jison": "^0.4.18",
     "jison-lex": "^0.3.4"
   }
 }
