@@ -4,7 +4,7 @@
   "description": "A CMD.EXE/DOS de-obfuscation library and command line utility.",
   "main": "index.js",
   "scripts": {
-      "test": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/**/*_test.js"
+      "test": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/**/lexer_test.js"
   },
   "keywords": [
     "dos",

