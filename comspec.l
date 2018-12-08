@@ -1,27 +1,38 @@
-%x DQS PARAM
+%x DQS ESC PARAM
 
 %{
-// code goes here
+function token (state, name) {
+
+    let obj = {
+        name  : name,
+        match : state.match,
+        line  : yylineno,
+        text  : yytext,
+        len   : yyleng,
+        loc   : yylloc
+    };
+
+    return obj;
+}
 %}
 
 
-Whitespace                       \s
+Escape                           "^"
+Whitespace                       [ \s\t]
 Unknown                          .
-DoubleQuote                      \"
-
-Switch                           "/"[A-Za-z0-9]+
-SwitchAttrBegin                  ":"
+NewLine                          [\r\n]
+DoubleQuote                      [\"]
+SingleQuote                      "'"
+Any                              .
 
 %%
 
-<INITIAL>{DoubleQuote}            { this.begin("DQS"); return "STRING_DQUOTE_BEGIN"; }
-<DQS>[^\\]{DoubleQuote}           { this.popState();   return "STRING_DQUOTE_END";   }
-<DQS>{Ignore}                     { /* Ignore */ }
+<INITIAL>{DoubleQuote}      { this.begin("DQS"); return token(this, "STRING_DQUOTE_BEGIN"); }
+<DQS>{DoubleQuote}          { this.popState(); return token(this, "STRING_DQUOTE_END");  }
+<DQS>[^\"]                  { return token(this, "STRING_DQUOTE_CHAR"); }
 
-// Switches
-<INITIAL>{Switch}                 { this.begin("PARAM"); return "SWITCH_BEGIN"; }
-<PARAM>{SwitchAttrBegin}          { return "SWITCH_ATTR_BEGIN"; }
+<INITIAL>{Escape}           { this.begin("ESC"); return token(this, "ESCAPE"); }
+<ESC>{Any}                  { this.popState(); return token(this, "ESCAPED_LITERAL"); }
 
-<INITIAL>{Whitespace}+            return "WHITESPACE";
-<*>{Unknown}                      { /* IGNORE */ }
-<*><<EOF>>                        return "EOF";
+<*>{Unknown}                { return token(this, "LITERAL"); }
+<*><<EOF>>                  { return "EOF"; }

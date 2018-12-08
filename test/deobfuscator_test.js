@@ -1,12 +1,16 @@
-const assert = require("chai").assert;
+const assert       = require("chai").assert,
+      deobfuscator = require("../index");
 
 describe("DeObfuscator Tests", () => {
 
-    beforeEach(function () {});
+    describe("Quotes", () => {
 
-    xdescribe("XX", () => {
-        it("should xx", () => {
-            assert.equal(1, 2);
+        it(`should remove empty double-quote pairs: ""`, () => {
+
+            const input  = `Pow""erSh""ell`,
+                  output = `PowerShell`;
+
+            assert.equal(deobfuscator.deobfuscate(input), output);
         });
     });
 });

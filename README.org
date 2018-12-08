@@ -17,4 +17,5 @@ Material" section later in this document.
  - [[https://msdn.microsoft.com/en-us/library/a1y7w461.aspx][WINAPI Parsing C Command-Line Arguments]]
  - [[https://blogs.msdn.microsoft.com/twistylittlepassagesallalike/2011/04/23/everyone-quotes-command-line-arguments-the-wrong-way/][Everyone quotes command line arguments the wrong way]]
  - [[https://blogs.msdn.microsoft.com/oldnewthing/20100917-00/?p=12833/][What’s up with the strange treatment of quotation marks and backslashes by CommandLineToArgvW]]
+ - [[https://www.dostips.com/?t=Snippets.Escape][DOS Tips: Escapes]]
  - [[https://docs.microsoft.com/en-gb/windows/desktop/api/shellapi/nf-shellapi-commandlinetoargvw][MSDN CommandLineToArgvW function]]
