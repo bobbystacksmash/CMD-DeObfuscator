@@ -1,4 +1,4 @@
-%x DQS ESC PARAM
+%x DQS ESC VAR PARAM
 
 %{
 function token (state, name) {
@@ -16,7 +16,7 @@ function token (state, name) {
 }
 %}
 
-
+Variable                         "%[A-Z]+%"
 Escape                           "^"
 Whitespace                       [ \s\t]
 Unknown                          .
@@ -33,6 +33,8 @@ Any                              .
 
 <INITIAL>{Escape}           { this.begin("ESC"); return token(this, "ESCAPE"); }
 <ESC>{Any}                  { this.popState(); return token(this, "ESCAPED_LITERAL"); }
+
+
 
 <*>{Unknown}                { return token(this, "LITERAL"); }
 <*><<EOF>>                  { return "EOF"; }

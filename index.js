@@ -4,9 +4,9 @@ const JisonLex = require("jison-lex"),
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
 
-function tokenise (cmdstr) {
+function tokenise (doscmd) {
 
-    lexer.setInput(cmdstr);
+    lexer.setInput(doscmd);
 
     let tokens = [];
 
@@ -23,9 +23,37 @@ function tokenise (cmdstr) {
     return tokens;
 }
 
-function deobfuscate_dos_cmd () {}
+function expand_variables (doscmd, vars) {
+
+    vars = {
+        comspec: "C:\\Windows\\System32\\cmd.exe"
+    };
+
+    const VAR_REGEXP = /[^%]*%([A-Z][A-Z0-9_]*)[^%]*%/gi;
+    var cmd = doscmd.split(""),
+        match;
+
+    while ((match = VAR_REGEXP.exec(doscmd)) !== null) {
+
+        let var_value = vars[match[1].toLowerCase()];
+
+        cmd = [
+            cmd.slice(0, match.index).join(""),
+            var_value,
+            cmd.slice(match.index + var_value.length).join("")
+        ].filter(x => x.length).join("");
+    }
+
+    return cmd;
+}
+
+function deobfuscate_dos_cmd (doscmd) {
+
+    let tokens = tokenise(doscmd);
+}
 
 module.exports = {
     tokenise:    tokenise,
-    deobfuscate: deobfuscate_dos_cmd
+    deobfuscate: deobfuscate_dos_cmd,
+    expand_variables: expand_variables
 };
