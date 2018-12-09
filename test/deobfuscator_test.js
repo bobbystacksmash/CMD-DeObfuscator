@@ -3,14 +3,10 @@ const assert       = require("chai").assert,
 
 describe("DeObfuscator Tests", () => {
 
-    describe("Quotes", () => {
+    describe("Escapes", () => {
 
-        it(`should remove empty double-quote pairs: ""`, () => {
+        it("should correctly handle escapes and double-escapes", () => {
 
-            const input  = `Pow""erSh""ell`,
-                  output = `PowerShell`;
-
-            assert.equal(deobfuscator.deobfuscate(input), output);
         });
     });
 });

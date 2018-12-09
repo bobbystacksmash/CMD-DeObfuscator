@@ -2,6 +2,13 @@ const assert       = require("chai").assert,
       deobfuscator = require("../index");
 
 const util = {
+
+    debug: (tokens) => {
+        tokens.forEach(token => {
+            console.log(token);
+        });
+    },
+
     tokens: function (tokens) {
         return tokens.map(token => token.name);
     }
@@ -66,5 +73,12 @@ describe("DeObfuscator Tests", () => {
 
             assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
         });
+    });
+
+    describe("Variables", () => {
+        /*
+         * Variable expansion isn't handled by the lexer.  For that,
+         * see the test file: 'var_expander_test.js'.
+         */
     });
 });
