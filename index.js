@@ -44,13 +44,41 @@ function expand_variables (doscmd, vars) {
         ].filter(x => x.length).join("");
     }
 
-    return cmd;
+    return cmd.join("");
+}
+
+function parser_lookahead(tokens, index) {
+
+    if (tokens[index++]) return tokens[index++];
 }
 
 function deobfuscate_dos_cmd (doscmd) {
 
-    let tokens = tokenise(doscmd);
+    doscmd = expand_variables(doscmd);
+
+    let tokens = tokenise(doscmd),
+        outbuf = "";
+
+    tokens.forEach((tok, i) => {
+
+        let lookahead = parser_lookahead(tokens, i);
+
+        if (tok.name === "LITERAL") {
+            outbuf += tok.text;
+        }
+        else if (tok.name === "ESCAPE") {
+            outbuf += lookahead.text;
+        }
+        else {
+            console.log("?>", tok.name, tok.text);
+        }
+    });
+
+    return outbuf;
 }
+
+
+deobfuscate_dos_cmd(`p^o^""w^e^r^s^h^e^l^l`);
 
 module.exports = {
     tokenise:    tokenise,
