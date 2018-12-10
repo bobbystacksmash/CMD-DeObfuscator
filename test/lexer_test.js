@@ -17,6 +17,33 @@ const util = {
 describe("DeObfuscator Tests", () => {
     describe("Quotes", () => {
 
+        it("should correctly detect an empty string", () => {
+
+            const input = `""`,
+                  expected = [
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_END"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
+        });
+
+        it("should detect an empty string between literals", () => {
+
+            const input = `po""wer`,
+                  expected = [
+                      "LITERAL",             // p
+                      "LITERAL",             // o
+                      "STRING_DQUOTE_BEGIN", // ""
+                      "STRING_DQUOTE_END",   // ""
+                      "LITERAL",             // w
+                      "LITERAL",             // e
+                      "LITERAL"              // r
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
+        });
+
         it("should correctly detect balanced double-quotes ", () => {
 
             const input    = `"abc"`,
