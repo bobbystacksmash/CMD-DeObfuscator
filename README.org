@@ -19,3 +19,4 @@ Material" section later in this document.
  - [[https://blogs.msdn.microsoft.com/oldnewthing/20100917-00/?p=12833/][What’s up with the strange treatment of quotation marks and backslashes by CommandLineToArgvW]]
  - [[https://www.dostips.com/?t=Snippets.Escape][DOS Tips: Escapes]]
  - [[https://docs.microsoft.com/en-gb/windows/desktop/api/shellapi/nf-shellapi-commandlinetoargvw][MSDN CommandLineToArgvW function]]
+ - [[https://en.wikibooks.org/wiki/Windows_Batch_Scripting#How_a_command_line_is_interpreted][Windows Batch Scripting: Command Line Interpretation]]
