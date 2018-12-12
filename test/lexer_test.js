@@ -15,62 +15,83 @@ const util = {
 };
 
 describe("DeObfuscator Tests", () => {
+
     describe("Quotes", () => {
 
-        it("should correctly detect an empty string", () => {
+        describe("Double-Quoted strings (DQS)", () => {
 
-            const input = `""`,
-                  expected = [
-                      "STRING_DQUOTE_BEGIN",
-                      "STRING_DQUOTE_END"
-                  ];
+            it("should correctly detect an empty string", () => {
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
+                const input = `""`,
+                      output = [
+                          "STRING_DQUOTE_BEGIN",
+                          "STRING_DQUOTE_END"
+                      ];
+
+                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            });
+
+            it("should detect an empty string between literals", () => {
+
+                const input = `po""wer`,
+                      output = [
+                          "LITERAL",             // p
+                          "LITERAL",             // o
+                          "STRING_DQUOTE_BEGIN", // ""
+                          "STRING_DQUOTE_END",   // ""
+                          "LITERAL",             // w
+                          "LITERAL",             // e
+                          "LITERAL"              // r
+                      ];
+
+                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            });
+
+            it("should correctly detect balanced double-quotes ", () => {
+
+                const input    = `"abc"`,
+                      output = [
+                          "STRING_DQUOTE_BEGIN",
+                          "STRING_DQUOTE_CHAR",
+                          "STRING_DQUOTE_CHAR",
+                          "STRING_DQUOTE_CHAR",
+                          "STRING_DQUOTE_END"
+                      ];
+
+                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            });
+
+            it("should handle empty double-quotes within a string", () => {
+
+                const input = `""a""b`,
+                      output = [
+                          "STRING_DQUOTE_BEGIN",
+                          "STRING_DQUOTE_END",
+                          "LITERAL",
+                          "STRING_DQUOTE_BEGIN",
+                          "STRING_DQUOTE_END",
+                          "LITERAL"
+                      ];
+
+                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            });
         });
 
-        it("should detect an empty string between literals", () => {
+        describe("Single-Quoted strings (SQS)", () => {
 
-            const input = `po""wer`,
-                  expected = [
-                      "LITERAL",             // p
-                      "LITERAL",             // o
-                      "STRING_DQUOTE_BEGIN", // ""
-                      "STRING_DQUOTE_END",   // ""
-                      "LITERAL",             // w
-                      "LITERAL",             // e
-                      "LITERAL"              // r
-                  ];
+            it("should handle single quoted strings", () => {
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
-        });
+                const input  = `'abc'`,
+                      output = [
+                          "STRING_SQUOTE_BEGIN",
+                          "STRING_SQUOTE_CHAR",
+                          "STRING_SQUOTE_CHAR",
+                          "STRING_SQUOTE_CHAR",
+                          "STRING_SQUOTE_END"
+                      ];
 
-        it("should correctly detect balanced double-quotes ", () => {
-
-            const input    = `"abc"`,
-                  expected = [
-                      "STRING_DQUOTE_BEGIN",
-                      "STRING_DQUOTE_CHAR",
-                      "STRING_DQUOTE_CHAR",
-                      "STRING_DQUOTE_CHAR",
-                      "STRING_DQUOTE_END"
-                  ];
-
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
-        });
-
-        it("should handle empty double-quotes within a string", () => {
-
-            const input = `""a""b`,
-                  expected = [
-                      "STRING_DQUOTE_BEGIN",
-                      "STRING_DQUOTE_END",
-                      "LITERAL",
-                      "STRING_DQUOTE_BEGIN",
-                      "STRING_DQUOTE_END",
-                      "LITERAL"
-                  ];
-
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
+                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            });
         });
     });
 
@@ -79,7 +100,7 @@ describe("DeObfuscator Tests", () => {
         it("should detect the escape symbol", () => {
 
             const input    = `a^b^c`,
-                  expected = [
+                  output = [
                       "LITERAL",
                       "ESCAPE",
                       "ESCAPED_LITERAL",
@@ -87,18 +108,67 @@ describe("DeObfuscator Tests", () => {
                       "ESCAPED_LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
         });
 
         it("should allow the escape symbol to escape itself", () => {
 
             const input = `^^`,
-                  expected = [
+                  output = [
                       "ESCAPE",
                       "ESCAPED_LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), expected);
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it("should detect the escape symbol when used before double quote", () => {
+
+            const input    = `^""foo"`,
+                  output = [
+                      "ESCAPE",
+                      "ESCAPED_LITERAL",
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it("should not escape tokens within a double-quoted string", () => {
+
+            const input  = `"^f^o^o"`,
+                  output = [
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it("should detect escape tokens within a single-quoted string", () => {
+
+            const input  = `'f^o^o'`,
+                  output = [
+                      "STRING_SQUOTE_BEGIN",
+                      "STRING_SQUOTE_CHAR",
+                      "ESCAPE",
+                      "ESCAPED_LITERAL",
+                      "ESCAPE",
+                      "ESCAPED_LITERAL",
+                      "STRING_SQUOTE_END"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
         });
     });
 

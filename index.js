@@ -25,26 +25,17 @@ function tokenise (doscmd) {
 
 function expand_variables (doscmd, vars) {
 
-    vars = {
+    const default_vars = {
+        appdata: "C:\\Users\\whoami\\AppData\\Roaming",
         comspec: "C:\\Windows\\System32\\cmd.exe"
     };
+    vars = Object.assign(default_vars, vars);
 
-    const VAR_REGEXP = /[^%]*%([A-Z][A-Z0-9_]*)[^%]*%/gi;
-    var cmd = doscmd.split(""),
-        match;
+    let cmd = Object.keys(vars).map(varname => {
+        return doscmd.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
+    });
 
-    while ((match = VAR_REGEXP.exec(doscmd)) !== null) {
-
-        let var_value = vars[match[1].toLowerCase()];
-
-        cmd = [
-            cmd.slice(0, match.index).join(""),
-            var_value,
-            cmd.slice(match.index + var_value.length).join("")
-        ].filter(x => x.length).join("");
-    }
-
-    return cmd.join("");
+    return cmd.pop();
 }
 
 function parser_lookahead(tokens, index) {
@@ -52,9 +43,16 @@ function parser_lookahead(tokens, index) {
     if (tokens[index++]) return tokens[index++];
 }
 
-function deobfuscate_dos_cmd (doscmd) {
+function deobfuscate_dos_cmd (doscmd, options) {
 
-    doscmd = expand_variables(doscmd);
+    const default_opts = {
+        expand_vars: true
+    };
+    options = Object.assign(default_opts, options || {});
+
+    if (default_opts.expand_vars) {
+        doscmd = expand_variables(doscmd);
+    }
 
     let tokens = tokenise(doscmd),
         outbuf = "";
@@ -65,20 +63,21 @@ function deobfuscate_dos_cmd (doscmd) {
 
         if (tok.name === "LITERAL") {
             outbuf += tok.text;
+            return;
         }
         else if (tok.name === "ESCAPE") {
             outbuf += lookahead.text;
+            return;
         }
         else {
             console.log("?>", tok.name, tok.text);
         }
     });
 
+    console.log(outbuf);
+
     return outbuf;
 }
-
-
-deobfuscate_dos_cmd(`p^o^""w^e^r^s^h^e^l^l`);
 
 module.exports = {
     tokenise:    tokenise,
