@@ -170,6 +170,23 @@ describe("DeObfuscator Tests", () => {
 
             assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
         });
+
+        it(`should handle strings like: '"h"t"t"p'`, () => {
+
+            const input  = `"h"t"t"p`,
+                  output = [
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END",
+                      "LITERAL",
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
     });
 
     describe("Variables", () => {
