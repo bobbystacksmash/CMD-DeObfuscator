@@ -11,6 +11,7 @@ function tokenise (doscmd) {
     let tokens = [];
 
     while (true) {
+
         let token = lexer.lex();
 
         if (token === "EOF") {
@@ -33,9 +34,65 @@ function expand_variables (doscmd, vars) {
 
     let cmd = Object.keys(vars).map(varname => {
         return doscmd.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
-    });
+    }).pop();
 
-    return cmd.pop();
+    // Substring handling
+    // ==================
+    //
+    // There are a few different ways we can apply substrings.  Assume
+    // %foo% = "abcdef".
+    //
+    //  - %foo:~3%      => def
+    //  - %foo:~0,3%    => abc
+    //  - %foo:~-3%     => def
+    //  - %foo:~1,3%    => bcd
+    //
+    let substr_re    = /%([a-z][0-9a-z_]*):~([-]?\d+)(?:,([-]?\d+))?%/ig,
+        replacements = [],
+        substr_match;
+
+    while ((substr_match = substr_re.exec(cmd))) {
+
+        /*console.log();
+        console.log("----------- got substr match ---------------");
+        console.log(substr_match);*/
+
+        let var_name     = substr_match[1].toLowerCase(),
+            var_value    = vars[var_name],
+            substr_start = substr_match[2],
+            substr_end   = substr_match[3];
+
+        if (var_value === undefined) {
+            continue;
+        }
+
+        let replace = {
+            search: substr_match.input
+        };
+
+        if ((substr_start !== undefined) && (substr_end === undefined)) {
+
+            if (substr_start == 0) {
+                // Special case -- when the substr pattern is
+                // something like:
+                //
+                //   %FOO:~0%
+                //
+                // Windows expands this to the full variable value.
+                replace.replace = var_value;
+                replacements.push(replace);
+                continue;
+            }
+
+            // TODO: handle negative numbers.
+            replace.replace = var_value.substring(substr_start, substr_end);
+        }
+
+        replacements.push(replace);
+    }
+
+    replacements.forEach(r => cmd = cmd.replace(r.search, r.replace));
+    return cmd;
 }
 
 function parser_lookahead(tokens, index) {
@@ -73,8 +130,6 @@ function deobfuscate_dos_cmd (doscmd, options) {
             console.log("?>", tok.name, tok.text);
         }
     });
-
-    console.log(outbuf);
 
     return outbuf;
 }

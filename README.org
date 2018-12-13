@@ -20,3 +20,4 @@ Material" section later in this document.
  - [[https://www.dostips.com/?t=Snippets.Escape][DOS Tips: Escapes]]
  - [[https://docs.microsoft.com/en-gb/windows/desktop/api/shellapi/nf-shellapi-commandlinetoargvw][MSDN CommandLineToArgvW function]]
  - [[https://en.wikibooks.org/wiki/Windows_Batch_Scripting#How_a_command_line_is_interpreted][Windows Batch Scripting: Command Line Interpretation]]
+ - [[https://ss64.com/nt/syntax-substring.html][DOS CMD Substrings]]

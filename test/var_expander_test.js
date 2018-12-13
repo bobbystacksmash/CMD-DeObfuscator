@@ -16,27 +16,57 @@ const util = {
 
 describe("DeObfuscator: Variable Expansion", () => {
 
-    it("should replace variables for which there are definitions", () => {
+    describe("Standard %ENVVAR% handling", () => {
 
-        const input  = `%COMSPEC%`,
-              output = `C:\\Windows\\System32\\cmd.exe`;
+        it("should replace variables for which there are definitions", () => {
 
-        assert.equal(deobfuscator.expand_variables(input), output);
+            const input  = `%COMSPEC%`,
+                  output = `C:\\Windows\\System32\\cmd.exe`;
+
+            assert.equal(deobfuscator.expand_variables(input), output);
+        });
+
+        it("should ignore variables for which there are no associations", () => {
+
+            const input  = `I am %FOOBAR% things`,
+                  output = `I am %FOOBAR% things`;
+
+            assert.equal(deobfuscator.expand_variables(input), output);
+        });
+
+        it("should replace multiple appearances of defined vars", () => {
+
+            const input =  `a %b% c %b% d`,
+                  output = `a XXX c XXX d`;
+
+            assert.equal(deobfuscator.expand_variables(input, { b: "XXX" }), output);
+        });
     });
 
-    it("should ignore variables for which there are no associations", () => {
+    describe("Variable substring operations", () => {
 
-        const input  = `I am %FOOBAR% things`,
-              output = `I am %FOOBAR% things`;
+        it("should leave the string unchanged if VAR is not defined", () => {
 
-        assert.equal(deobfuscator.expand_variables(input), output);
-    });
+            const input  = `%FOO:~3%`,
+                  output = input;
 
-    it("should replace multiple appearances of defined vars", () => {
+            assert.equal(deobfuscator.expand_variables(input), output);
+        });
 
-        const input =  `a %b% c %b% d`,
-              output = `a XXX c XXX d`;
+        it("should replace the whole value when using %VAR:~0%", () => {
 
-        assert.equal(deobfuscator.expand_variables(input, { b: "XXX" }), output);
+            const input  = `%FOO:~0%`,
+                  output = `abcdef`;
+
+            assert.equal(deobfuscator.expand_variables(input, { foo: "abcdef" }), output);
+        });
+
+        it("should apply substring when VAR is defined", () => {
+
+            const input  = `%FOO:~3%`,
+                  output = `def`;
+
+            assert.equal(deobfuscator.expand_variables(input, { foo: "abcdef" }), output);
+        });
     });
 });
