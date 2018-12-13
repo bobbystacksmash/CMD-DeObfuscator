@@ -4,12 +4,19 @@
 
 /Currently under active development/
 
-DOS DeObfuscator is a node.js library and command-line utility
-designed to remove as much CMD.EXE obfuscation as possible.  This
-program is highly influenced by the "DOSfuscation" whitepaper,
-published by [[https://www.fireeye.com/blog/threat-research/2018/03/dosfuscation-exploring-obfuscation-and-detection-techniques.html][FireEye]].  Many of the static analysis techniques used in
-DOS DeObfuscator have come from FireEye's paper, or from the "Reading
-Material" section later in this document.
+The ~DOS DeObfuscator~ is a Node.js library which aims to strip
+deobfuscation from Windows batch commands passed to CMD.EXE.  This
+project is influenced by the "DOSfuscation" whitepaper, published by
+[[https://www.fireeye.com/blog/threat-research/2018/03/dosfuscation-exploring-obfuscation-and-detection-techniques.html][FireEye]].
+
+** Examples
+
+#+BEGIN_SRC javascript
+const deobfuscator = require("./index");
+console.log(deobfuscator.deobfuscate("CmD /C p^o^w^e^r^s^h^e^l^l"));
+
+// Returns: CmD /C powershell
+#+END_SRC
 
 ** Reading Material
 
