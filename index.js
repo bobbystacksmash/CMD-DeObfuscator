@@ -108,7 +108,7 @@ function deobfuscate_dos_cmd (doscmd, options) {
     options = Object.assign(default_opts, options || {});
 
     if (default_opts.expand_vars) {
-        doscmd = expand_variables(doscmd);
+        doscmd = expand_variables(doscmd, options.vars);
     }
 
     let tokens = tokenise(doscmd),
