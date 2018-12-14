@@ -232,15 +232,15 @@ function parse_cmdstr (cmdstr) {
 
     split_command(cmdstr).forEach(cmd => {
 
+        console.log("NO ESC>", strip_escape_chars(cmd));
 
-
-        //let deobfuscated = deobfuscate_dos_cmd(remove_escapes(cmd));
+        //let deobfuscated = deobfuscate_dos_cmd(strip_escape_chars(cmd));
         //vars = Object.assign(deobfuscated.vars, vars);
         //console.log(expand_variables(deobfuscated.command, vars));
     });
 }
 
-function remove_escapes (cmdstr, options) {
+function strip_escape_chars (cmdstr, options) {
 
     let outcmd     = "",
         tokens     = tokenise(cmdstr),
@@ -257,6 +257,9 @@ function remove_escapes (cmdstr, options) {
         let next_tok = parser_lookahead(tokens, i);
 
         if (ignore.test(tok.name)) {
+            return;
+        }
+        else if (tok.name === "SET_DQUOTE_CHAR" && tok.text === "^") {
             return;
         }
         else if (tok.name === "SET_DQUOTE_BEGIN" && next_tok.name === "SET_DQUOTE_END") {
@@ -438,6 +441,7 @@ module.exports = {
     tokenise:    tokenise,
     split_command: split_command,
     parse: parse_cmdstr,
+    strip_escape_chars: strip_escape_chars,
     deobfuscate: deobfuscate_dos_cmd,
     expand_variables: expand_variables
 };
