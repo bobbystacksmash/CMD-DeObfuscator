@@ -47,15 +47,11 @@ function expand_variables (doscmd, vars) {
     //  - %foo:~-3%     => def
     //  - %foo:~1,3%    => bcd
     //
-    let substr_re    = /%([a-z][0-9a-z_]*):~([-]?\d+)(?:,([-]?\d+))?%/ig,
+    let substr_re    = /%([a-z][0-9a-z_]*):\s*~\s*([+-]?\d+)(?:,([+-]?\d+))?%/ig,
         replacements = [],
         substr_match;
 
     while ((substr_match = substr_re.exec(cmd))) {
-
-        /*console.log();
-        console.log("----------- got substr match ---------------");
-        console.log(substr_match);*/
 
         let var_name     = substr_match[1].toLowerCase(),
             var_value    = vars[var_name],

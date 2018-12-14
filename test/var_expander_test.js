@@ -69,6 +69,29 @@ describe("DeObfuscator: Variable Expansion", () => {
             assert.equal(deobfuscator.expand_variables(input, { foo: "abcdef" }), output);
         });
 
+        it("should handle both + and - before substr indexes", () => {
+
+            const tests = [
+                { input: `%FOO:~+3%`,    output: "def" },
+                { input: `%FOO:~+3,+2%`, output: "de" }
+            ];
+
+            tests.forEach(T => {
+                assert.equal(deobfuscator.expand_variables(T.input, { foo: "abcdef" }), T.output);
+            });
+        });
+
+        it("should handle whitespace between parts of the substr expression", () => {
+
+            const tests = [
+                { input: `%FOO:   ~  3%`,    output: "def" },
+            ];
+
+            tests.forEach(T => {
+                assert.equal(deobfuscator.expand_variables(T.input, { foo: "abcdef" }), T.output);
+            });
+        });
+
         it("should return the correct substr when given upper and lower bounds: :~n,N%", () => {
 
             const vars = { foo: "abcdef", bar: "123456789abcdef0" };
