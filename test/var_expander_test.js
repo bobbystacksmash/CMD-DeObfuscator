@@ -80,7 +80,10 @@ describe("DeObfuscator: Variable Expansion", () => {
                 { input: `%FOO:~3,9%`, output: "def" },
 
                 // Negatives
-                { input: `%FOO:~-3%`, output: "def" }
+                { input: `%FOO:~-3%`, output: "def" },
+
+                // Extract everything except the last 2 characters
+                { input: `%FOO:~0,-2%`, output: "abcd" }
             ];
 
             tests.forEach(T => {

@@ -79,6 +79,8 @@ function expand_variables (doscmd, vars) {
             search: substr_match.input
         };
 
+        let rev = s => s.split("").reverse().join("");
+
         if ((substr_start !== undefined) && (substr_end === undefined)) {
 
             if (substr_start == 0) {
@@ -95,12 +97,8 @@ function expand_variables (doscmd, vars) {
             else if (substr_start < 0) {
                 // Negative substr values start from the last char and
                 // substr forwards.
-                let rev_var_value = var_value.split("").reverse().join("");
-                var_value = rev_var_value
-                    .substr(0, (substr_start * -1))
-                    .split("")
-                    .reverse()
-                    .join("");
+                let rev_var_value = rev(var_value);
+                var_value = rev(rev_var_value.substr(0, (substr_start * -1)));
 
                 replace.replace = var_value;
                 replacements.push(replace);
@@ -111,7 +109,10 @@ function expand_variables (doscmd, vars) {
         }
         else if ((substr_start !== undefined) && (substr_end !== undefined)) {
 
-            if (substr_start === 0) {
+            if (substr_end < 0 && substr_start === 0) {
+                replace.replace = rev(rev(var_value).substr(substr_end * -1));
+            }
+            else if (substr_start === 0) {
                 replace.replace = var_value.substring(substr_start, substr_end);
             }
             else if (substr_start > 0) {
