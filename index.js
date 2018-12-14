@@ -169,7 +169,14 @@ function deobfuscate_dos_cmd (doscmd, options) {
             return;
         }
         else if (tok.name === "ESCAPE") {
-            outbuf += lookahead.text;
+
+            if (lookahead.text === " ") {
+                // We ignore escaped space sequences.
+            }
+            else {
+                outbuf += lookahead.text;
+            }
+
             return;
         }
         else if (tok.name === "STRING_DQUOTE_BEGIN") {

@@ -12,6 +12,14 @@ describe("DeObfuscator Tests", () => {
 
             assert.equal(deobfuscator.deobfuscate(input), output);
         });
+
+        it(`should remove escapes which preceed spaces`, () => {
+
+            const input  = `dir ^ `,
+                  output = `dir `;
+
+            assert.equal(deobfuscator.deobfuscate(input), output);
+        });
     });
 
     describe("Escapes", () => {
