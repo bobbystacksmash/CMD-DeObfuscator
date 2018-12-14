@@ -109,7 +109,18 @@ function expand_variables (doscmd, vars) {
         }
         else if ((substr_start !== undefined) && (substr_end !== undefined)) {
 
-            if (substr_end < 0 && substr_start === 0) {
+            if (substr_start < 0 && substr_end < 0) {
+                console.log();
+
+                substr_start = (substr_start * -1);
+                substr_end   = (substr_end   * -1);
+
+                let tmpstart = Math.min(substr_start, substr_end),
+                    tmpend   = Math.max(substr_start, substr_end);
+
+                replace.replace = rev(rev(var_value).split("").slice(tmpstart, tmpend).join(""));
+            }
+            else if (substr_end < 0 && substr_start === 0) {
                 replace.replace = rev(rev(var_value).substr(substr_end * -1));
             }
             else if (substr_start === 0) {

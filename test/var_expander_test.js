@@ -71,7 +71,7 @@ describe("DeObfuscator: Variable Expansion", () => {
 
         it("should return the correct substr when given upper and lower bounds: :~n,N%", () => {
 
-            const vars = { foo: "abcdef" };
+            const vars = { foo: "abcdef", bar: "123456789abcdef0" };
 
             const tests = [
                 { input: `%FOO:~0,3%`, output: "abc" },
@@ -83,7 +83,10 @@ describe("DeObfuscator: Variable Expansion", () => {
                 { input: `%FOO:~-3%`, output: "def" },
 
                 // Extract everything except the last 2 characters
-                { input: `%FOO:~0,-2%`, output: "abcd" }
+                { input: `%FOO:~0,-2%`, output: "abcd" },
+
+                // Extract the 5th and 6th chars from the end
+                { input: `%BAR:~-7,-5%`, output: "ab" }
             ];
 
             tests.forEach(T => {
