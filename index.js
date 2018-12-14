@@ -153,7 +153,14 @@ function deobfuscate_dos_cmd (doscmd, options) {
     let tokens = tokenise(doscmd),
         outbuf = "";
 
+    let skip_token = false;
+
     tokens.forEach((tok, i) => {
+
+        if (skip_token) {
+            skip_token = false;
+            return;
+        }
 
         let lookahead = parser_lookahead(tokens, i);
 
@@ -164,6 +171,13 @@ function deobfuscate_dos_cmd (doscmd, options) {
         else if (tok.name === "ESCAPE") {
             outbuf += lookahead.text;
             return;
+        }
+        else if (tok.name === "STRING_DQUOTE_BEGIN") {
+            if (lookahead.name === "STRING_DQUOTE_END") {
+                // We do not copy empty strings to the output buffer.
+                skip_token = true;
+                return;
+            }
         }
         else {
             console.log("?>", tok.name, tok.text);
