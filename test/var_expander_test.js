@@ -117,4 +117,28 @@ describe("DeObfuscator: Variable Expansion", () => {
             });
         });
     });
+
+    describe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {
+
+        // See page. 14 of FireEye's DOSFuscation whitepaper for details.
+        it("should always produce the full %COMSPEC% var for the following substrs", () => {
+
+            const COMSPEC = `C:\\Windows\\System32\\cmd.exe`,
+                  vars    = { comspec: COMSPEC };
+
+            const tests = [
+                `%COMSPEC:~0%`,
+                `%COMSPEC:~0,27%`,
+                `%COMSPEC:~-27%`,
+                `%COMSPEC:~-27,27%`,
+                `%COMSPEC:~0,1337%`,
+                `%COMSPEC:~-1337%`,
+                `%COMSPEC:~-1337,1337%`
+            ];
+
+            tests.forEach(input => {
+                assert.equal(deobfuscator.expand_variables(input, vars), COMSPEC);
+            });
+        });
+    });
 });

@@ -66,7 +66,6 @@ function expand_variables (doscmd, vars) {
             substr_end = parseInt(substr_end, 10);
         }
 
-
         if (var_value === undefined) {
             continue;
         }
@@ -106,6 +105,7 @@ function expand_variables (doscmd, vars) {
         else if ((substr_start !== undefined) && (substr_end !== undefined)) {
 
             if (substr_start < 0 && substr_end < 0) {
+
                 console.log();
 
                 substr_start = (substr_start * -1);
@@ -116,11 +116,15 @@ function expand_variables (doscmd, vars) {
 
                 replace.replace = rev(rev(var_value).split("").slice(tmpstart, tmpend).join(""));
             }
+            else if (substr_start < 0 && substr_end > 0) {
+                let substr_offset = (substr_end + substr_start);
+                replace.replace = rev((rev(var_value).substr(substr_offset)));
+            }
             else if (substr_end < 0 && substr_start === 0) {
                 replace.replace = rev(rev(var_value).substr(substr_end * -1));
             }
             else if (substr_start === 0) {
-                replace.replace = var_value.substring(substr_start, substr_end);
+                replace.replace = var_value.substring(0, substr_end);
             }
             else if (substr_start > 0) {
                 replace.replace = var_value.substring(substr_start, substr_end + substr_start);
