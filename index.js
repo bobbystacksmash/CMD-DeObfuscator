@@ -62,6 +62,15 @@ function expand_variables (doscmd, vars) {
             substr_start = substr_match[2],
             substr_end   = substr_match[3];
 
+        if (substr_start !== undefined) {
+            substr_start = parseInt(substr_start, 10);
+        }
+
+        if (substr_end !== undefined) {
+            substr_end = parseInt(substr_end, 10);
+        }
+
+
         if (var_value === undefined) {
             continue;
         }
@@ -83,9 +92,31 @@ function expand_variables (doscmd, vars) {
                 replacements.push(replace);
                 continue;
             }
+            else if (substr_start < 0) {
+                // Negative substr values start from the last char and
+                // substr forwards.
+                let rev_var_value = var_value.split("").reverse().join("");
+                var_value = rev_var_value
+                    .substr(0, (substr_start * -1))
+                    .split("")
+                    .reverse()
+                    .join("");
 
-            // TODO: handle negative numbers.
+                replace.replace = var_value;
+                replacements.push(replace);
+                continue;
+            }
+
             replace.replace = var_value.substring(substr_start, substr_end);
+        }
+        else if ((substr_start !== undefined) && (substr_end !== undefined)) {
+
+            if (substr_start === 0) {
+                replace.replace = var_value.substring(substr_start, substr_end);
+            }
+            else if (substr_start > 0) {
+                replace.replace = var_value.substring(substr_start, substr_end + substr_start);
+            }
         }
 
         replacements.push(replace);
