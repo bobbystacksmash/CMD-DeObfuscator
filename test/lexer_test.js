@@ -189,6 +189,40 @@ describe("DeObfuscator Tests", () => {
         });
     });
 
+    describe("Commas and Semi-colons", () => {
+
+        // A free comma is a comma that appears outside of quotes.
+        it("should correctly identify free-commas", () => {
+
+            const input  = `,;,`,
+                  output = [
+                      "COMMA",
+                      "SEMICOLON",
+                      "COMMA"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it("should not detect commas and semi-colons between double quotes", () => {
+
+            const input  = `,;,",;,"`,
+                  output = [
+                      "COMMA",
+                      "SEMICOLON",
+                      "COMMA",
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+    });
+
     describe("Variables", () => {
         /*
          * Variable expansion isn't handled by the lexer.  For that,

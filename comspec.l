@@ -25,8 +25,13 @@ DoubleQuote                      [\"]
 SingleQuote                      "'"
 Any                              .
 NextCommand                      "&"
+Comma                            ","
+SemiColon                        ";"
 
 %%
+
+<INITIAL>{Comma}            { return token(this, "COMMA"); }
+<INITIAL>{SemiColon}        { return token(this, "SEMICOLON"); }
 
 <INITIAL,SQS>{Escape}       { this.begin("ESC"); return token(this, "ESCAPE"); }
 
