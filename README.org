@@ -35,3 +35,4 @@ deobfuscator.deobfuscate("CmD /C p^o^w^e^r^s^h^e^l^l") // => CmD /C powershell
  - [[https://docs.microsoft.com/en-gb/windows/desktop/api/shellapi/nf-shellapi-commandlinetoargvw][MSDN CommandLineToArgvW function]]
  - [[https://en.wikibooks.org/wiki/Windows_Batch_Scripting#How_a_command_line_is_interpreted][Windows Batch Scripting: Command Line Interpretation]]
  - [[https://ss64.com/nt/syntax-substring.html][DOS CMD Substrings]]
+ - [[https://docs.microsoft.com/en-gb/windows/desktop/ProcThread/environment-variables][MSDN: Environment Variables]]
