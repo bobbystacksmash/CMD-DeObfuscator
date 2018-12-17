@@ -1,4 +1,4 @@
-%x DQS SQS ESC VAR PARAM ENVVAR
+%x DQS SQS ESC SET SETDQS
 
 %{
 function token (state, name) {
@@ -18,6 +18,9 @@ function token (state, name) {
 
 Variable                         "%[A-Z]+%"
 Escape                           "^"
+Set                              [Ss][Ee][Tt]
+Assignment                       "="
+CallOp                           "&"
 Whitespace                       [ \s\t]
 Unknown                          .
 NewLine                          [\r\n]
@@ -29,6 +32,14 @@ Comma                            ","
 SemiColon                        ";"
 
 %%
+
+<INITIAL,SET>{CallOp}           { return token(this, "CALL"); }
+
+<INITIAL>{Set}              { this.begin("SET"); return token(this, "SET"); }
+<SET,SETDQS>{Assignment}    { return token(this, "SET_ASSIGNMENT"); }
+<SET>{DoubleQuote}          { this.begin("SETDQS"); return token(this, "SET_DQUOTE_BEGIN"); }
+<SETDQS>{DoubleQuote}       { this.popState(); return token(this, "SET_DQUOTE_END"); }
+<SETDQS>[^\"]               { return token(this, "SET_DQUOTE_CHAR"); }
 
 <INITIAL>{Comma}            { return token(this, "COMMA"); }
 <INITIAL>{SemiColon}        { return token(this, "SEMICOLON"); }

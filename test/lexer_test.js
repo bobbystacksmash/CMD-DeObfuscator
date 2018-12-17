@@ -16,6 +16,92 @@ const util = {
 
 describe("DeObfuscator Tests", () => {
 
+    describe("using SET to introduce environment variables", () => {
+
+        it(`should detect a 'SET' command`, () => {
+
+            const input  = `set`,
+                  output = ["SET"];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it(`should correctly tokenise the statement: SET "^ =10"`, () => {
+
+            const input  = `set "^ =10"`,
+                  output = [
+                      "SET",
+                      "LITERAL",
+                      "SET_DQUOTE_BEGIN",
+                      "SET_DQUOTE_CHAR",
+                      "SET_DQUOTE_CHAR",
+                      "SET_ASSIGNMENT",
+                      "SET_DQUOTE_CHAR",
+                      "SET_DQUOTE_CHAR",
+                      "SET_DQUOTE_END"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it(`should correctly tokenise the statement: SET foo=bar`, () => {
+
+            const input  = `set foo=bar`,
+                  output = [
+                      "SET",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "SET_ASSIGNMENT",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it(`should treat a space as a valid part of a var name`, () => {
+
+            const input  = `SET _x =ab`,
+                  output = [
+                      "SET",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "SET_ASSIGNMENT",
+                      "LITERAL",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it(`should continue RHS assignment until meeting an '&' (CALL)`, () => {
+
+            const input  = `SET foo=a,b,c &`,
+                  output = [
+                      "SET",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "SET_ASSIGNMENT",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "CALL"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+    });
+
     describe("Quotes", () => {
 
         describe("Double-Quoted strings (DQS)", () => {
