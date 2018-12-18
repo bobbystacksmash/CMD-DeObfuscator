@@ -157,14 +157,20 @@ function deobfuscate_dos_cmd (doscmd, options) {
         varbuf = "",
         valbuf = "";
 
-    let skip_token       = false;
-    let in_env_var_name  = false,
-        in_env_var_value = false;
+    let dqs_skip_token    = false,
+        sqs_skip_token    = false,
+        in_env_var_name   = false,
+        in_env_var_value  = false,
+        multi_space_chars = true;
 
     tokens.forEach((tok, i) => {
 
-        if (skip_token) {
-            skip_token = false;
+        if (dqs_skip_token) {
+            dqs_skip_token = false;
+            return;
+        }
+        else if (sqs_skip_token) {
+            sqs_skip_token = false;
             return;
         }
 
@@ -172,11 +178,25 @@ function deobfuscate_dos_cmd (doscmd, options) {
 
         if (tok.name === "LITERAL") {
 
+            if (tok.text !== " " && multi_space_chars) {
+                multi_space_chars = false;
+            }
+
             if (in_env_var_name) {
                 varbuf += tok.text;
             }
             else if (in_env_var_value) {
                 valbuf += tok.text;
+            }
+            else if (tok.text === " ") {
+
+                if (multi_space_chars) {
+                    return;
+                }
+                else {
+                    outbuf += tok.text;
+                    multi_space_chars = true;
+                }
             }
             else {
                 outbuf += tok.text;
@@ -198,12 +218,37 @@ function deobfuscate_dos_cmd (doscmd, options) {
         else if (tok.name === "ESCAPED_LITERAL") {
             return;
         }
+        else if (tok.name === "STRING_SQUOTE_BEGIN") {
+            if (lookahead.name === "STRING_SQUOTE_END") {
+                // We do not copy empty strings to the output buffer.
+                sqs_skip_token = true;
+                return;
+            }
+            else {
+                outbuf += tok.text;
+            }
+        }
+        else if (tok.name === "STRING_SQUOTE_END") {
+            outbuf += tok.text;
+        }
+        else if (tok.name === "STRING_SQUOTE_CHAR") {
+            outbuf += tok.text;
+        }
         else if (tok.name === "STRING_DQUOTE_BEGIN") {
             if (lookahead.name === "STRING_DQUOTE_END") {
                 // We do not copy empty strings to the output buffer.
-                skip_token = true;
+                dqs_skip_token = true;
                 return;
             }
+            else {
+                outbuf += tok.text;
+            }
+        }
+        else if (tok.name === "STRING_DQUOTE_END") {
+                outbuf += tok.text;
+        }
+        else if (tok.name === "STRING_DQUOTE_CHAR") {
+            outbuf += tok.text;
         }
         else if (tok.name === "SET") {
 
