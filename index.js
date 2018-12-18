@@ -106,8 +106,6 @@ function expand_variables (doscmd, vars) {
 
             if (substr_start < 0 && substr_end < 0) {
 
-                console.log();
-
                 substr_start = (substr_start * -1);
                 substr_end   = (substr_end   * -1);
 
@@ -155,9 +153,13 @@ function deobfuscate_dos_cmd (doscmd, options) {
     }
 
     let tokens = tokenise(doscmd),
-        outbuf = "";
+        outbuf = "",
+        varbuf = "",
+        valbuf = "";
 
-    let skip_token = false;
+    let skip_token       = false;
+    let in_env_var_name  = false,
+        in_env_var_value = false;
 
     tokens.forEach((tok, i) => {
 
@@ -169,7 +171,17 @@ function deobfuscate_dos_cmd (doscmd, options) {
         let lookahead = parser_lookahead(tokens, i);
 
         if (tok.name === "LITERAL") {
-            outbuf += tok.text;
+
+            if (in_env_var_name) {
+                varbuf += tok.text;
+            }
+            else if (in_env_var_value) {
+                valbuf += tok.text;
+            }
+            else {
+                outbuf += tok.text;
+            }
+
             return;
         }
         else if (tok.name === "ESCAPE") {
@@ -183,12 +195,27 @@ function deobfuscate_dos_cmd (doscmd, options) {
 
             return;
         }
+        else if (tok.name === "ESCAPED_LITERAL") {
+            return;
+        }
         else if (tok.name === "STRING_DQUOTE_BEGIN") {
             if (lookahead.name === "STRING_DQUOTE_END") {
                 // We do not copy empty strings to the output buffer.
                 skip_token = true;
                 return;
             }
+        }
+        else if (tok.name === "SET") {
+
+            if (in_env_var_name) {
+                console.log("ERR: already in var assignment mode?");
+            }
+
+            in_env_var_name = true;
+        }
+        else if (tok.name === "SET_ASSIGNMENT") {
+            in_env_var_name = false;
+            in_env_var_value = true;
         }
         else {
             console.log("?>", tok.name, tok.text);

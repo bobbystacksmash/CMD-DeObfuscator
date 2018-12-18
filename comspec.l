@@ -18,7 +18,7 @@ function token (state, name) {
 
 Variable                         "%[A-Z]+%"
 Escape                           "^"
-Set                              [Ss][Ee][Tt]
+Set                              [Ss][Ee][Tt]\s*
 Assignment                       "="
 CallOp                           "&"
 Whitespace                       [ \s\t]
@@ -33,7 +33,7 @@ SemiColon                        ";"
 
 %%
 
-<INITIAL,SET>{CallOp}           { return token(this, "CALL"); }
+<INITIAL,SET>{CallOp}       { return token(this, "CALL"); }
 
 <INITIAL>{Set}              { this.begin("SET"); return token(this, "SET"); }
 <SET,SETDQS>{Assignment}    { return token(this, "SET_ASSIGNMENT"); }

@@ -31,7 +31,6 @@ describe("DeObfuscator Tests", () => {
             const input  = `set "^ =10"`,
                   output = [
                       "SET",
-                      "LITERAL",
                       "SET_DQUOTE_BEGIN",
                       "SET_DQUOTE_CHAR",
                       "SET_DQUOTE_CHAR",
@@ -52,7 +51,6 @@ describe("DeObfuscator Tests", () => {
                       "LITERAL",
                       "LITERAL",
                       "LITERAL",
-                      "LITERAL",
                       "SET_ASSIGNMENT",
                       "LITERAL",
                       "LITERAL",
@@ -70,7 +68,6 @@ describe("DeObfuscator Tests", () => {
                       "LITERAL",
                       "LITERAL",
                       "LITERAL",
-                      "LITERAL",
                       "SET_ASSIGNMENT",
                       "LITERAL",
                       "LITERAL"
@@ -84,7 +81,6 @@ describe("DeObfuscator Tests", () => {
             const input  = `SET foo=a,b,c &`,
                   output = [
                       "SET",
-                      "LITERAL",
                       "LITERAL",
                       "LITERAL",
                       "LITERAL",
