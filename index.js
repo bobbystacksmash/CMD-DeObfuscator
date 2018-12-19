@@ -24,6 +24,31 @@ function tokenise (doscmd) {
     return tokens;
 }
 
+function substr_replace (doscmd, vars) {
+
+    let find_replace_re = /%([a-z][0-9a-z_]*):([^\s]+)=([^\s]+)%/ig,
+        got_match;
+
+    while ((got_match = find_replace_re.exec(doscmd))) {
+
+        let wholematch = got_match[0],
+            findstr    = got_match[2],
+            replstr    = got_match[3],
+            varname    = got_match[1].toLowerCase(),
+            varvalue   = vars[varname];
+
+        if (vars.hasOwnProperty(varname) === false) {
+            continue;
+        }
+
+        let replaced_varvalue = varvalue.split(findstr).join(replstr);
+
+        doscmd = doscmd.split(wholematch).join(replaced_varvalue);
+    }
+
+    return doscmd;
+}
+
 function expand_variables (doscmd, vars) {
 
     const default_vars = {
@@ -33,8 +58,14 @@ function expand_variables (doscmd, vars) {
     vars = Object.assign(default_vars, vars);
 
     let cmd = Object.keys(vars).map(varname => {
+        // TODO: I don't think we can use a new RegExp for the
+        // replacement because envvar variable names can contain
+        // punctuation chars which will conflict with the RegExp
+        // engine's metacharacters.
         return doscmd.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
     }).pop();
+
+    cmd = substr_replace(cmd, vars);
 
     // Substring handling
     // ==================

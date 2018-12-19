@@ -16,7 +16,7 @@ const util = {
 
 describe("DeObfuscator: Variable Expansion", () => {
 
-    describe("Standard %ENVVAR% handling", () => {
+    xdescribe("Standard %ENVVAR% handling", () => {
 
         it("should replace variables for which there are definitions", () => {
 
@@ -43,7 +43,7 @@ describe("DeObfuscator: Variable Expansion", () => {
         });
     });
 
-    describe("Variable substring operations", () => {
+    xdescribe("Variable substring operations", () => {
 
         it("should leave the string unchanged if VAR is not defined", () => {
 
@@ -118,7 +118,7 @@ describe("DeObfuscator: Variable Expansion", () => {
         });
     });
 
-    describe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {
+    xdescribe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {
 
         // See page. 14 of FireEye's DOSFuscation whitepaper for details.
         it("should always produce the full %COMSPEC% var for the following substrs", () => {
@@ -139,6 +139,17 @@ describe("DeObfuscator: Variable Expansion", () => {
             tests.forEach(input => {
                 assert.equal(deobfuscator.expand_variables(input, vars), COMSPEC);
             });
+        });
+    });
+
+    describe("Variable character replacement", () => {
+
+        it("should handle replacing all occurances of a given char within a variable", () => {
+
+            const input  = `%FOO:cat=dog%`,
+                  msg    = `the cat sat cat on cat the cat mat`,
+                  vars   = { foo: msg };
+            assert.equal(deobfuscator.expand_variables(input, vars), msg.replace(/cat/g, "dog"));
         });
     });
 });
