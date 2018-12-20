@@ -8,13 +8,14 @@ The ~DOS DeObfuscator~ is a pure JavaScript library written to
 deobfuscate commands passed to ~CMD.EXE~, presenting malicious
 commands _mostly_ free of obfuscation characters.
 
-As the BATCH interpreter analyses the command strings it performs the
-following deobfuscation actions:
-
- - removes empty quotes: ~h""t""t""p~ _becomes_ ~http~
- - expands variable substrings: ~%COMSPEC:\~-7%~ _becomes_ ~cmd.exe~
-
 ** EXAMPLES
+*** Variable expansion
+Attempts to expand all variables in to their expanded form, making
+analysis of the whole command clearer:
+#+BEGIN_SRC javascript
+deobfuscate("%COMSPEC%"); // => C:\Windows\System32\cmd.exe
+#+END_SRC
+
 *** Variable find/replace
 Replaces all occurances of ~cmd~ inside the ~%COMSPEC%~ var with the
 string ~powershell~:
@@ -38,6 +39,14 @@ deobfuscate("CmD /C p^o^w^e^r^s^h^e^l^l"); // => CmD /C powershell
 All empty strings are removed from the command:
 #+BEGIN_SRC javascript
 deobfuscate(`pow""ersh""ell`); // => powershell
+#+END_SRC
+
+*** Path resolver (/coming soon/)
+Any identified paths are resolved in to their absolute form, meaning
+we transform this:
+
+#+BEGIN_SRC javascript
+deobfuscate(`C:\foo\bar\baz\..\..\..\Windws\System32\cmd.exe`); // => C:\Windows\System32\cmd.exe
 #+END_SRC
 
 ** Reading Material
