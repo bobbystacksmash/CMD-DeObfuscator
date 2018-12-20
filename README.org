@@ -12,9 +12,9 @@ commands _mostly_ free of obfuscation characters.
 *** Variable expansion
 Attempts to expand all variables in to their expanded form, making
 analysis of the whole command clearer:
-#+BEGIN_SRC javascript
-deobfuscate("%COMSPEC%"); // => C:\Windows\System32\cmd.exe
-#+END_SRC
+| Obfuscated Command | Output                        |
+|--------------------+-------------------------------|
+| ~%COMSPEC%~        | ~C:\Windows\System32\cmd.exe~ |
 
 *** Variable find/replace
 Replaces all occurances of ~cmd~ inside the ~%COMSPEC%~ var with the
