@@ -6,7 +6,13 @@
 
 The ~DOS DeObfuscator~ is a pure JavaScript library written to
 deobfuscate commands passed to ~CMD.EXE~, presenting malicious
-commands free of "noise", without needing a Windows system.
+commands _mostly_ free of obfuscation characters.
+
+As the BATCH interpreter analyses the command strings it performs the
+following deobfuscation actions:
+
+ - removes empty quotes: ~h""t""t""p~ _becomes_ ~http~
+ - expands variable substrings: ~%COMSPEC:\~-7%~ _becomes_ ~cmd.exe~
 
 ** EXAMPLES
 *** Variable find/replace
