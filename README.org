@@ -12,42 +12,41 @@ commands _mostly_ free of obfuscation characters.
 *** Variable expansion
 Attempts to expand all variables in to their expanded form, making
 analysis of the whole command clearer:
-| Obfuscated Command | Output                        |
-|--------------------+-------------------------------|
-| ~%COMSPEC%~        | ~C:\Windows\System32\cmd.exe~ |
+| Input       | Deobfuscated Output           |
+|-------------+-------------------------------|
+| ~%COMSPEC%~ | ~C:\Windows\System32\cmd.exe~ |
 
 *** Variable find/replace
 Replaces all occurances of ~cmd~ inside the ~%COMSPEC%~ var with the
 string ~powershell~:
-#+BEGIN_SRC javascript
-deobfuscate("%COMSPEC:cmd=powershell%"); // => C:\Windows\System32\powershell.exe
-#+END_SRC
+| Input                      | Deobfuscated Output                  |
+|----------------------------+--------------------------------------|
+| ~%COMSPEC:cmd=powershell%~ | ~C:\Windows\System32\powershell.exe~ |
 
 *** Variable substrings
 Fetches the last seven characters within the ~%COMSPEC%~ var:
-#+BEGIN_SRC javascript
-deobfuscate("%COMSPEC:~-7%"); // => cmd.exe
-#+END_SRC
+| Input           | Deobfuscated Output |
+|-----------------+---------------------|
+| =%COMSPEC:~-7%= | ~cmd.exe~           |
 
 *** Escape-sequence stripping
 All escape characters (~^~) are stripped from the command:
-#+BEGIN_SRC javascript
-deobfuscate("CmD /C p^o^w^e^r^s^h^e^l^l"); // => CmD /C powershell
-#+END_SRC
+| Input                        | Deobfuscated Output |
+|------------------------------+---------------------|
+| ~CmD /C p^o^w^e^r^s^h^e^l^l~ | ~CmD /C powershell~ |
 
 *** Empty string removal
 All empty strings are removed from the command:
-#+BEGIN_SRC javascript
-deobfuscate(`pow""ersh""ell`); // => powershell
-#+END_SRC
+| Input            | Deobfuscated Output |
+|------------------+---------------------|
+| ~pow""ersh""ell~ | ~powershell~        |
 
 *** Path resolver (/coming soon/)
 Any identified paths are resolved in to their absolute form, meaning
 we transform this:
-
-#+BEGIN_SRC javascript
-deobfuscate(`C:\foo\bar\baz\..\..\..\Windws\System32\cmd.exe`); // => C:\Windows\System32\cmd.exe
-#+END_SRC
+| Input                                             | Deobfuscated Output           |
+|---------------------------------------------------+-------------------------------|
+| ~C:\foo\bar\baz\..\..\..\Windws\System32\cmd.exe~ | ~C:\Windows\System32\cmd.exe~ |
 
 ** Reading Material
 
