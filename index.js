@@ -216,6 +216,7 @@ function deobfuscate_dos_cmd (doscmd, options) {
         sqs_skip_token    = false,
         in_env_var_name   = false,
         in_env_var_value  = false,
+        set_startswith    = null,
         multi_space_chars = true;
 
     tokens.forEach((tok, i) => {
@@ -311,9 +312,19 @@ function deobfuscate_dos_cmd (doscmd, options) {
                 console.log("ERR: already in var assignment mode?");
             }
 
+            set_startswith = lookahead.text;
+
             in_env_var_name = true;
         }
         else if (/^SET_DQUOTE_(?:BEGIN|CHAR|END)$/.test(tok.name)) {
+
+            if (tok.name === "SET_DQUOTE_BEGIN" && varbuf.length === 0) {
+                return;
+            }
+
+            if (tok.name === "SET_DQUOTE_END" && set_startswith === tok.text) {
+                return;
+            }
 
             if (in_env_var_name) {
                 varbuf += tok.text;
