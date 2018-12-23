@@ -8,6 +8,14 @@ The ~DOS DeObfuscator~ is a pure JavaScript library written to
 deobfuscate commands passed to ~CMD.EXE~, presenting malicious
 commands _mostly_ free of obfuscation characters.
 
+** USAGE
+#+BEGIN_SRC javascript
+const DOS = require("./index"); // Module is not yet on NPM.
+
+let cmd = `p^o^w^e^r""sh""ell`;
+console.log(DOS.deobfuscate(cmd)); // => powershell
+#+END_SRC
+
 ** EXAMPLES
 *** Variable expansion
 Attempts to expand all variables in to their expanded form, making
