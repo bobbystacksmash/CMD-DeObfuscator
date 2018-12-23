@@ -18,7 +18,7 @@ function token (state, name) {
 
 Variable                         "%[A-Z]+%"
 Escape                           "^"
-Set                              [Ss][Ee][Tt]\s*
+Set                              [Ss][Ee][Tt][\s]
 Assignment                       "="
 CallOp                           "&"
 Whitespace                       [ \s\t]

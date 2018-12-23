@@ -20,7 +20,7 @@ describe("DeObfuscator Tests", () => {
 
         it(`should detect a 'SET' command`, () => {
 
-            const input  = `set`,
+            const input  = `set `,
                   output = ["SET"];
 
             assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);

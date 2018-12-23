@@ -1,7 +1,7 @@
 const assert = require("chai").assert,
       DOS    = require("../index");
 
-describe("DOS Tests", () => {
+describe("Deobfuscation Tests", () => {
 
     describe("Removing noise", () => {
 
@@ -35,6 +35,40 @@ describe("DOS Tests", () => {
 
             assert.equal(DOS.deobfuscate(input).command, output);
         });
+    });
+
+    describe("Environment variables", () => {
+
+        it("should correctly identify variable assignments using SET", () => {
+
+            const tests = [
+                { in: `SET foo=bar`, out: { foo: "bar" } },
+                { in: `SET foo = bar`, out: { "foo ": " bar" } }
+            ];
+
+            tests.forEach(T => assert.deepEqual(DOS.deobfuscate(T.in).vars, T.out));
+        });
+
+        it("should include double quotes as part of the var value", () => {
+
+            const tests = [
+                { in: `SET foo="bar"`, out: {foo: `"bar"` } }
+            ];
+
+            tests.forEach(T => assert.deepEqual(DOS.deobfuscate(T.in).vars, T.out));
+        });
+
+        it("should allow punctuation chars in the variable name", () => {
+
+            const tests = [
+                { in: `SET ###=bar`, out: { "###": "bar" } },
+                { in: `SET  =bar`,   out: { " ": "bar" } },
+            ];
+
+            tests.forEach(T => assert.deepEqual(DOS.deobfuscate(T.in).vars, T.out));
+        });
+
+        // complain about !!!! in var names
     });
 
     /*xdescribe("Escapes", () => {

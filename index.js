@@ -313,6 +313,15 @@ function deobfuscate_dos_cmd (doscmd, options) {
 
             in_env_var_name = true;
         }
+        else if (/^SET_DQUOTE_(?:BEGIN|CHAR|END)$/.test(tok.name)) {
+
+            if (in_env_var_name) {
+                varbuf += tok.text;
+            }
+            else if (in_env_var_value) {
+                valbuf += tok.text;
+            }
+        }
         else if (tok.name === "SET_ASSIGNMENT") {
 
             in_env_var_name = false;
@@ -331,7 +340,7 @@ function deobfuscate_dos_cmd (doscmd, options) {
     });
 
     return {
-        envvars: varmap,
+        vars:    varmap,
         command: outbuf
     };
 }
