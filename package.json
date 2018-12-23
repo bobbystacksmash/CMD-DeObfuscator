@@ -1,7 +1,7 @@
 {
-  "name": "dosdeobfuscator",
+  "name": "cmd-deobfuscator",
   "version": "0.1.0",
-  "description": "A CMD.EXE/DOS de-obfuscation library and command line utility.",
+  "description": "A CMD de-obfuscation library and command line utility.",
   "main": "index.js",
   "scripts": {
     "testlex": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/**/lexer_test.js",

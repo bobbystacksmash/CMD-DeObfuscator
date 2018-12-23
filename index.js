@@ -202,8 +202,15 @@ function deobfuscate_dos_cmd (doscmd, options) {
 
     let tokens = tokenise(doscmd),
         outbuf = "",
+        varmap = {},
         varbuf = "",
         valbuf = "";
+
+    // Shove an end marker in so we know we're at the end of the command.
+    tokens.push({
+        name: "END",
+        text: null
+    });
 
     let dqs_skip_token    = false,
         sqs_skip_token    = false,
@@ -307,15 +314,26 @@ function deobfuscate_dos_cmd (doscmd, options) {
             in_env_var_name = true;
         }
         else if (tok.name === "SET_ASSIGNMENT") {
+
             in_env_var_name = false;
             in_env_var_value = true;
+        }
+        else if (tok.name === "CALL" || tok.name === "END") {
+            in_env_var_value = false;
+            varmap[varbuf] = valbuf;
+
+            varbuf = "";
+            valbuf = "";
         }
         else {
             console.log("?>", tok.name, tok.text);
         }
     });
 
-    return outbuf;
+    return {
+        envvars: varmap,
+        command: outbuf
+    };
 }
 
 module.exports = {
