@@ -16,7 +16,7 @@ const util = {
 
 describe("DeObfuscator: Variable Expansion", () => {
 
-    xdescribe("Standard %ENVVAR% handling", () => {
+    describe("Standard %ENVVAR% handling", () => {
 
         it("should replace variables for which there are definitions", () => {
 
@@ -43,7 +43,7 @@ describe("DeObfuscator: Variable Expansion", () => {
         });
     });
 
-    xdescribe("Variable substring operations", () => {
+    describe("Variable substring operations", () => {
 
         it("should leave the string unchanged if VAR is not defined", () => {
 
@@ -118,7 +118,7 @@ describe("DeObfuscator: Variable Expansion", () => {
         });
     });
 
-    xdescribe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {
+    describe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {
 
         // See page. 14 of FireEye's DOSFuscation whitepaper for details.
         it("should always produce the full %COMSPEC% var for the following substrs", () => {
@@ -150,6 +150,24 @@ describe("DeObfuscator: Variable Expansion", () => {
                   msg    = `the cat sat cat on cat the cat mat`,
                   vars   = { foo: msg };
             assert.equal(deobfuscator.expand_variables(input, vars), msg.replace(/cat/g, "dog"));
+        });
+
+        it("should handle removing all matching chars from a given variable", () => {
+
+            const input  = `%x:@=%`,
+                  output = `wscript`,
+                  vars   = { x: `wsc@ript` };
+
+            assert.equal(deobfuscator.expand_variables(input, vars), `wscript`);
+        });
+
+        it("should expand the variable without find/replace when find does not match", () => {
+
+            const input  = `%x:z=a%`,
+                  output = `foobar`,
+                  vars   = { x: output };
+
+            assert.equal(deobfuscator.expand_variables(input, vars), output);
         });
     });
 });

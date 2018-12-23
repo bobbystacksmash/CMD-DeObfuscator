@@ -24,16 +24,33 @@ function tokenise (doscmd) {
     return tokens;
 }
 
+
+/**
+ * Attempts to perform a find/replace with variable expansion against
+ * a given DOS command with values read from an optional variable
+ * key/value object.  BATCH implements some syntactic-sugar to support
+ * finding and replacing characters within an environment variable:
+ *
+ * @example
+ * // Replace all 'a' chars with 'b' in var 'foo':
+ * "%foo:a=b%"
+ *
+ * @param {string} doscmd - DOS command we wish to deobfuscate.
+ * @param {Object} [vars] - An object mapping var names to values.
+ *
+ * @returns {string} An expanded form of `doscmd` with all variable
+ * find/replace operations performed.
+ */
 function substr_replace (doscmd, vars) {
 
-    let find_replace_re = /%([a-z][0-9a-z_]*):([^\s]+)=([^\s]+)%/ig,
+    let find_replace_re = /%([a-z][0-9a-z_]*):([^\s]+)=([^\s]+)?%/ig,
         got_match;
 
     while ((got_match = find_replace_re.exec(doscmd))) {
 
         let wholematch = got_match[0],
             findstr    = got_match[2],
-            replstr    = got_match[3],
+            replstr    = got_match[3] || "",
             varname    = got_match[1].toLowerCase(),
             varvalue   = vars[varname];
 
