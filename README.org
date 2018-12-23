@@ -1,12 +1,12 @@
-* DOS De-Obfuscator
+* CMD De-Obfuscator
 
 ** ABOUT
 
 /Currently under active development/
 
-The ~DOS DeObfuscator~ is a pure JavaScript library written to
-deobfuscate commands passed to ~CMD.EXE~, presenting malicious
-commands _mostly_ free of obfuscation characters.
+~CMD DeObfuscator~ is a pure JavaScript library written to deobfuscate
+commands passed to ~CMD.EXE~, presenting malicious commands _mostly_
+free of obfuscation characters.
 
 ** USAGE
 #+BEGIN_SRC javascript
