@@ -4,6 +4,35 @@ const JisonLex = require("jison-lex"),
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
 
+/**
+ * Given a command string, attempts to split the string, returning an
+ * array of individual command strings.
+ *
+ * @param {string} command - a CMD.EXE command.
+ * @returns {string|Array} Each command is an element in the array.
+ */
+function split_command (command_str) {
+
+    let tokens   = tokenise(command_str),
+        index    = 0,
+        commands = [""];
+
+    tokens.forEach(tok => {
+
+        if (tok.name === "CALL" || tok.name === "COND_CALL") {
+            index++;
+            commands[index] = "";
+        }
+        else {
+            commands[index] += tok.text;
+        }
+    });
+
+    return commands
+        .map(cmd => cmd.replace(/^\s*|\s*$/g, "")) // Remove leading and trailing whitespace
+        .filter(cmd => ! /^\s*$/.test(cmd));
+}
+
 function tokenise (doscmd) {
 
     lexer.setInput(doscmd);
@@ -308,6 +337,8 @@ function deobfuscate_dos_cmd (doscmd, options) {
         }
         else if (tok.name === "SET") {
 
+            outbuf += "SET ";
+
             if (in_env_var_name) {
                 console.log("ERR: already in var assignment mode?");
             }
@@ -317,6 +348,8 @@ function deobfuscate_dos_cmd (doscmd, options) {
             in_env_var_name = true;
         }
         else if (/^SET_DQUOTE_(?:BEGIN|CHAR|END)$/.test(tok.name)) {
+
+            outbuf += tok.text;
 
             if (tok.name === "SET_DQUOTE_BEGIN" && varbuf.length === 0) {
                 return;
@@ -334,6 +367,8 @@ function deobfuscate_dos_cmd (doscmd, options) {
             }
         }
         else if (tok.name === "SET_ASSIGNMENT") {
+
+            outbuf += tok.text;
 
             in_env_var_name = false;
             in_env_var_value = true;
@@ -358,6 +393,7 @@ function deobfuscate_dos_cmd (doscmd, options) {
 
 module.exports = {
     tokenise:    tokenise,
+    split_command: split_command,
     deobfuscate: deobfuscate_dos_cmd,
     expand_variables: expand_variables
 };

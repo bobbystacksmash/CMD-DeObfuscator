@@ -21,6 +21,7 @@ Escape                           "^"
 Set                              [Ss][Ee][Tt][\s]
 Assignment                       "="
 CallOp                           "&"
+CondCallOp                       "&&"
 Whitespace                       [ \s\t]
 Unknown                          .
 NewLine                          [\r\n]
@@ -33,6 +34,7 @@ SemiColon                        ";"
 
 %%
 
+<INITIAL>{CondCallOp}       { return token(this, "COND_CALL"); }
 <INITIAL,SET>{CallOp}       { return token(this, "CALL"); }
 
 <INITIAL>{Set}              { this.begin("SET"); return token(this, "SET"); }
