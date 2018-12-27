@@ -49,6 +49,14 @@ describe("Deobfuscation Tests", () => {
             tests.forEach(T => assert.deepEqual(DOS.deobfuscate(T.in).vars, T.out));
         });
 
+        it(`should correctly handle: 'SET "foo=bar"'`, () => {
+
+            assert.deepEqual(
+                DOS.deobfuscate(`SET "foo=bar"`).vars,
+                {foo: "bar"}
+            );
+        });
+
         it("should include double quotes as part of the var value", () => {
 
             const tests = [
@@ -68,6 +76,15 @@ describe("Deobfuscation Tests", () => {
             tests.forEach(T => assert.deepEqual(DOS.deobfuscate(T.in).vars, T.out));
         });
 
+        it("should expand variables in the output command which have been user-defined", () => {
+
+            assert.equal(
+                DOS.deobfuscate(`SET x=hello & echo %x%`).command,
+                ""
+            );
+        });
+
+        // TODO
         // complain about !!!! in var names
     });
 

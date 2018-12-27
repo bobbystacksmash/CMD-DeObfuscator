@@ -39,6 +39,7 @@ SemiColon                        ";"
 
 <INITIAL>{Set}              { this.begin("SET"); return token(this, "SET"); }
 <SET,SETDQS>{Assignment}    { return token(this, "SET_ASSIGNMENT"); }
+
 <SET>{DoubleQuote}          { this.begin("SETDQS"); return token(this, "SET_DQUOTE_BEGIN"); }
 <SETDQS>{DoubleQuote}       { this.popState(); return token(this, "SET_DQUOTE_END"); }
 <SETDQS>[^\"]               { return token(this, "SET_DQUOTE_CHAR"); }
@@ -46,7 +47,7 @@ SemiColon                        ";"
 <INITIAL>{Comma}            { return token(this, "COMMA"); }
 <INITIAL>{SemiColon}        { return token(this, "SEMICOLON"); }
 
-<INITIAL,SQS>{Escape}       { this.begin("ESC"); return token(this, "ESCAPE"); }
+<INITIAL,SET,SQS>{Escape}   { this.begin("ESC"); return token(this, "ESCAPE"); }
 
 <INITIAL>{DoubleQuote}      { this.begin("DQS"); return token(this, "STRING_DQUOTE_BEGIN"); }
 <DQS>{DoubleQuote}          { this.popState(); return token(this, "STRING_DQUOTE_END");  }

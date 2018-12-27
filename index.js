@@ -1,4 +1,5 @@
 const JisonLex = require("jison-lex"),
+      path     = require("path").win32,
       fs       = require("fs");
 
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
@@ -33,9 +34,9 @@ function split_command (command_str) {
         .filter(cmd => ! /^\s*$/.test(cmd));
 }
 
-function tokenise (doscmd) {
+function tokenise (cmdstr) {
 
-    lexer.setInput(doscmd);
+    lexer.setInput(cmdstr);
 
     let tokens = [];
 
@@ -64,18 +65,18 @@ function tokenise (doscmd) {
  * // Replace all 'a' chars with 'b' in var 'foo':
  * "%foo:a=b%"
  *
- * @param {string} doscmd - DOS command we wish to deobfuscate.
+ * @param {string} cmdstr - DOS command we wish to deobfuscate.
  * @param {Object} [vars] - An object mapping var names to values.
  *
- * @returns {string} An expanded form of `doscmd` with all variable
+ * @returns {string} An expanded form of `cmdstr` with all variable
  * find/replace operations performed.
  */
-function substr_replace (doscmd, vars) {
+function substr_replace (cmdstr, vars) {
 
     let find_replace_re = /%([a-z][0-9a-z_]*):([^\s]+)=([^\s]+)?%/ig,
         got_match;
 
-    while ((got_match = find_replace_re.exec(doscmd))) {
+    while ((got_match = find_replace_re.exec(cmdstr))) {
 
         let wholematch = got_match[0],
             findstr    = got_match[2],
@@ -89,13 +90,13 @@ function substr_replace (doscmd, vars) {
 
         let replaced_varvalue = varvalue.split(findstr).join(replstr);
 
-        doscmd = doscmd.split(wholematch).join(replaced_varvalue);
+        cmdstr = cmdstr.split(wholematch).join(replaced_varvalue);
     }
 
-    return doscmd;
+    return cmdstr;
 }
 
-function expand_variables (doscmd, vars) {
+function expand_variables (cmdstr, vars) {
 
     const default_vars = {
         appdata: "C:\\Users\\whoami\\AppData\\Roaming",
@@ -108,7 +109,7 @@ function expand_variables (doscmd, vars) {
         // replacement because envvar variable names can contain
         // punctuation chars which will conflict with the RegExp
         // engine's metacharacters.
-        return doscmd.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
+        return cmdstr.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
     }).pop();
 
     cmd = substr_replace(cmd, vars);
@@ -214,11 +215,66 @@ function expand_variables (doscmd, vars) {
 }
 
 function parser_lookahead(tokens, index) {
-
     if (tokens[index++]) return tokens[index++];
 }
 
-function deobfuscate_dos_cmd (doscmd, options) {
+/**
+ * Parses a given command string in to individual commands, before
+ * applying expansion and de-obfuscation filters to the each command.
+ *
+ * @param {string} cmdstr - The original command string to be
+ * de-obfuscated.
+ *
+*/
+function parse_cmdstr (cmdstr) {
+
+    let vars = {};
+
+    split_command(cmdstr).forEach(cmd => {
+
+
+
+        //let deobfuscated = deobfuscate_dos_cmd(remove_escapes(cmd));
+        //vars = Object.assign(deobfuscated.vars, vars);
+        //console.log(expand_variables(deobfuscated.command, vars));
+    });
+}
+
+function remove_escapes (cmdstr, options) {
+
+    let outcmd     = "",
+        tokens     = tokenise(cmdstr),
+        ignore     = /^(?:ESCAPE)$/,
+        skip_token = false;
+
+    tokenise(cmdstr).forEach((tok, i) => {
+
+        if (skip_token) {
+            skip_token = false;
+            return;
+        }
+
+        let next_tok = parser_lookahead(tokens, i);
+
+        if (ignore.test(tok.name)) {
+            return;
+        }
+        else if (tok.name === "SET_DQUOTE_BEGIN" && next_tok.name === "SET_DQUOTE_END") {
+            skip_token = true;
+            return;
+        }
+        else if (tok.name === "SET_SQUOTE_BEGIN" && next_tok.name === "SET_SQUOTE_END") {
+            skip_token = true;
+            return;
+        }
+
+        outcmd += tok.text;
+    });
+
+    return outcmd;
+}
+
+function deobfuscate_dos_cmd (cmdstr, options) {
 
     const default_opts = {
         expand_vars: true
@@ -226,11 +282,11 @@ function deobfuscate_dos_cmd (doscmd, options) {
     options = Object.assign(default_opts, options || {});
 
     if (default_opts.expand_vars) {
-        doscmd = expand_variables(doscmd, options.vars);
+        cmdstr = expand_variables(cmdstr, options.vars);
     }
 
-    let tokens = tokenise(doscmd),
-        outbuf = "",
+    let tokens = tokenise(cmdstr),
+        outbuf = [],
         varmap = {},
         varbuf = "",
         valbuf = "";
@@ -248,6 +304,8 @@ function deobfuscate_dos_cmd (doscmd, options) {
         set_startswith    = null,
         multi_space_chars = true;
 
+
+
     tokens.forEach((tok, i) => {
 
         if (dqs_skip_token) {
@@ -260,6 +318,8 @@ function deobfuscate_dos_cmd (doscmd, options) {
         }
 
         let lookahead = parser_lookahead(tokens, i);
+
+        outbuf.push(tok.text);
 
         if (tok.name === "LITERAL") {
 
@@ -279,24 +339,16 @@ function deobfuscate_dos_cmd (doscmd, options) {
                     return;
                 }
                 else {
-                    outbuf += tok.text;
                     multi_space_chars = true;
                 }
-            }
-            else {
-                outbuf += tok.text;
             }
 
             return;
         }
         else if (tok.name === "ESCAPE") {
-
-            if (lookahead.text === " ") {
-                // We ignore escaped space sequences.
-            }
-            else {
-                outbuf += lookahead.text;
-            }
+            console.log("PRE", outbuf);
+            outbuf.pop();
+            console.log("PST", outbuf);
 
             return;
         }
@@ -309,15 +361,12 @@ function deobfuscate_dos_cmd (doscmd, options) {
                 sqs_skip_token = true;
                 return;
             }
-            else {
-                outbuf += tok.text;
-            }
         }
         else if (tok.name === "STRING_SQUOTE_END") {
-            outbuf += tok.text;
+
         }
         else if (tok.name === "STRING_SQUOTE_CHAR") {
-            outbuf += tok.text;
+
         }
         else if (tok.name === "STRING_DQUOTE_BEGIN") {
             if (lookahead.name === "STRING_DQUOTE_END") {
@@ -325,31 +374,23 @@ function deobfuscate_dos_cmd (doscmd, options) {
                 dqs_skip_token = true;
                 return;
             }
-            else {
-                outbuf += tok.text;
-            }
         }
         else if (tok.name === "STRING_DQUOTE_END") {
-                outbuf += tok.text;
+
         }
         else if (tok.name === "STRING_DQUOTE_CHAR") {
-            outbuf += tok.text;
+
         }
         else if (tok.name === "SET") {
-
-            outbuf += "SET ";
 
             if (in_env_var_name) {
                 console.log("ERR: already in var assignment mode?");
             }
 
             set_startswith = lookahead.text;
-
             in_env_var_name = true;
         }
         else if (/^SET_DQUOTE_(?:BEGIN|CHAR|END)$/.test(tok.name)) {
-
-            outbuf += tok.text;
 
             if (tok.name === "SET_DQUOTE_BEGIN" && varbuf.length === 0) {
                 return;
@@ -368,14 +409,16 @@ function deobfuscate_dos_cmd (doscmd, options) {
         }
         else if (tok.name === "SET_ASSIGNMENT") {
 
-            outbuf += tok.text;
-
             in_env_var_name = false;
             in_env_var_value = true;
         }
         else if (tok.name === "CALL" || tok.name === "END") {
+
             in_env_var_value = false;
-            varmap[varbuf] = valbuf;
+
+            if (varbuf) {
+                varmap[varbuf] = valbuf;
+            }
 
             varbuf = "";
             valbuf = "";
@@ -387,13 +430,14 @@ function deobfuscate_dos_cmd (doscmd, options) {
 
     return {
         vars:    varmap,
-        command: outbuf
+        command: outbuf.join("")
     };
 }
 
 module.exports = {
     tokenise:    tokenise,
     split_command: split_command,
+    parse: parse_cmdstr,
     deobfuscate: deobfuscate_dos_cmd,
     expand_variables: expand_variables
 };

@@ -1,5 +1,35 @@
 * CMD De-Obfuscator
 
+** TODO
+
+Rewrite so the command parser uses the following passes:
+
+ - first pass :: identify all commands within the input string
+ - second pass :: apply DOS deobfuscation to each command
+
+Use of ~&~ and ~&&~ should be implemented.  Each command is defined as:
+
+ - ~&~ :: Run the next command regardless of command success.
+ - ~&&~ :: Only run the next command when the current command
+           completes successfully.
+
+The structure of the module should be something like:
+
+ - run the command splitter first pass to identify commands,
+ - strip shell obfuscation from the commands (~c^m^d~ or ~w""script~),
+ - lookup each command in some dispatch table
+
+Need to correctly handle the following case:
+
+#+BEGIN_SRC shell
+echo %x% & SET x=hello
+#+END_SRC
+
+Echos ~%x%~ rather than ~hello~.
+
+Once done we can export a list of commands that were extracted in to
+an array of de-obfuscated commands.
+
 ** ABOUT
 
 /Currently under active development/
