@@ -36,9 +36,9 @@ function parse_cmdstr (cmdstr) {
 
     let vars = {};
 
-    split_command(cmdstr).forEach(curr_cmd => {
+    let output = [];
 
-        console.log("CMD>", curr_cmd);
+    split_command(cmdstr).forEach(curr_cmd => {
 
         let cmd = run_command(curr_cmd);
 
@@ -46,12 +46,14 @@ function parse_cmdstr (cmdstr) {
 
         let expanded_cmd = expand_environment_variables(cmd.command.clean, vars);
 
-        console.log("EXP>", expanded_cmd);
+        output.push(expanded_cmd);
 
         //let deobfuscated = deobfuscate_dos_cmd(strip_escape_chars(cmd));
         //vars = Object.assign(deobfuscated.vars, vars);
         //console.log(expand_variables(deobfuscated.command, vars));
     });
+
+    return output;
 }
 
 /**
