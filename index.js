@@ -5,6 +5,25 @@ const JisonLex = require("jison-lex"),
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
 
+// ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+// ;;                                    ;;
+// ;; TYPE DEFINITIONS FOR DOCUMENTATION ;;
+// ;;                                    ;;
+// ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+//
+// Token
+// =====
+/**
+ * @typedef {Object} Token
+ * @property {string} name  - Name of the token (LITERAL, SET, ESCAPE, ...).
+ * @property {string} match - Match object for the matched token.
+ * @property {string} line  - Line number upon which the token was found.
+ * @property {string} text  - Similar to 'match'.
+ * @property {number} len   - Length (in chars) of the matched token.
+ * @property {Object} loc   - Location of match (first/last line, first/last col).
+ */
+
+
 /**
  * Parses a given command string in to individual commands, before
  * applying expansion and de-obfuscation filters to the each command.
@@ -19,8 +38,15 @@ function parse_cmdstr (cmdstr) {
 
     split_command(cmdstr).forEach(curr_cmd => {
 
-        let cmd_output = run_command(curr_cmd);
-        console.log(cmd_output);
+        console.log("CMD>", curr_cmd);
+
+        let cmd = run_command(curr_cmd);
+
+        vars = Object.assign(vars, cmd.vars);
+
+        let expanded_cmd = expand_environment_variables(cmd.command.clean, vars);
+
+        console.log("EXP>", expanded_cmd);
 
         //let deobfuscated = deobfuscate_dos_cmd(strip_escape_chars(cmd));
         //vars = Object.assign(deobfuscated.vars, vars);
@@ -33,6 +59,8 @@ function parse_cmdstr (cmdstr) {
  * returning an object which can be used to present the command in an
  * easy-to-understand way.
  *
+ * @param {string} cmdstr - The command to run/parse.
+ * @returns {Object}
  */
 function run_command (cmdstr) {
 
@@ -46,7 +74,7 @@ function run_command (cmdstr) {
         in_set_cmd              : false,
         capturing_env_var_name  : false,
         capturing_env_var_value : false
-    };
+        };
 
     let env_vars      = {},
         env_var_name  = "",
@@ -54,10 +82,14 @@ function run_command (cmdstr) {
 
     let command_name  = "UNKNOWN";
 
+    let outbuf = "";
+
     for (let i = 0; i < tokens.length; i++) {
 
         let token     = tokens[i],
             lookahead = tokens[i + 1];
+
+        outbuf += token.text;
 
         switch (token.name) {
 
@@ -69,6 +101,9 @@ function run_command (cmdstr) {
                 else if (flags.capturing_env_var_value) {
                     env_var_value += token.text;
                 }
+            }
+            else {
+
             }
             break;
 
@@ -104,7 +139,9 @@ function run_command (cmdstr) {
         }
     }
 
-    env_vars[env_var_name] = env_var_value;
+    if (env_var_name.length && env_var_value.length) {
+        env_vars[env_var_name] = env_var_value;
+    }
 
     return {
         command: {
@@ -146,16 +183,12 @@ function split_command (command_str) {
 }
 
 /**
- * Handles the 'SET' command, which is used to introduce new
- * environment variables to the current shell session.
+ * Given a command string, attempts to split the string in to an array
+ * of Token objects.
  *
- *
+ * @param {string} cmdstr - The command string to split in to tokens.
+ * @returns {Token|Array} Token objects, one-per-token.
  */
-function handle_cmd_SET (cmdstr) {
-
-}
-
-
 function tokenise (cmdstr) {
 
     lexer.setInput(cmdstr);
@@ -218,14 +251,30 @@ function substr_replace (cmdstr, vars) {
     return cmdstr;
 }
 
-function expand_variables (cmdstr, vars) {
+/**
+ * Given a command string an an object mapping varname => varvalue,
+ * attempts to apply the range of text manipulations supported by the
+ * BATCH language.  The following features are supported:
+ *
+ *   - expansion  :: %foo% expands to the valueOf(%foo%).
+ *   - substrings :: %foo:~5%, %foo:0,3%, %foo:~-3%
+ *   -
+ *
+ */
+function expand_environment_variables (cmdstr, vars) {
 
-    const default_vars = {
+     const default_vars = {
         appdata: "C:\\Users\\whoami\\AppData\\Roaming",
         comspec: "C:\\Windows\\System32\\cmd.exe"
     };
     vars = Object.assign(default_vars, vars);
 
+    // Expand Variables
+    // ================
+    //
+    // Take all instances of '%foo%' and replace with the value found
+    // within the 'vars' dict.
+    //
     let cmd = Object.keys(vars).map(varname => {
         // TODO: I don't think we can use a new RegExp for the
         // replacement because envvar variable names can contain
@@ -234,6 +283,15 @@ function expand_variables (cmdstr, vars) {
         return cmdstr.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
     }).pop();
 
+    // Apply Find/Replace
+    // ==================
+    //
+    // Searches the variable for all instances of STR, replacing with
+    // REP, for example:
+    //
+    //   %foo:STR=REP%
+    //   %foo:cat=dog%
+    //
     cmd = substr_replace(cmd, vars);
 
     // Substring handling
@@ -386,7 +444,7 @@ function deobfuscate_dos_cmd (cmdstr, options) {
     options = Object.assign(default_opts, options || {});
 
     if (default_opts.expand_vars) {
-        cmdstr = expand_variables(cmdstr, options.vars);
+        cmdstr = expand_environment_variables(cmdstr, options.vars);
     }
 
     let tokens = tokenise(cmdstr),
@@ -542,5 +600,5 @@ module.exports = {
     parse: parse_cmdstr,
     strip_escape_chars: strip_escape_chars,
     deobfuscate: deobfuscate_dos_cmd,
-    expand_variables: expand_variables
+    expand_variables: expand_environment_variables
 };
