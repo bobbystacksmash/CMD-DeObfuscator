@@ -6,6 +6,117 @@ const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
 
 /**
+ * Parses a given command string in to individual commands, before
+ * applying expansion and de-obfuscation filters to the each command.
+ *
+ * @param {string} cmdstr - The original command string to be
+ * de-obfuscated.
+ *
+*/
+function parse_cmdstr (cmdstr) {
+
+    let vars = {};
+
+    split_command(cmdstr).forEach(curr_cmd => {
+
+        let cmd_output = run_command(curr_cmd);
+        console.log(cmd_output);
+
+        //let deobfuscated = deobfuscate_dos_cmd(strip_escape_chars(cmd));
+        //vars = Object.assign(deobfuscated.vars, vars);
+        //console.log(expand_variables(deobfuscated.command, vars));
+    });
+}
+
+/**
+ * Given a command string, attempts to partially parse the command,
+ * returning an object which can be used to present the command in an
+ * easy-to-understand way.
+ *
+ */
+function run_command (cmdstr) {
+
+    let clean_cmdstr =
+        strip_escape_chars(cmdstr)
+        .replace(/^\s+|\s+$/, "")
+        .toLowerCase();
+
+    let tokens = tokenise(clean_cmdstr),
+        flags  = {
+        in_set_cmd              : false,
+        capturing_env_var_name  : false,
+        capturing_env_var_value : false
+    };
+
+    let env_vars      = {},
+        env_var_name  = "",
+        env_var_value = "";
+
+    let command_name  = "UNKNOWN";
+
+    for (let i = 0; i < tokens.length; i++) {
+
+        let token     = tokens[i],
+            lookahead = tokens[i + 1];
+
+        switch (token.name) {
+
+        case "LITERAL":
+            if (flags.in_set_cmd) {
+                if (flags.capturing_env_var_name) {
+                    env_var_name += token.text;
+                }
+                else if (flags.capturing_env_var_value) {
+                    env_var_value += token.text;
+                }
+            }
+            break;
+
+        case "SET":
+            flags.capturing_env_var_name = true;
+            flags.in_set_cmd             = true;
+            command_name                 = "SET";
+            break;
+
+        case "SET_ASSIGNMENT":
+            flags.capturing_env_var_name  = false;
+            flags.capturing_env_var_value = true;
+            break;
+
+        case "SET_DQUOTE_CHAR":
+
+            if (flags.capturing_env_var_name) {
+                env_var_name += token.text;
+            }
+            else if (flags.capturing_env_var_value) {
+                env_var_value += token.text;
+            }
+
+            break;
+
+        case "SET_DQUOTE_BEGIN":
+        case "SET_DQUOTE_END":
+            // TODO: may need to add another flag here...
+            break;
+
+        default:
+            console.log("UNKNOWN TOK>", token.name, token.text);
+        }
+    }
+
+    env_vars[env_var_name] = env_var_value;
+
+    return {
+        command: {
+            name     : command_name,
+            clean    : clean_cmdstr,
+            original : cmdstr
+        },
+        vars: env_vars
+    };
+}
+
+/**
  * Given a command string, attempts to split the string, returning an
  * array of individual command strings.
  *
@@ -33,6 +144,17 @@ function split_command (command_str) {
         .map(cmd => cmd.replace(/^\s*|\s*$/g, "")) // Remove leading and trailing whitespace
         .filter(cmd => ! /^\s*$/.test(cmd));
 }
+
+/**
+ * Handles the 'SET' command, which is used to introduce new
+ * environment variables to the current shell session.
+ *
+ *
+ */
+function handle_cmd_SET (cmdstr) {
+
+}
+
 
 function tokenise (cmdstr) {
 
@@ -218,27 +340,6 @@ function parser_lookahead(tokens, index) {
     if (tokens[index++]) return tokens[index++];
 }
 
-/**
- * Parses a given command string in to individual commands, before
- * applying expansion and de-obfuscation filters to the each command.
- *
- * @param {string} cmdstr - The original command string to be
- * de-obfuscated.
- *
-*/
-function parse_cmdstr (cmdstr) {
-
-    let vars = {};
-
-    split_command(cmdstr).forEach(cmd => {
-
-        console.log("NO ESC>", strip_escape_chars(cmd));
-
-        //let deobfuscated = deobfuscate_dos_cmd(strip_escape_chars(cmd));
-        //vars = Object.assign(deobfuscated.vars, vars);
-        //console.log(expand_variables(deobfuscated.command, vars));
-    });
-}
 
 function strip_escape_chars (cmdstr, options) {
 
@@ -306,8 +407,6 @@ function deobfuscate_dos_cmd (cmdstr, options) {
         in_env_var_value  = false,
         set_startswith    = null,
         multi_space_chars = true;
-
-
 
     tokens.forEach((tok, i) => {
 
