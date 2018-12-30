@@ -32,11 +32,15 @@ const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
  * de-obfuscated.
  *
 */
-function parse_cmdstr (cmdstr) {
+function parse_cmdstr (cmdstr, options) {
 
-    let vars = {};
+    options = options || {};
+    options = Object.assign(options, {
+        successive: true
+    });
 
-    let output = [];
+    let vars   = {},
+        output = [];
 
     split_command(cmdstr).forEach(curr_cmd => {
 
@@ -54,6 +58,81 @@ function parse_cmdstr (cmdstr) {
     });
 
     return output;
+}
+
+/**
+ * Given a command string, attempts to slurp all LITERAL,
+ * non-whitespace tokens surrounding a string inside that string.  For
+ * example:
+ *
+ *   c"alc".exe  --[slurped]--> "calc.exe"
+ *
+ * @param {Token|Array} tokens - An array of tokens.
+ * @returns {Token|Array}
+ */
+function filter_slurp_literals_into_strings (tokens) {
+
+    for (let i = 0; i < tokens.length; i++) {
+
+        let token      = tokens[i],
+            lookahead  = tokens[i + 1],
+            lookbehind = tokens[i - 1];
+
+        if (token.name === "STRING_DQUOTE_BEGIN") {
+            if (lookbehind && lookbehind.name === "LITERAL" && lookbehind.text !== " ") {
+                tokens[i - 1] = token;
+                tokens[i]     = lookbehind;
+                tokens[i].name = "STRING_DQUOTE_CHAR";
+            }
+        }
+        else if (token.name === "STRING_DQUOTE_END") {
+            if (lookahead && lookahead.name === "LITERAL" && lookahead.text !== " ") {
+                tokens[i + 1] = token;
+                tokens[i]     = lookahead;
+                tokens[i].name = "STRING_DQUOTE_CHAR";
+            }
+        }
+    }
+
+    return tokens;
+}
+
+/**
+ * Given an array of Tokens, attempts to remove all empty strings ("")
+ * from the list, returning a new list of tokens with empty string
+ * tokens removed.
+ *
+ * @param {Token|Array} tokens - An array of tokens.
+ * @returns {Token|Array}
+ */
+function filter_strip_empty_strings (tokens) {
+
+    let out_tokens = [],
+        skip_token = false;
+
+    for (let i = 0; i < tokens.length; i++) {
+
+        let token      = tokens[i],
+            lookahead  = tokens[i + 1];
+
+        if (skip_token) {
+            out_tokens.pop();
+            skip_token = false;
+            continue;
+        }
+
+        out_tokens.push(token);
+
+        switch (token.name) {
+        case "STRING_DQUOTE_BEGIN":
+            if (lookahead && lookahead.name === "STRING_DQUOTE_END") {
+                skip_token = true;
+            }
+            break;
+        }
+    }
+
+    return out_tokens;
 }
 
 /**
@@ -84,18 +163,31 @@ function run_command (cmdstr) {
 
     let command_name  = "UNKNOWN";
 
-    let outbuf = "";
+    // The `outbuf` var holds a cleaned-up version of the command with
+    // all obfuscation removed.
+    let outbuf = [];
+
+    // When TRUE, the parser skips the next token.  Used in cases
+    // where we want to ignore "".
+    let skip = false;
 
     for (let i = 0; i < tokens.length; i++) {
+
+        if (skip) {
+            outbuf.pop();
+            skip = false;
+            continue;
+        }
 
         let token     = tokens[i],
             lookahead = tokens[i + 1];
 
-        outbuf += token.text;
+        outbuf.push(token.text);
 
         switch (token.name) {
 
         case "LITERAL":
+
             if (flags.in_set_cmd) {
                 if (flags.capturing_env_var_name) {
                     env_var_name += token.text;
@@ -118,6 +210,7 @@ function run_command (cmdstr) {
         case "SET_ASSIGNMENT":
             flags.capturing_env_var_name  = false;
             flags.capturing_env_var_value = true;
+            outbuf.push(token.text);
             break;
 
         case "SET_DQUOTE_CHAR":
@@ -136,6 +229,12 @@ function run_command (cmdstr) {
             // TODO: may need to add another flag here...
             break;
 
+        case "STRING_DQUOTE_BEGIN":
+            if (lookahead.name === "STRING_DQUOTE_END") {
+                skip = true;
+            }
+            break;
+
         default:
             console.log("UNKNOWN TOK>", token.name, token.text);
         }
@@ -147,9 +246,10 @@ function run_command (cmdstr) {
 
     return {
         command: {
-            name     : command_name,
-            clean    : clean_cmdstr,
-            original : cmdstr
+            name       : command_name,
+            no_escapes : clean_cmdstr,
+            clean      : outbuf.join(""),
+            original   : cmdstr
         },
         vars: env_vars
     };
@@ -597,6 +697,12 @@ function deobfuscate_dos_cmd (cmdstr, options) {
 }
 
 module.exports = {
+
+    filter: {
+        widen_strings:       filter_slurp_literals_into_strings,
+        strip_empty_strings: filter_strip_empty_strings
+    },
+
     tokenise:    tokenise,
     split_command: split_command,
     parse: parse_cmdstr,

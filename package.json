@@ -4,11 +4,13 @@
   "description": "A CMD de-obfuscation library and command line utility.",
   "main": "index.js",
   "scripts": {
-    "testlex": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/lexer_test.js",
-    "teststrip": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/strip_escapes_test.js",
-    "testsplit": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/command_splitter_test.js",
-    "testvar": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/var_expander_test.js",
-    "testdeob": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/deobfuscator_test.js",
+      "testlex": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/lexer_test.js",
+      "testfilters":   "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/filters/*_test.js",
+      "teststrip": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/strip_escapes_test.js",
+      "testsplit": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/command_splitter_test.js",
+      "testvar": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/var_expander_test.js",
+      "testdeob": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/deobfuscator_test.js",
+      "integration": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/integration_test.js",
     "test": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/**/*_test.js"
   },
   "keywords": [
