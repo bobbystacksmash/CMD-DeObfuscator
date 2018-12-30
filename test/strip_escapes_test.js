@@ -2,7 +2,6 @@ const assert       = require("chai").assert,
       deobfuscator = require("../index");
 
 const util = {
-
     tokens: function (tokens) {
         return tokens.map(token => token.name);
     }
