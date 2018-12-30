@@ -16,6 +16,61 @@ const util = {
 
 describe("DeObfuscator Tests", () => {
 
+    describe("Filtering tokens", () => {
+
+        it("should, by default, remove empty double-quotes from a command", () => {
+
+            const input  = `w""script`,
+                  output = [
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+        });
+
+        it(`should filter strings like: '"h"t"t"p'`, () => {
+
+            const input  = `"h"t"t"p`,
+                  unfiltered = [
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END",
+                      "LITERAL",
+                      "STRING_DQUOTE_BEGIN",
+                      "STRING_DQUOTE_CHAR",
+                      "STRING_DQUOTE_END",
+                      "LITERAL"
+                  ];
+
+            const filtered = [
+                "STRING_DQUOTE_BEGIN",
+                "STRING_DQUOTE_CHAR",
+                "STRING_DQUOTE_CHAR",
+                "STRING_DQUOTE_CHAR",
+                "STRING_DQUOTE_CHAR",
+                "STRING_DQUOTE_END"
+            ];
+
+            assert.deepEqual(
+                util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                unfiltered,
+                "disable filtering"
+            );
+
+            assert.deepEqual(
+                util.tokens(deobfuscator.tokenise(input, { filter: true })),
+                filtered,
+                "filtering"
+            );
+        });
+    });
+
     describe("using SET to introduce environment variables", () => {
 
         it(`should detect a 'SET' command`, () => {
@@ -110,7 +165,10 @@ describe("DeObfuscator Tests", () => {
                           "STRING_DQUOTE_END"
                       ];
 
-                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+                assert.deepEqual(
+                    util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                    output
+                );
             });
 
             it("should detect an empty string between literals", () => {
@@ -126,7 +184,10 @@ describe("DeObfuscator Tests", () => {
                           "LITERAL"              // r
                       ];
 
-                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+                assert.deepEqual(
+                    util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                    output
+                );
             });
 
             it("should correctly detect balanced double-quotes ", () => {
@@ -155,7 +216,10 @@ describe("DeObfuscator Tests", () => {
                           "LITERAL"
                       ];
 
-                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+                assert.deepEqual(
+                    util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                    output
+                );
             });
         });
 
@@ -248,23 +312,6 @@ describe("DeObfuscator Tests", () => {
                       "ESCAPE",
                       "ESCAPED_LITERAL",
                       "STRING_SQUOTE_END"
-                  ];
-
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
-        });
-
-        it(`should handle strings like: '"h"t"t"p'`, () => {
-
-            const input  = `"h"t"t"p`,
-                  output = [
-                      "STRING_DQUOTE_BEGIN",
-                      "STRING_DQUOTE_CHAR",
-                      "STRING_DQUOTE_END",
-                      "LITERAL",
-                      "STRING_DQUOTE_BEGIN",
-                      "STRING_DQUOTE_CHAR",
-                      "STRING_DQUOTE_END",
-                      "LITERAL"
                   ];
 
             assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);

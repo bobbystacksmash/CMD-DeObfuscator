@@ -35,9 +35,6 @@ const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
 function parse_cmdstr (cmdstr, options) {
 
     options = options || {};
-    options = Object.assign(options, {
-        successive: true
-    });
 
     let vars   = {},
         output = [];
@@ -70,7 +67,7 @@ function parse_cmdstr (cmdstr, options) {
  * @param {Token|Array} tokens - An array of tokens.
  * @returns {Token|Array}
  */
-function filter_slurp_literals_into_strings (tokens) {
+function FILTER_slurp_literals_into_strings (tokens) {
 
     for (let i = 0; i < tokens.length; i++) {
 
@@ -94,6 +91,28 @@ function filter_slurp_literals_into_strings (tokens) {
         }
     }
 
+    // We need to clean-up the tokens.  Consider the following input:
+    //
+    //   h"t"t"p"
+    //
+    // The way the algorithm works, we'll end up with our tokens being
+    // ordered:
+    //
+    //   "htt""p"
+    //
+    for (i = 0; i < tokens.length; i++) {
+
+        let token       = tokens[i],
+            lookahead_1 = tokens[i + 1],
+            lookahead_2 = tokens[i + 2];
+
+        if (token.name === "STRING_DQUOTE_END") {
+            if (lookahead_1 && lookahead_1.name === "STRING_DQUOTE_BEGIN") {
+                tokens.splice(i, 2);
+            }
+        }
+    }
+
     return tokens;
 }
 
@@ -105,7 +124,7 @@ function filter_slurp_literals_into_strings (tokens) {
  * @param {Token|Array} tokens - An array of tokens.
  * @returns {Token|Array}
  */
-function filter_strip_empty_strings (tokens) {
+function FILTER_strip_empty_strings (tokens) {
 
     let out_tokens = [],
         skip_token = false;
@@ -152,9 +171,9 @@ function run_command (cmdstr) {
 
     let tokens = tokenise(clean_cmdstr),
         flags  = {
-        in_set_cmd              : false,
-        capturing_env_var_name  : false,
-        capturing_env_var_value : false
+            in_set_cmd              : false,
+            capturing_env_var_name  : false,
+            capturing_env_var_value : false
         };
 
     let env_vars      = {},
@@ -210,7 +229,6 @@ function run_command (cmdstr) {
         case "SET_ASSIGNMENT":
             flags.capturing_env_var_name  = false;
             flags.capturing_env_var_value = true;
-            outbuf.push(token.text);
             break;
 
         case "SET_DQUOTE_CHAR":
@@ -236,7 +254,7 @@ function run_command (cmdstr) {
             break;
 
         default:
-            console.log("UNKNOWN TOK>", token.name, token.text);
+            //console.log("UNKNOWN TOK>", token.name, token.text);
         }
     }
 
@@ -289,9 +307,13 @@ function split_command (command_str) {
  * of Token objects.
  *
  * @param {string} cmdstr - The command string to split in to tokens.
+ * @param {string} [options] - Set .filter T|F to enable/disable filtering.
  * @returns {Token|Array} Token objects, one-per-token.
  */
-function tokenise (cmdstr) {
+function tokenise (cmdstr, options) {
+
+    options = options || {};
+    options = Object.assign({}, { filter: true }, options);
 
     lexer.setInput(cmdstr);
 
@@ -308,9 +330,13 @@ function tokenise (cmdstr) {
         tokens.push(token);
     }
 
+    if (options.filter) {
+        tokens = FILTER_strip_empty_strings(tokens);
+        tokens = FILTER_slurp_literals_into_strings(tokens);
+    }
+
     return tokens;
 }
-
 
 /**
  * Attempts to perform a find/replace with variable expansion against
@@ -699,8 +725,8 @@ function deobfuscate_dos_cmd (cmdstr, options) {
 module.exports = {
 
     filter: {
-        widen_strings:       filter_slurp_literals_into_strings,
-        strip_empty_strings: filter_strip_empty_strings
+        widen_strings:       FILTER_slurp_literals_into_strings,
+        strip_empty_strings: FILTER_strip_empty_strings
     },
 
     tokenise:    tokenise,

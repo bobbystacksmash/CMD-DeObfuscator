@@ -14,6 +14,27 @@ describe("Command Deobfuscator: Integration Tests", () => {
         });
     });
 
+    describe("Noise Reduction", () => {
+
+        it("should remove empty double-quoted strings", () => {
+
+            const tests = [
+                [`c""alc.exe`, [`calc.exe`]]
+            ];
+
+            tests.forEach(test => assert.deepEqual(CMD.parse(test[0]), test[1]));
+        });
+
+        it("should expand strings to enclose surrounding literals", () => {
+
+            const tests = [
+                [`h"t"t"p"`, [`"http"`]]
+            ];
+
+            tests.forEach(test => assert.deepEqual(CMD.parse(test[0]), test[1]));
+        });
+    });
+
     describe("Environment variables handling", () => {
 
         it("should expand environment variables introduced with set", () => {

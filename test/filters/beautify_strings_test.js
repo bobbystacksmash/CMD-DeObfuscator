@@ -35,7 +35,15 @@ describe("String handling and clean-up filters", () => {
 
     describe("Widen Strings", () => {
 
-        it("should widen a contiguous run of non-whitespace delimited chars in to one string", () => {
+        it("should handle multiple quoted regions in a single region", () => {
+
+            const input  = CMD.tokenise(`h"t"t"p"`),
+                  output = `"http"`;
+
+            assert.deepEqual(util.tokens2string(CMD.filter.widen_strings(input)), output);
+        });
+
+        it("should widen a run of non-whitespace delimited chars in to one string", () => {
 
             const input  = CMD.tokenise(`echo c"al"c.exe test`),
                   output = `echo "calc.exe" test`;
