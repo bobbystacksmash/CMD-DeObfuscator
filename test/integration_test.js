@@ -14,7 +14,18 @@ describe("Command Deobfuscator: Integration Tests", () => {
         });
     });
 
-    describe("Noise Reduction", () => {
+    describe("Environment variables handling", () => {
+
+        it("should expand environment variables introduced with set", () => {
+
+            const input  = `SET foo=bar & echo %foo%`,
+                  output = [`set foo=bar`, `echo bar`];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
+    });
+
+    describe("Noise reduction", () => {
 
         it("should remove empty double-quoted strings", () => {
 
@@ -33,20 +44,6 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
             tests.forEach(test => assert.deepEqual(CMD.parse(test[0]), test[1]));
         });
-    });
-
-    describe("Environment variables handling", () => {
-
-        it("should expand environment variables introduced with set", () => {
-
-            const input  = `SET foo=bar & echo %foo%`,
-                  output = [`set foo=bar`, `echo bar`];
-
-            assert.deepEqual(CMD.parse(input), output);
-        });
-    });
-
-    describe("Noise reduction", () => {
 
         it("should strip excessive escape sequences", () => {
 
