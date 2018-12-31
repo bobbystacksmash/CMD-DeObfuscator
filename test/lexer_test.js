@@ -1,5 +1,5 @@
 const assert       = require("chai").assert,
-      deobfuscator = require("../index");
+      CMD = require("../index");
 
 const util = {
 
@@ -14,9 +14,31 @@ const util = {
     }
 };
 
-describe("DeObfuscator Tests", () => {
+describe("CMD Tests", () => {
 
     describe("Filtering tokens", () => {
+
+        it("should, by default, remove excessive whitespace outside of strings", () => {
+
+            const input    = `cmd     a  b   c`,
+                  expected = [
+                      { name: "LITERAL", text: "c" },
+                      { name: "LITERAL", text: "m" },
+                      { name: "LITERAL", text: "d" },
+                      { name: "LITERAL", text: " " },
+                      { name: "LITERAL", text: "a" },
+                      { name: "LITERAL", text: " " },
+                      { name: "LITERAL", text: "b" },
+                      { name: "LITERAL", text: " " },
+                      { name: "LITERAL", text: "c" }
+                  ];
+
+            const tokens = CMD.tokenise(input).map(token => {
+                return { name: token.name, text: token.text };
+            });
+
+            assert.deepEqual(tokens, expected);
+        });
 
         it("should, by default, remove empty double-quotes from a command", () => {
 
@@ -31,7 +53,7 @@ describe("DeObfuscator Tests", () => {
                       "LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it(`should filter strings like: '"h"t"t"p'`, () => {
@@ -58,13 +80,13 @@ describe("DeObfuscator Tests", () => {
             ];
 
             assert.deepEqual(
-                util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                util.tokens(CMD.tokenise(input, { filter: false })),
                 unfiltered,
                 "disable filtering"
             );
 
             assert.deepEqual(
-                util.tokens(deobfuscator.tokenise(input, { filter: true })),
+                util.tokens(CMD.tokenise(input, { filter: true })),
                 filtered,
                 "filtering"
             );
@@ -78,7 +100,7 @@ describe("DeObfuscator Tests", () => {
             const input  = `set `,
                   output = ["SET"];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it(`should correctly tokenise the statement: SET "^ =10"`, () => {
@@ -95,7 +117,7 @@ describe("DeObfuscator Tests", () => {
                       "SET_DQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it(`should correctly tokenise the statement: SET foo=bar`, () => {
@@ -112,7 +134,7 @@ describe("DeObfuscator Tests", () => {
                       "LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it(`should treat a space as a valid part of a var name`, () => {
@@ -128,7 +150,7 @@ describe("DeObfuscator Tests", () => {
                       "LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it(`should continue RHS assignment until meeting an '&' (CALL)`, () => {
@@ -149,7 +171,7 @@ describe("DeObfuscator Tests", () => {
                       "CALL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
     });
 
@@ -166,7 +188,7 @@ describe("DeObfuscator Tests", () => {
                       ];
 
                 assert.deepEqual(
-                    util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                    util.tokens(CMD.tokenise(input, { filter: false })),
                     output
                 );
             });
@@ -185,7 +207,7 @@ describe("DeObfuscator Tests", () => {
                       ];
 
                 assert.deepEqual(
-                    util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                    util.tokens(CMD.tokenise(input, { filter: false })),
                     output
                 );
             });
@@ -201,7 +223,7 @@ describe("DeObfuscator Tests", () => {
                           "STRING_DQUOTE_END"
                       ];
 
-                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+                assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
             });
 
             it("should handle empty double-quotes within a string", () => {
@@ -217,7 +239,7 @@ describe("DeObfuscator Tests", () => {
                       ];
 
                 assert.deepEqual(
-                    util.tokens(deobfuscator.tokenise(input, { filter: false })),
+                    util.tokens(CMD.tokenise(input, { filter: false })),
                     output
                 );
             });
@@ -236,7 +258,7 @@ describe("DeObfuscator Tests", () => {
                           "STRING_SQUOTE_END"
                       ];
 
-                assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+                assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
             });
         });
     });
@@ -254,7 +276,7 @@ describe("DeObfuscator Tests", () => {
                       "ESCAPED_LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it("should allow the escape symbol to escape itself", () => {
@@ -265,7 +287,7 @@ describe("DeObfuscator Tests", () => {
                       "ESCAPED_LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it("should detect the escape symbol when used before double quote", () => {
@@ -281,7 +303,7 @@ describe("DeObfuscator Tests", () => {
                       "STRING_DQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it("should not escape tokens within a double-quoted string", () => {
@@ -298,7 +320,7 @@ describe("DeObfuscator Tests", () => {
                       "STRING_DQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it("should detect escape tokens within a single-quoted string", () => {
@@ -314,7 +336,7 @@ describe("DeObfuscator Tests", () => {
                       "STRING_SQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
     });
 
@@ -330,7 +352,7 @@ describe("DeObfuscator Tests", () => {
                       "COMMA"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
         it("should not detect commas and semi-colons between double quotes", () => {
@@ -347,7 +369,7 @@ describe("DeObfuscator Tests", () => {
                       "STRING_DQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(deobfuscator.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
     });

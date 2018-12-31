@@ -12,6 +12,31 @@ const util = {
 
 describe("String handling and clean-up filters", () => {
 
+    describe("Whitespace clean-ups", () => {
+
+        it("should strip contiguous whitespace literals", () => {
+
+            const inputs = [
+                [ `cmd`,       `cmd`  ],
+                [ `c m d`,     `c m d`],
+                [ `c  m  d`,   `c m d`],
+                [ `c   m d`,   `c m d`],
+                [ `  c m d`,   `c m d`],
+                [ `  c m d  `, `c m d`],
+            ];
+
+            inputs.forEach(test => {
+
+                let tokens = CMD.tokenise(test[0], { filter: false });
+
+                assert.deepEqual(
+                    util.tokens2string(CMD.filter.strip_whitespace(tokens)),
+                    test[1]
+                );
+            });
+        });
+    });
+
     describe("Strip Empty Strings", () => {
 
         it("should remove empty double-quotes from a given command string", () => {

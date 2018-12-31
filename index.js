@@ -58,6 +58,41 @@ function parse_cmdstr (cmdstr, options) {
 }
 
 /**
+ * Given a command string, attempts to remove all non-quoted
+ * contiguous whitespace LITERALS, leaving a single space between each word boundary.
+ *
+ * @param {Token|Array} tokens - An array of tokens.
+ * @returns {Token|Array}
+ */
+function FILTER_strip_excessive_whitespace (tokens) {
+
+    for (let i = 0; i < tokens.length; i++) {
+
+        let token      = tokens[i],
+            lookahead  = tokens[i + 1];
+
+        if (token.name === "LITERAL" && token.text === " ") {
+            if (i === 0) {
+                tokens.splice(0,1);
+                i = -1;
+            }
+            else if (i === (tokens.length - 1) && token.text === " ") {
+                tokens.splice(i, 1);
+                i = -1;
+            }
+            else if (lookahead && lookahead.name === "LITERAL" && lookahead.text === " ") {
+                tokens.splice(i, 1);
+                i = -1;
+            }
+
+        }
+    }
+
+    return tokens;
+}
+
+
+/**
  * Given a command string, attempts to slurp all LITERAL,
  * non-whitespace tokens surrounding a string inside that string.  For
  * example:
@@ -315,6 +350,10 @@ function tokenise (cmdstr, options) {
     options = options || {};
     options = Object.assign({}, { filter: true }, options);
 
+    if (options.filter) {
+        cmdstr = cmdstr.replace(/^\s+|\s+$/g, "");
+    }
+
     lexer.setInput(cmdstr);
 
     let tokens = [];
@@ -333,6 +372,7 @@ function tokenise (cmdstr, options) {
     if (options.filter) {
         tokens = FILTER_strip_empty_strings(tokens);
         tokens = FILTER_slurp_literals_into_strings(tokens);
+        tokens = FILTER_strip_excessive_whitespace(tokens);
     }
 
     return tokens;
@@ -726,6 +766,7 @@ module.exports = {
 
     filter: {
         widen_strings:       FILTER_slurp_literals_into_strings,
+        strip_whitespace:    FILTER_strip_excessive_whitespace,
         strip_empty_strings: FILTER_strip_empty_strings
     },
 
