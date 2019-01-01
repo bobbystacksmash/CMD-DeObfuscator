@@ -116,6 +116,18 @@ describe("DeObfuscator: Variable Expansion", () => {
                 assert.equal(deobfuscator.expand_variables(T.input, vars), T.output);
             });
         });
+
+        it("should correctly replace a (negative,positive) substr combination", () => {
+
+            const vars  = { foo: "abcdef" },
+                  tests = [
+                      { input: `%FOO:~-3,1%`, output: "d" },
+                  ];
+
+            tests.forEach(t => {
+                assert.equal(deobfuscator.expand_variables(t.input, vars), t.output);
+            });
+        });
     });
 
     describe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {

@@ -487,7 +487,7 @@ function expand_environment_variables (cmdstr, vars) {
     //  - %foo:~-3%     => def
     //  - %foo:~1,3%    => bcd
     //
-    let substr_re    = /%([a-z][0-9a-z_]*):\s*~\s*([+-]?\d+)(?:,([+-]?\d+))?%/ig,
+    let substr_re    = /%([^:]*):\s*~\s*([+-]?\d+)(?:,([+-]?\d+))?%/ig,
         replacements = [],
         substr_match;
 
@@ -511,7 +511,7 @@ function expand_environment_variables (cmdstr, vars) {
         }
 
         let replace = {
-            search: substr_match.input
+            find: substr_match[0]
         };
 
         let rev = s => s.split("").reverse().join("");
@@ -555,8 +555,11 @@ function expand_environment_variables (cmdstr, vars) {
                 replace.replace = rev(rev(var_value).split("").slice(tmpstart, tmpend).join(""));
             }
             else if (substr_start < 0 && substr_end > 0) {
-                let substr_offset = (substr_end + substr_start);
-                replace.replace = rev((rev(var_value).substr(substr_offset)));
+                /*
+                 * Handles cases such as: %foo:~-10,3%.
+                 */
+                let substr_offset = (substr_end + substr_start) * -1;
+                replace.replace = rev((rev(var_value).substr(substr_offset, substr_end)));
             }
             else if (substr_end < 0 && substr_start === 0) {
                 replace.replace = rev(rev(var_value).substr(substr_end * -1));
@@ -572,7 +575,10 @@ function expand_environment_variables (cmdstr, vars) {
         replacements.push(replace);
     }
 
-    replacements.forEach(r => cmd = cmd.replace(r.search, r.replace));
+    replacements.forEach(r => {
+        cmd = cmd.replace(new RegExp(escapeRegexpString(r.find), "gi"), r.replace);
+    });
+
     return cmd;
 }
 

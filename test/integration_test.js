@@ -100,4 +100,15 @@ describe("Command Deobfuscator: Integration Tests", () => {
             assert.deepEqual(CMD.parse(input), [output]);
         });
     });
+
+    describe("FireEye: Dosfuscation Report Examples", () => {
+
+        it("should decode use of %COMSPEC% to echo 'SET'", () =>{
+
+            const input  = `%comspec:~-16,1%%comspec:~-1%%comspec:~-13,1%`,
+                  output = [`Set`];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
+    });
 });
