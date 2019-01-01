@@ -1,35 +1,5 @@
 * CMD De-Obfuscator
 
-** TODO
-
-Rewrite so the command parser uses the following passes:
-
- - first pass :: identify all commands within the input string
- - second pass :: apply DOS deobfuscation to each command
-
-Use of ~&~ and ~&&~ should be implemented.  Each command is defined as:
-
- - ~&~ :: Run the next command regardless of command success.
- - ~&&~ :: Only run the next command when the current command
-           completes successfully.
-
-The structure of the module should be something like:
-
- - run the command splitter first pass to identify commands,
- - strip shell obfuscation from the commands (~c^m^d~ or ~w""script~),
- - lookup each command in some dispatch table
-
-Need to correctly handle the following case:
-
-#+BEGIN_SRC shell
-echo %x% & SET x=hello
-#+END_SRC
-
-Echos ~%x%~ rather than ~hello~.
-
-Once done we can export a list of commands that were extracted in to
-an array of de-obfuscated commands.
-
 ** ABOUT
 
 /Currently under active development/
@@ -40,10 +10,20 @@ free of obfuscation characters.
 
 ** USAGE
 #+BEGIN_SRC javascript
-const DOS = require("./index"); // Module is not yet on NPM.
+const CMD = require("./index"); // Module is not yet on NPM.
 
-let cmd = `p^o^w^e^r""sh""ell`;
-console.log(DOS.deobfuscate(cmd)); // => powershell
+let output = CMD.parse(`SET foo=p^o^w^e^r^s^h^e^l^l & echo %foo%`);
+console.log(output);
+
+/* Output
+ * ======
+ *
+ *   [
+ *     "SET foo=powershell",
+ *     "echo powershell"
+ *   ]
+ *
+ */
 #+END_SRC
 
 ** EXAMPLES
@@ -78,6 +58,14 @@ All empty strings are removed from the command:
 | Input            | Deobfuscated Output |
 |------------------+---------------------|
 | ~pow""ersh""ell~ | ~powershell~        |
+
+*** String widening
+Obfuscation of a command can be achieved by excessive use of
+double-quotes, for example: =w"s"c"r"i"p"t=.  The /string widening/
+algorithm merges quoted and non-quoted regions together:
+| Input           | Deobfuscated Output |
+|-----------------+---------------------|
+| ~w"s"c"r"i"p"t~ | ~"wscript"~         |
 
 *** Path resolver (/coming soon/)
 Any identified paths are resolved in to their absolute form, meaning
