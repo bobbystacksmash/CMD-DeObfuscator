@@ -14,14 +14,29 @@ describe("Command Deobfuscator: Integration Tests", () => {
         });
     });
 
-    describe("Environment variables handling", () => {
+    describe("Environment variable handling", () => {
 
         it("should expand environment variables introduced with set", () => {
 
             const input  = `SET foo=bar & echo %foo%`,
-                  output = [`set foo=bar`, `echo bar`];
+                  output = [`SET foo=bar`, `echo bar`];
 
             assert.deepEqual(CMD.parse(input), output);
+        });
+
+        it("should allow many ASCII chars on the LHS of a SET expression", () => {
+
+            const var_names = [
+                `%`,
+                `%@!`
+            ];
+
+            var_names.forEach(v => {
+                let cmd = `SET ${v}=foo & echo %${v}%`;
+                assert.deepEqual(
+                    assert.deepEqual(CMD.parse(cmd), [`SET ${v}=foo`, `echo foo`])
+                );
+            });
         });
     });
 
