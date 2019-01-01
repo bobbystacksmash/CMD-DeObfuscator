@@ -16,6 +16,14 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
     describe("Environment variable handling", () => {
 
+        it("should not expand a variable which has been used before it was defined", () => {
+
+            const input  = `echo %foo% & SET foo=bar`,
+                  output = [`echo %foo%`, `SET foo=bar`];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
+
         it("should expand environment variables introduced with set", () => {
 
             const input  = `SET foo=bar & echo %foo%`,
