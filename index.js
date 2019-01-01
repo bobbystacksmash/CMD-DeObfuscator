@@ -1,6 +1,7 @@
-const JisonLex = require("jison-lex"),
-      path     = require("path").win32,
-      fs       = require("fs");
+const JisonLex           = require("jison-lex"),
+      path               = require("path").win32,
+      fs                 = require("fs"),
+      escapeRegexpString = require("escape-string-regexp");
 
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
@@ -190,6 +191,25 @@ function FILTER_strip_empty_strings (tokens) {
 }
 
 /**
+ * Given an array of Tokens, attempts to fix-up all tokens which were
+ * previously escaped tokens.
+ *
+ * @param {Token|Array} tokens - An array of tokens.
+ * @returns {Token|Array}
+ */
+function FILTER_apply_escapes (tokens) {
+
+    let filtered = tokens
+        .filter(tok => tok.name !== "ESCAPE")
+        .map((tok, i, tokens) => {
+            if (tok.name === "ESCAPED_LITERAL") tokens[i].name = "LITERAL";
+            return tokens[i];
+        });
+
+    return filtered;
+}
+
+/**
  * Given a command string, attempts to partially parse the command,
  * returning an object which can be used to present the command in an
  * easy-to-understand way.
@@ -199,9 +219,7 @@ function FILTER_strip_empty_strings (tokens) {
  */
 function run_command (cmdstr) {
 
-    let clean_cmdstr =
-        strip_escape_chars(cmdstr)
-        .replace(/^\s+|\s+$/, "");
+    let clean_cmdstr = cmdstr.replace(/^\s+|\s+$/, "");
 
     let tokens = tokenise(clean_cmdstr),
         flags  = {
@@ -249,9 +267,9 @@ function run_command (cmdstr) {
                     env_var_value += token.text;
                 }
             }
-            else {
+            break;
 
-            }
+        case "ESCAPED":
             break;
 
         case "SET":
@@ -312,11 +330,11 @@ function run_command (cmdstr) {
  * array of individual command strings.
  *
  * @param {string} command - a CMD.EXE command.
- * @returns {string|Array} Each command is an element in the array.
+ * @returns {Tokens|Array} Each command is an element in the array.
  */
 function split_command (command_str) {
 
-    let tokens   = tokenise(command_str),
+    let tokens   = tokenise(command_str, { filter: false }),
         index    = 0,
         commands = [""];
 
@@ -365,6 +383,7 @@ function tokenise (cmdstr, options) {
     }
 
     if (options.filter) {
+        tokens = FILTER_apply_escapes(tokens);
         tokens = FILTER_strip_empty_strings(tokens);
         tokens = FILTER_slurp_literals_into_strings(tokens);
         tokens = FILTER_strip_excessive_whitespace(tokens);
@@ -427,8 +446,8 @@ function substr_replace (cmdstr, vars) {
 function expand_environment_variables (cmdstr, vars) {
 
      const default_vars = {
-        appdata: "C:\\Users\\whoami\\AppData\\Roaming",
-        comspec: "C:\\Windows\\System32\\cmd.exe"
+        appdata: `C:\\Users\\whoami\\AppData\\Roaming`,
+        comspec: `C:\\Windows\\System32\\cmd.exe`
     };
     vars = Object.assign(default_vars, vars);
 
@@ -443,7 +462,7 @@ function expand_environment_variables (cmdstr, vars) {
         // replacement because envvar variable names can contain
         // punctuation chars which will conflict with the RegExp
         // engine's metacharacters.
-        return cmdstr.replace(new RegExp(`%${varname}%`, "gi"), vars[varname]);
+        return cmdstr.replace(new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname]);
     }).pop();
 
     // Apply Find/Replace
@@ -557,7 +576,7 @@ function expand_environment_variables (cmdstr, vars) {
     return cmd;
 }
 
-function strip_escape_chars (cmdstr, options) {
+/*function strip_escape_chars (cmdstr, options) {
 
     let outcmd     = "",
         tokens     = tokenise(cmdstr),
@@ -592,7 +611,7 @@ function strip_escape_chars (cmdstr, options) {
     });
 
     return outcmd;
-}
+}*/
 
 /*function deobfuscate_dos_cmd (cmdstr, options) {
 
@@ -757,6 +776,7 @@ module.exports = {
 
     filter: {
         widen_strings:       FILTER_slurp_literals_into_strings,
+        strip_escapes:       FILTER_apply_escapes,
         strip_whitespace:    FILTER_strip_excessive_whitespace,
         strip_empty_strings: FILTER_strip_empty_strings
     },
@@ -764,6 +784,5 @@ module.exports = {
     tokenise:    tokenise,
     split_command: split_command,
     parse: parse_cmdstr,
-    strip_escape_chars: strip_escape_chars,
     expand_variables: expand_environment_variables
 };

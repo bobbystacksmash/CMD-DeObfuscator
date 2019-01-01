@@ -28,7 +28,10 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
             const var_names = [
                 `%`,
-                `%@!`
+                `%@!`,
+                `_`,
+                `foo@bar`,
+                `##`,
             ];
 
             var_names.forEach(v => {
@@ -37,6 +40,11 @@ describe("Command Deobfuscator: Integration Tests", () => {
                     assert.deepEqual(CMD.parse(cmd), [`SET ${v}=foo`, `echo foo`])
                 );
             });
+        });
+
+        it("should allow escaping of chars in the LHS of a SET expression", () => {
+            assert.deepEqual(CMD.parse(`SET ^>=foo & echo %>%`), [`SET >=foo`, `echo foo`]);
+            assert.deepEqual(CMD.parse(`SET ^^=foo & echo %^^%`), [`SET ^=foo`, `echo foo`]);
         });
     });
 

@@ -153,6 +153,22 @@ describe("CMD Tests", () => {
             assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
 
+        it("should allow an escaped caret to be a valid LHS name", () => {
+
+            const input    = `SET ^^=abc`,
+                  expected = [
+                      ["SET", "SET "],
+                      ["LITERAL", "^"],
+                      ["SET_ASSIGNMENT", "="],
+                      ["LITERAL", "a"],
+                      ["LITERAL", "b"],
+                      ["LITERAL", "c"]
+                  ];
+
+            let tokens = CMD.tokenise(input).map(t => [t.name, t.text]);
+            assert.deepEqual(tokens, expected);
+        });
+
         it(`should continue RHS assignment until meeting an '&' (CALL)`, () => {
 
             const input  = `SET foo=a,b,c &`,
@@ -276,7 +292,7 @@ describe("CMD Tests", () => {
                       "ESCAPED_LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input, { filter: false })), output);
         });
 
         it("should allow the escape symbol to escape itself", () => {
@@ -287,7 +303,7 @@ describe("CMD Tests", () => {
                       "ESCAPED_LITERAL"
                   ];
 
-            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input, { filter: false })), output);
         });
 
         it("should detect the escape symbol when used before double quote", () => {
@@ -303,7 +319,7 @@ describe("CMD Tests", () => {
                       "STRING_DQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input, { filter: false })), output);
         });
 
         it("should not escape tokens within a double-quoted string", () => {
@@ -336,7 +352,33 @@ describe("CMD Tests", () => {
                       "STRING_SQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input, { filter: false })), output);
+        });
+
+        describe("Filtered tokens", () => {
+
+            it("should change all escaped pairs in to a literal char", () => {
+
+                const input  = `f^o^o`,
+                      output = [
+                          "LITERAL",
+                          "LITERAL",
+                          "LITERAL"
+                      ];
+
+                assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            });
+
+            it("should handle escaped escape chars", () => {
+
+                let tokenised = CMD.tokenise(`^^`);
+
+                assert.isArray(tokenised);
+                assert.equal(tokenised.length, 1);
+
+                assert.equal(tokenised[0].name, "LITERAL");
+                assert.equal(tokenised[0].text, "^");
+            });
         });
     });
 
