@@ -201,8 +201,7 @@ function run_command (cmdstr) {
 
     let clean_cmdstr =
         strip_escape_chars(cmdstr)
-        .replace(/^\s+|\s+$/, "")
-        .toLowerCase();
+        .replace(/^\s+|\s+$/, "");
 
     let tokens = tokenise(clean_cmdstr),
         flags  = {
@@ -562,11 +561,6 @@ function expand_environment_variables (cmdstr, vars) {
     return cmd;
 }
 
-function parser_lookahead(tokens, index) {
-    if (tokens[index++]) return tokens[index++];
-}
-
-
 function strip_escape_chars (cmdstr, options) {
 
     let outcmd     = "",
@@ -581,7 +575,7 @@ function strip_escape_chars (cmdstr, options) {
             return;
         }
 
-        let next_tok = parser_lookahead(tokens, i);
+        let next_tok = tokens[i + 1];
 
         if (ignore.test(tok.name)) {
             return;
@@ -604,7 +598,7 @@ function strip_escape_chars (cmdstr, options) {
     return outcmd;
 }
 
-function deobfuscate_dos_cmd (cmdstr, options) {
+/*function deobfuscate_dos_cmd (cmdstr, options) {
 
     const default_opts = {
         expand_vars: true
@@ -645,7 +639,7 @@ function deobfuscate_dos_cmd (cmdstr, options) {
             return;
         }
 
-        let lookahead = parser_lookahead(tokens, i);
+        let lookahead = tokens[i + 1];
 
         outbuf.push(tok.text);
 
@@ -760,7 +754,8 @@ function deobfuscate_dos_cmd (cmdstr, options) {
         vars:    varmap,
         command: outbuf.join("")
     };
-}
+    }*/
+
 
 module.exports = {
 
@@ -774,6 +769,5 @@ module.exports = {
     split_command: split_command,
     parse: parse_cmdstr,
     strip_escape_chars: strip_escape_chars,
-    deobfuscate: deobfuscate_dos_cmd,
     expand_variables: expand_environment_variables
 };
