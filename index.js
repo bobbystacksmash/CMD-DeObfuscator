@@ -116,6 +116,7 @@ function FILTER_slurp_literals_into_strings (tokens) {
                 tokens[i - 1] = token;
                 tokens[i]     = lookbehind;
                 tokens[i].name = "STRING_DQUOTE_CHAR";
+                i = 0;
             }
         }
         else if (token.name === "STRING_DQUOTE_END") {

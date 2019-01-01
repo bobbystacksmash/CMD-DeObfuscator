@@ -76,6 +76,15 @@ describe("Command Deobfuscator: Integration Tests", () => {
             tests.forEach(test => assert.deepEqual(CMD.parse(test[0]), test[1]));
         });
 
+        it(`should sanitise a string mixing empty quotes ("") and "qu"oted"chars"`, () => {
+
+            const tests = [
+                [`w""sc"r"i"p"t`, [`"wscript"`]]
+            ];
+
+            tests.forEach(test => assert.deepEqual(CMD.parse(test[0]), test[1]));
+        });
+
         it("should strip excessive escape sequences", () => {
 
             const input  = `p^o^w^e^r^s^h^e^l^l`,

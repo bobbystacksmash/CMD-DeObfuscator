@@ -84,4 +84,16 @@ describe("String handling and clean-up filters", () => {
             assert.deepEqual(util.tokens2string(CMD.filter.widen_strings(input)), output);
         });
     });
+
+    describe("Combinations of string obfuscation", () => {
+
+        it("should sanitise mixing quoted chars and empty chars in one string", () => {
+
+            const tests = [
+                [`w""sc"r"i"p"t`, [`"wscript"`]]
+            ];
+
+            tests.forEach(test => assert.deepEqual(CMD.parse(test[0]), test[1]));
+        });
+    });
 });
