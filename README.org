@@ -12,18 +12,16 @@ free of obfuscation characters.
 #+BEGIN_SRC javascript
 const CMD = require("./index"); // Module is not yet on NPM.
 
-let output = CMD.parse(`SET foo=p^o^w^e^r^s^h^e^l^l & echo %foo%`);
-console.log(output);
+CMD.parse(`SET foo=p^o^w^e^r^s^h^e^l^l & echo %foo%`);
+// => [ "SET foo=powershell", "echo powershell" ]
 
-/* Output
- * ======
- *
- *   [
- *     "SET foo=powershell",
- *     "echo powershell"
- *   ]
- *
- */
+// Example from FireEye's DOSfuscation Report:
+CMD.parse(`%comspec:~-16,1%%comspec:~-1%%comspec:~-13,1% foo=bar`);
+// => [ "Set foo=bar" ]
+
+// String clean-up
+CMD.parse(`w""sc"r"i"p"t e""vil.js`);
+// => [ `"wscript" evil.js ]`
 #+END_SRC
 
 ** EXAMPLES
