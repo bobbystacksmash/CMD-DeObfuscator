@@ -349,10 +349,6 @@ function tokenise (cmdstr, options) {
     options = options || {};
     options = Object.assign({}, { filter: true }, options);
 
-    if (options.filter) {
-        cmdstr = cmdstr.replace(/^\s+|\s+$/g, "");
-    }
-
     lexer.setInput(cmdstr);
 
     let tokens = [];
