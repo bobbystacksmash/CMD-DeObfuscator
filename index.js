@@ -307,6 +307,22 @@ function run_command (cmdstr) {
     }
 
     if (env_var_name.length && env_var_value.length) {
+
+        if (/^%[^%]+[^%]%$/.test(env_var_name)) {
+            // Special handling for the case where someone sets:
+            //
+            //   SET %foo%=bar
+            //
+            // In this case, '%foo%' is treated as 'foo'.  This is
+            // different from something like:
+            //
+            //   SET %%foo%%=bar
+            //
+            // which Windows treats as '%%foo%%' which is !== '%foo%'.
+            //
+            env_var_name = env_var_name.replace(/^%|%$/g, "");
+        }
+
         env_vars[env_var_name] = env_var_value;
     }
 
