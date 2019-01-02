@@ -127,5 +127,17 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
             assert.deepEqual(CMD.parse(input), output);
         });
+
+        it("should fail", () => {
+            // TODO: need to add some tests for:
+            //
+            //   SET %foo%=bar
+            //
+            // vs.
+            //
+            //   SET %%foo%%=bar
+            //
+            assert.isTrue(false);
+        });
     });
 });
