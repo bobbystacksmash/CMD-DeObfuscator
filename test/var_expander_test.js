@@ -1,5 +1,5 @@
-const assert       = require("chai").assert,
-      deobfuscator = require("../index");
+const assert = require("chai").assert,
+      CMD    = require("../index");
 
 const util = {
 
@@ -14,7 +14,7 @@ const util = {
     }
 };
 
-describe("DeObfuscator: Variable Expansion", () => {
+describe("Deobfuscator: Variable Expansion", () => {
 
     describe("Standard %ENVVAR% handling", () => {
 
@@ -23,7 +23,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input  = `%COMSPEC%`,
                   output = `C:\\Windows\\System32\\cmd.exe`;
 
-            assert.equal(deobfuscator.expand_variables(input), output);
+            assert.equal(CMD.expand_variables(input), output);
         });
 
         it("should ignore variables for which there are no associations", () => {
@@ -31,7 +31,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input  = `I am %FOOBAR% things`,
                   output = `I am %FOOBAR% things`;
 
-            assert.equal(deobfuscator.expand_variables(input), output);
+            assert.equal(CMD.expand_variables(input), output);
         });
 
         it("should replace multiple appearances of defined vars", () => {
@@ -39,7 +39,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input =  `a %b% c %b% d`,
                   output = `a XXX c XXX d`;
 
-            assert.equal(deobfuscator.expand_variables(input, { b: "XXX" }), output);
+            assert.equal(CMD.expand_variables(input, { b: "XXX" }), output);
         });
     });
 
@@ -50,7 +50,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input  = `%FOO:~3%`,
                   output = input;
 
-            assert.equal(deobfuscator.expand_variables(input), output);
+            assert.equal(CMD.expand_variables(input), output);
         });
 
         it("should replace the whole value when using %VAR:~0%", () => {
@@ -58,7 +58,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input  = `%FOO:~0%`,
                   output = `abcdef`;
 
-            assert.equal(deobfuscator.expand_variables(input, { foo: "abcdef" }), output);
+            assert.equal(CMD.expand_variables(input, { foo: "abcdef" }), output);
         });
 
         it("should return the correct substr when given: :~3%", () => {
@@ -66,7 +66,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input  = `%FOO:~3%`,
                   output = `def`;
 
-            assert.equal(deobfuscator.expand_variables(input, { foo: "abcdef" }), output);
+            assert.equal(CMD.expand_variables(input, { foo: "abcdef" }), output);
         });
 
         it("should handle both + and - before substr indexes", () => {
@@ -77,7 +77,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             ];
 
             tests.forEach(T => {
-                assert.equal(deobfuscator.expand_variables(T.input, { foo: "abcdef" }), T.output);
+                assert.equal(CMD.expand_variables(T.input, { foo: "abcdef" }), T.output);
             });
         });
 
@@ -88,7 +88,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             ];
 
             tests.forEach(T => {
-                assert.equal(deobfuscator.expand_variables(T.input, { foo: "abcdef" }), T.output);
+                assert.equal(CMD.expand_variables(T.input, { foo: "abcdef" }), T.output);
             });
         });
 
@@ -113,7 +113,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             ];
 
             tests.forEach(T => {
-                assert.equal(deobfuscator.expand_variables(T.input, vars), T.output);
+                assert.equal(CMD.expand_variables(T.input, vars), T.output);
             });
         });
 
@@ -125,7 +125,7 @@ describe("DeObfuscator: Variable Expansion", () => {
                   ];
 
             tests.forEach(t => {
-                assert.equal(deobfuscator.expand_variables(t.input, vars), t.output);
+                assert.equal(CMD.expand_variables(t.input, vars), t.output);
             });
         });
 
@@ -139,7 +139,7 @@ describe("DeObfuscator: Variable Expansion", () => {
                       j:  "l"
                   };
 
-            assert.equal(deobfuscator.expand_variables(input, vars), "powershell");
+            assert.equal(CMD.expand_variables(input, vars), "powershell");
         });
     });
 
@@ -162,7 +162,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             ];
 
             tests.forEach(input => {
-                assert.equal(deobfuscator.expand_variables(input, vars), COMSPEC);
+                assert.equal(CMD.expand_variables(input, vars), COMSPEC);
             });
         });
     });
@@ -174,7 +174,7 @@ describe("DeObfuscator: Variable Expansion", () => {
             const input  = `%FOO:cat=dog%`,
                   msg    = `the cat sat cat on cat the cat mat`,
                   vars   = { foo: msg };
-            assert.equal(deobfuscator.expand_variables(input, vars), msg.replace(/cat/g, "dog"));
+            assert.equal(CMD.expand_variables(input, vars), msg.replace(/cat/g, "dog"));
         });
 
         it("should handle removing all matching chars from a given variable", () => {
@@ -183,7 +183,7 @@ describe("DeObfuscator: Variable Expansion", () => {
                   output = `wscript`,
                   vars   = { x: `wsc@ript` };
 
-            assert.equal(deobfuscator.expand_variables(input, vars), `wscript`);
+            assert.equal(CMD.expand_variables(input, vars), `wscript`);
         });
 
         it("should expand the variable without find/replace when find does not match", () => {
@@ -192,7 +192,7 @@ describe("DeObfuscator: Variable Expansion", () => {
                   output = `foobar`,
                   vars   = { x: output };
 
-            assert.equal(deobfuscator.expand_variables(input, vars), output);
+            assert.equal(CMD.expand_variables(input, vars), output);
         });
     });
 });
