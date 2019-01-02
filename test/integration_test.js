@@ -119,5 +119,13 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
             assert.deepEqual(CMD.parse(input), output);
         });
+
+        it("should allow setting a single quote ' to some value", () => {
+
+            const input  = `SET '=abc & echo %'%`,
+                  output = [`SET '=abc`, `echo abc`];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
     });
 });
