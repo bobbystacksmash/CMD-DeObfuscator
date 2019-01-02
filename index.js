@@ -47,12 +47,7 @@ function parse_cmdstr (cmdstr, options) {
         vars = Object.assign(vars, cmd.vars);
 
         let expanded_cmd = expand_environment_variables(cmd.command.clean, vars);
-
         output.push(expanded_cmd);
-
-        //let deobfuscated = deobfuscate_dos_cmd(strip_escape_chars(cmd));
-        //vars = Object.assign(deobfuscated.vars, vars);
-        //console.log(expand_variables(deobfuscated.command, vars));
     });
 
     return output;
@@ -458,13 +453,10 @@ function expand_environment_variables (cmdstr, vars) {
     // Take all instances of '%foo%' and replace with the value found
     // within the 'vars' dict.
     //
-    let cmd = Object.keys(vars).map(varname => {
-        // TODO: I don't think we can use a new RegExp for the
-        // replacement because envvar variable names can contain
-        // punctuation chars which will conflict with the RegExp
-        // engine's metacharacters.
-        return cmdstr.replace(new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname]);
-    }).pop();
+    let cmd = cmdstr;
+    Object.keys(vars).forEach(varname => {
+        cmd = cmd.replace(new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname]);
+    });
 
     // Apply Find/Replace
     // ==================

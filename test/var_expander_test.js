@@ -128,6 +128,19 @@ describe("DeObfuscator: Variable Expansion", () => {
                 assert.equal(deobfuscator.expand_variables(t.input, vars), t.output);
             });
         });
+
+        it("should correctly replace multiple environment variables in one cmd", () => {
+
+            const input = `%abc%%def%%ghi%%j%`,
+                  vars  = {
+                      abc: "pow",
+                      def: "ers",
+                      ghi: "hel",
+                      j:  "l"
+                  };
+
+            assert.equal(deobfuscator.expand_variables(input, vars), "powershell");
+        });
     });
 
     describe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {
