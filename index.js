@@ -54,8 +54,77 @@ function parse_cmdstr (cmdstr, options) {
 }
 
 /**
- * Given a command string, attempts to remove all non-quoted
- * contiguous whitespace LITERALS, leaving a single space between each word boundary.
+ * Given an array of Token objects, attempts to identify the command
+ * being run.  If a command is found, the name of the command is
+ * returned without ".exe", for example, if "cmd.exe" is identified,
+ * the return output is simply "CMD".  If no command can be found,
+ * returns an empty string.
+ *
+ * For best results, this command should be called AFTER all filtering
+ * has taken place, thus ensuring the command is in the least
+ * obfuscated state BEFORE attempting command identification.
+ *
+ * @param {Token|Array} tokens - The command string to analyse.
+ * @returns {string}
+ */
+function try_identify_command (tokens) {
+
+    /*
+     * Double-Quoted commands
+     * ======================
+     *
+     * For example, matches something similar to:
+     *
+     *   "C:\Windows\System32\cmd.exe"
+     *   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     */
+    if (tokens[0].name === "STRING_DQUOTE_BEGIN") {
+
+        let dquote_end_index = tokens.findIndex(
+            (t, i) => i > 0 && t.name === "STRING_DQUOTE_END"
+        );
+
+        if (!dquote_end_index) {
+            // We can't do much if the CMD doesn't have an ending
+            // DQUOTE.  Bad command.
+            return "";
+        }
+
+        let cmd = tokens
+                .splice(0, dquote_end_index)
+                .map(tok => tok.text)
+                .join("")
+                .replace(/^\"|\"$/g, "");
+
+        return path.basename(cmd);
+    }
+
+    /*
+     * Because we've already checked to see if the command starts with
+     * a DQUOTE, we can skip ahead until we find a whitespace char of
+     * the end of the token array, at which point we'll see what we've
+     * collected and try and identify the command that way...
+     */
+
+    let space_or_end_index = tokens.findIndex(t => t.text === " ");
+    space_or_end_index = (space_or_end_index < 0) ? tokens.length : space_or_end_index;
+
+    let cmd = tokens
+            .splice(0, space_or_end_index)
+            .map(tok => tok.text)
+            .join("");
+
+    if (/[\\/]/.test(cmd) || /^[a-z]:/i.test(cmd)) {
+        return path.basename(cmd);
+    }
+
+    return cmd;
+}
+
+/**
+ * Given an array of Token objects, attempts to remove all non-quoted
+ * contiguous whitespace LITERALS, leaving a single space between each
+ * word boundary.
  *
  * @param {Token|Array} tokens - An array of tokens.
  * @returns {Token|Array}
@@ -217,8 +286,10 @@ function run_command (cmdstr) {
 
     let clean_cmdstr = cmdstr.replace(/^\s+|\s+$/, "");
 
-    let tokens = tokenise(clean_cmdstr),
-        flags  = {
+    // Parse the command string in to an array of Token objects.
+    let tokens = tokenise(clean_cmdstr);
+
+    let flags  = {
             in_set_cmd              : false,
             capturing_env_var_name  : false,
             capturing_env_var_value : false
@@ -795,6 +866,8 @@ module.exports = {
         strip_whitespace:    FILTER_strip_excessive_whitespace,
         strip_empty_strings: FILTER_strip_empty_strings
     },
+
+    try_identify_command: try_identify_command,
 
     tokenise:    tokenise,
     split_command: split_command,
