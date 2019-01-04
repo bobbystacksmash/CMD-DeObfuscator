@@ -96,7 +96,7 @@ function try_identify_command (tokens) {
                 .join("")
                 .replace(/^\"|\"$/g, "");
 
-        return path.basename(cmd);
+        return path.basename(cmd).replace(/\.exe$/i, "");
     }
 
     /*
@@ -115,7 +115,11 @@ function try_identify_command (tokens) {
             .join("");
 
     if (/[\\/]/.test(cmd) || /^[a-z]:/i.test(cmd)) {
-        return path.basename(cmd);
+        return path.basename(cmd).replace(/\.exe$/i, "");
+    }
+
+    if (cmd) {
+        return cmd.replace(/\.exe$/i, "");
     }
 
     return cmd;
@@ -287,7 +291,8 @@ function run_command (cmdstr) {
     let clean_cmdstr = cmdstr.replace(/^\s+|\s+$/, "");
 
     // Parse the command string in to an array of Token objects.
-    let tokens = tokenise(clean_cmdstr);
+    let tokens  = tokenise(clean_cmdstr),
+        command = try_identify_command(tokens);
 
     let flags  = {
             in_set_cmd              : false,

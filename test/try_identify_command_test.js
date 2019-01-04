@@ -7,11 +7,11 @@ describe("Command identification tests", () => {
 
         const commands = [
             { input: "wscript",    output: "wscript" },
-            { input: "   cmd.exe ", output: "cmd.exe" },
-            { input: "..\\..\\..\\cmd.exe", output: "cmd.exe" },
-            { input: "C:\\Windows\\System32\\cmd.exe", output: "cmd.exe" },
-            { input: `"C:\\Windows\\System32\\cmd.exe"`, output: "cmd.exe" },
-            { input: "C:evil.exe", output: "evil.exe" }
+            { input: "   cmd.exe ", output: "cmd" },
+            { input: "..\\..\\..\\cmd.exe", output: "cmd" },
+            { input: "C:\\Windows\\System32\\cmd.exe", output: "cmd" },
+            { input: `"C:\\Windows\\System32\\cmd.exe"`, output: "cmd" },
+            { input: "C:evil.exe", output: "evil" }
         ];
 
         commands.forEach(
