@@ -11,7 +11,8 @@ describe("Command identification tests", () => {
             { input: "..\\..\\..\\cmd.exe", output: "cmd" },
             { input: "C:\\Windows\\System32\\cmd.exe", output: "cmd" },
             { input: `"C:\\Windows\\System32\\cmd.exe"`, output: "cmd" },
-            { input: "C:evil.exe", output: "evil" }
+            { input: "C:evil.exe", output: "evil" },
+            { input: "SET foo=bar", output: "set" },
         ];
 
         commands.forEach(

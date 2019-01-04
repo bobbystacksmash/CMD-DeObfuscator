@@ -57,8 +57,8 @@ function parse_cmdstr (cmdstr, options) {
  * Given an array of Token objects, attempts to identify the command
  * being run.  If a command is found, the name of the command is
  * returned without ".exe", for example, if "cmd.exe" is identified,
- * the return output is simply "CMD".  If no command can be found,
- * returns an empty string.
+ * the return output is simply "cmd" ('.exe' is always stripped).  If
+ * no command can be found, returns an empty string.
  *
  * For best results, this command should be called AFTER all filtering
  * has taken place, thus ensuring the command is in the least
@@ -97,6 +97,9 @@ function try_identify_command (tokens) {
                 .replace(/^\"|\"$/g, "");
 
         return path.basename(cmd).replace(/\.exe$/i, "");
+    }
+    else if (tokens[0].name === "SET") {
+        return "set";
     }
 
     /*
