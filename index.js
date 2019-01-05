@@ -23,7 +23,65 @@ const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
  * @property {number} len   - Length (in chars) of the matched token.
  * @property {Object} loc   - Location of match (first/last line, first/last col).
  */
+//
+// Identified Command
+// ==================
+/**
+ * @typedef {Object} IdentifiedCommand
+ * @property {string} command - The name of the command ("" if unknown).
+ * @property {number} offset  - The offset of where the command identifier
+ *                              ends in the tokens array.
+ */
 
+
+/**
+ * Command dispatch table maps commands we can handle to functions
+ * which do the command handling.  Generally, when we're talking about
+ * "handling a command", we mean altering the parsed token stream so
+ * that the tokens are correctly altered based upon the command
+ * handling them.  For example, we may have been passed something
+ * like:
+ *
+ *   cmd "set foo=bar"
+ *
+ * The token stream for this command will look something like:
+ *
+ *   LIT(c), LIT(m), LIT(d), STR("), STRLIT(s), STRLIT(e), ...
+ *
+ * If we remove the leading "cmd " from the string, and strip the
+ * surrounding double quotes from the command and re-tokenise it,
+ * we'll get a new tokenised sequence which we can handle.
+ *
+ */
+const cmd_dispatch = {
+    cmd: FILTER_handle_cmd
+};
+
+/**
+ * Provides specific command clean-up for the 'cmd.exe' command.
+ *
+ * @param {IdentifiedCommand} ident - The identified command object.
+ * @param {Tokens|Array} tokens - The array of tokens from parsing the cmd.
+ *
+ * @returns {Tokens|Array}
+ */
+function FILTER_handle_cmd (ident, tokens) {
+
+    tokens = Array.prototype.slice.call(tokens);
+
+    if (ident.offset >= tokens.length) {
+        return tokens;
+    }
+
+    let cmd = tokens
+            .slice(ident.offset)
+            .map(t => t.text)
+            .join("")
+            .replace(/^\s+/,  "")
+            .replace(/^"|"$/g, "");
+
+    return tokenise(cmd);
+}
 
 /**
  * Parses a given command string in to individual commands, before
@@ -55,21 +113,27 @@ function parse_cmdstr (cmdstr, options) {
 
 /**
  * Given an array of Token objects, attempts to identify the command
- * being run.  If a command is found, the name of the command is
- * returned without ".exe", for example, if "cmd.exe" is identified,
- * the return output is simply "cmd" ('.exe' is always stripped).  If
- * no command can be found, returns an empty string.
+ * being run.  If a command is found, an IdentifiedCommand object is
+ * returned which will contain both the command name and the offset
+ * from where abouts in the tokens array the command string ends.  If
+ * the command cannot be found, returns an empty name ("") and -1 for
+ * the offset.
  *
  * For best results, this command should be called AFTER all filtering
  * has taken place, thus ensuring the command is in the least
  * obfuscated state BEFORE attempting command identification.
  *
  * @param {Token|Array} tokens - The command string to analyse.
- * @returns {string}
+ * @returns {IdentifiedCommand}
  */
 function try_identify_command (tokens) {
 
     tokens = Array.prototype.slice.call(tokens);
+
+    let identified_command = {
+        command: "",
+        offset:  -1
+    };
 
     /*
      * Double-Quoted commands
@@ -98,36 +162,43 @@ function try_identify_command (tokens) {
                 .join("")
                 .replace(/^\"|\"$/g, "");
 
-        return path.basename(cmd).replace(/\.exe$/i, "");
+        identified_command.command = path.basename(cmd).replace(/\.exe$/i, "");
+        identified_command.offset  = dquote_end_index + 1;
     }
     else if (tokens[0].name === "SET") {
-        return "set";
+        identified_command.command = "set";
+        identified_command.offset  = 1;
+    }
+    else {
+        /*
+         * Because we've already checked to see if the command starts with
+         * a DQUOTE, we can skip ahead until we find a whitespace char of
+         * the end of the token array, at which point we'll see what we've
+         * collected and try and identify the command that way...
+         */
+
+        let space_or_end_index = tokens.findIndex(t => t.text === " ");
+        space_or_end_index = (space_or_end_index < 0) ? tokens.length : space_or_end_index;
+
+        let cmd = tokens
+                .splice(0, space_or_end_index)
+                .map(tok => tok.text)
+                .join("");
+
+        if (/[\\/]/.test(cmd) || /^[a-z]:/i.test(cmd)) {
+            // If the path contains path separators, or some drive
+            // identifier such as 'C:', then clean-up the path and
+            // return the command.
+            identified_command.command = path.basename(cmd).replace(/\.exe$/i, "");
+            identified_command.offset  = space_or_end_index + 1;
+        }
+        else if (cmd) {
+            identified_command.command = cmd.replace(/\.exe$/i, "");
+            identified_command.offset  = space_or_end_index;
+        }
     }
 
-    /*
-     * Because we've already checked to see if the command starts with
-     * a DQUOTE, we can skip ahead until we find a whitespace char of
-     * the end of the token array, at which point we'll see what we've
-     * collected and try and identify the command that way...
-     */
-
-    let space_or_end_index = tokens.findIndex(t => t.text === " ");
-    space_or_end_index = (space_or_end_index < 0) ? tokens.length : space_or_end_index;
-
-    let cmd = tokens
-            .splice(0, space_or_end_index)
-            .map(tok => tok.text)
-            .join("");
-
-    if (/[\\/]/.test(cmd) || /^[a-z]:/i.test(cmd)) {
-        return path.basename(cmd).replace(/\.exe$/i, "");
-    }
-
-    if (cmd) {
-        return cmd.replace(/\.exe$/i, "");
-    }
-
-    return cmd;
+    return identified_command;
 }
 
 /**
@@ -296,8 +367,12 @@ function run_command (cmdstr) {
     let clean_cmdstr = cmdstr.replace(/^\s+|\s+$/, "");
 
     // Parse the command string in to an array of Token objects.
-    let tokens  = tokenise(clean_cmdstr),
-        command = try_identify_command(tokens);
+    let tokens = tokenise(clean_cmdstr),
+        ident  = try_identify_command(tokens);
+
+    if (cmd_dispatch.hasOwnProperty(ident.command)) {
+        tokens = cmd_dispatch[ident.command](ident, tokens);
+    }
 
     let flags  = {
             in_set_cmd              : false,
@@ -678,7 +753,10 @@ module.exports = {
         widen_strings:       FILTER_slurp_literals_into_strings,
         strip_escapes:       FILTER_apply_escapes,
         strip_whitespace:    FILTER_strip_excessive_whitespace,
-        strip_empty_strings: FILTER_strip_empty_strings
+        strip_empty_strings: FILTER_strip_empty_strings,
+
+        // Command handlers
+        handle_CMD: FILTER_handle_cmd,
     },
 
     try_identify_command: try_identify_command,

@@ -3,12 +3,20 @@ const assert = require("chai").assert,
 
 describe("Command Deobfuscator: Integration Tests", () => {
 
-    describe("Command Splitting", () => {
+    describe("Command Splitting and Identification", () => {
 
         it("should correctly split multiple commands in a command-string", () => {
 
             const input  = `echo foo & echo bar`,
                   output = [`echo foo`, `echo bar`];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
+
+        it("should perform command-specific handling for certain (known) commands", () => {
+
+            const input  = `"C:\\Windows\\System32\\cmd.exe" "set hello=world & echo %hello%"`,
+                  output = [`set foo=bar`, `echo world`];
 
             assert.deepEqual(CMD.parse(input), output);
         });
