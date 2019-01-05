@@ -69,6 +69,8 @@ function parse_cmdstr (cmdstr, options) {
  */
 function try_identify_command (tokens) {
 
+    tokens = Array.prototype.slice.call(tokens);
+
     /*
      * Double-Quoted commands
      * ======================
