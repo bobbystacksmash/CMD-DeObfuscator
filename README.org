@@ -63,7 +63,7 @@ double-quotes, for example: =w"s"c"r"i"p"t=.  The /string widening/
 algorithm merges quoted and non-quoted regions together:
 | Input           | Deobfuscated Output |
 |-----------------+---------------------|
-| ~w"s"c"r"i"p"t~ | ="wscript"=         |
+| ~w"s"c"r"i"p"t~ | =\"wscript\"=         |
 
 *** Path resolver (/coming soon/)
 Any identified paths are resolved in to their absolute form, meaning
