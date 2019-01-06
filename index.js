@@ -91,24 +91,24 @@ function FILTER_handle_cmd (ident, tokens) {
  * de-obfuscated.
  *
 */
-function parse_cmdstr (cmdstr, options) {
+function parse_cmdstr (cmdstr, collector) {
 
-    options = options || {};
+    collector = collector || { vars: {}, output: [] };
 
-    let vars   = {},
-        output = [];
+    split_command(cmdstr).forEach(cmd => {
 
-    split_command(cmdstr).forEach(curr_cmd => {
+        let result = interpret_command(cmd);
+        collector.vars = Object.assign(collector.vars, result.vars);
 
-        let cmd = run_command(curr_cmd);
-
-        vars = Object.assign(vars, cmd.vars);
-
-        let expanded_cmd = expand_environment_variables(cmd.command.clean, vars);
-        output.push(expanded_cmd);
+        if (result.ident.command === "cmd") {
+            parse_cmdstr(result.ident.tokens.map(t => t.text).join(""), collector);
+        }
+        else {
+            collector.output.push(expand_environment_variables(result.clean, collector.vars));
+        }
     });
 
-    return output;
+    return collector.output;
 }
 
 /**
@@ -355,14 +355,14 @@ function FILTER_apply_escapes (tokens) {
 }
 
 /**
- * Given a command string, attempts to partially parse the command,
- * returning an object which can be used to present the command in an
- * easy-to-understand way.
+ * Given a command string, attempts to partially interpret the
+ * command, returning an object which can be used to present the
+ * command in an easy-to-understand way.
  *
  * @param {string} cmdstr - The command to run/parse.
  * @returns {Object}
  */
-function run_command (cmdstr) {
+function interpret_command (cmdstr) {
 
     let clean_cmdstr = cmdstr.replace(/^\s+|\s+$/, "");
 
@@ -371,7 +371,7 @@ function run_command (cmdstr) {
         ident  = try_identify_command(tokens);
 
     if (cmd_dispatch.hasOwnProperty(ident.command)) {
-        tokens = cmd_dispatch[ident.command](ident, tokens);
+        ident.tokens = cmd_dispatch[ident.command](ident, tokens);
     }
 
     let flags  = {
@@ -383,8 +383,6 @@ function run_command (cmdstr) {
     let env_vars      = {},
         env_var_name  = "",
         env_var_value = "";
-
-    let command_name  = "UNKNOWN";
 
     // The `outbuf` var holds a cleaned-up version of the command with
     // all obfuscation removed.
@@ -427,7 +425,6 @@ function run_command (cmdstr) {
         case "SET":
             flags.capturing_env_var_name = true;
             flags.in_set_cmd             = true;
-            command_name                 = "SET";
             break;
 
         case "SET_ASSIGNMENT":
@@ -483,14 +480,18 @@ function run_command (cmdstr) {
     }
 
     return {
-        command: {
-            name       : command_name,
+        ident: ident,
+        clean: outbuf.join(""),
+        vars: env_vars
+    };
+    /*command: {
+            identified : ident,
             no_escapes : clean_cmdstr,
             clean      : outbuf.join(""),
             original   : cmdstr
         },
         vars: env_vars
-    };
+    };*/
 }
 
 /**

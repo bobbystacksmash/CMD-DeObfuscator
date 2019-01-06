@@ -15,10 +15,13 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
         it("should perform command-specific handling for certain (known) commands", () => {
 
-            const input  = `"C:\\Windows\\System32\\cmd.exe" "set hello=world & echo %hello%"`,
-                  output = [`set foo=bar`, `echo world`];
+            const tests = [
+                { input: `cmd "set foo=bar & echo %foo%"`, output: [`set foo=bar`, `echo bar`] },
+                { input: `cmd calc.exe`, output: [`calc.exe`] },
+                { input: `cmd cmd cmd cmd calc.exe`, output: [`calc.exe`] }
+            ];
 
-            assert.deepEqual(CMD.parse(input), output);
+            tests.forEach(t => assert.deepEqual(CMD.parse(t.input), t.output));
         });
     });
 
