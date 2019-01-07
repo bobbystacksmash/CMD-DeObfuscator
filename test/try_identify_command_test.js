@@ -12,12 +12,13 @@ describe("Command identification tests", () => {
             CMD.try_identify_command(tokens),
             {
                 command: "cmd",
+                args: {},
                 offset:  3
             }
         );
     });
 
-    it("should correctly identify the command", () => {
+    it("should correctly identify the command and its arguments (if any)", () => {
 
         const commands = [
             { input: "wscript",    output: "wscript" },
@@ -27,6 +28,7 @@ describe("Command identification tests", () => {
             { input: `"C:\\Windows\\System32\\cmd.exe"`, output: "cmd" },
             { input: "C:evil.exe", output: "evil" },
             { input: "SET foo=bar", output: "set" },
+            { input: "cmd;", output: "cmd" },
         ];
 
         commands.forEach(
