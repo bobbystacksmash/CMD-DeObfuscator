@@ -394,7 +394,7 @@ describe("CMD Tests", () => {
                       "COMMA"
                   ];
 
-            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input, { filter: false })), output);
         });
 
         it("should not detect commas and semi-colons between double quotes", () => {
@@ -411,7 +411,7 @@ describe("CMD Tests", () => {
                       "STRING_DQUOTE_END"
                   ];
 
-            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            assert.deepEqual(util.tokens(CMD.tokenise(input, { filter: false })), output);
         });
 
     });
