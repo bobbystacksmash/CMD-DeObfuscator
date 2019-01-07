@@ -37,6 +37,23 @@ describe("String handling and clean-up filters", () => {
         });
     });
 
+    describe("Strip excessive commas", () => {
+
+        it("should remove excessive commas outside of double quotes", () => {
+
+            const tests = [
+                { input: "cmd , , ,", output: "cmd   " }
+            ];
+
+            tests.forEach(test => {
+                assert.deepEqual(
+                    util.tokens2string(CMD.filter.strip_commas(CMD.tokenise(test.input))),
+                    test.output
+                );
+            });
+        });
+    });
+
     describe("Strip Empty Strings", () => {
 
         it("should remove empty double-quotes from a given command string", () => {

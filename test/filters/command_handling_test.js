@@ -14,7 +14,27 @@ describe("Command handlers", () => {
 
     describe("cmd.exe", () => {
 
-        // test for the case where the command is simply 'wscript'.
+        describe("Switches", () => {
+
+            it("should correctly identify the various cmd.exe switches", () => {
+
+                let tests = [
+                    { input: `cmd.exe /V`, expected: { V: true } },
+                    { input: `"C:\\Windows\\System32\\cmd.exe" /c c^m^d`, expected: { "c": "" } },
+                    { input: `"cmd.exe" /R "set x=y"`, expected: { "R": "" } },
+                ];
+
+                tests.forEach(test => {
+
+                    let tokens = CMD.tokenise(test.input),
+                        ident  = CMD.try_identify_command(tokens),
+                        output = CMD.filter.handle_CMD(ident, tokens);
+
+                    assert.deepEqual(output.switches, test.expected);
+                });
+            });
+        });
+
         it("should not alter the token sequence when the identified cmd has no args", () => {
 
             let tests = [
@@ -35,23 +55,18 @@ describe("Command handlers", () => {
             });
         });
 
-        it("should re-tokenise tokens when the command is identified", () => {
+        xit("should also strip command flags before the body of the command", () => {
 
-            let tokens   = CMD.tokenise(`cmd.exe "set foo=bar"`),
-                ident    = CMD.try_identify_command(tokens),
-                output   = util.tokens(CMD.filter.handle_CMD(ident, tokens)),
-                expected = [
-                    "SET",
-                    "LITERAL",
-                    "LITERAL",
-                    "LITERAL",
-                    "SET_ASSIGNMENT",
-                    "LITERAL",
-                    "LITERAL",
-                    "LITERAL"
-                ];
+            let tests = [
+                {
+                    input:  `"C:\\Windows\\System32\\cmd.exe" /c cmd "set foo=bar"`,
+                    output: [`set foo=bar`]
+                }
+            ];
 
-            assert.deepEqual(output, expected);
+            tests.forEach(t => {
+                assert.deepEqual(CMD.parse(t.input), t.output);
+            });
         });
     });
 });
