@@ -77,10 +77,75 @@ function FILTER_handle_cmd (ident, tokens) {
             .slice(ident.offset)
             .map(t => t.text)
             .join("")
-            .replace(/^\s+/,  "")
-            .replace(/^"|"$/g, "");
+            .replace(/^\s+/,  "");
 
-    return tokenise(cmd);
+    // A note about argument parsing
+    // =============================
+    //
+    // The CMD.EXE help page says that the syntax of the 'cmd.exe'
+    // command is:
+    //
+    //   CMD [charset] [options] [/C command]
+    //   CMD [charset] [options] [/K command]
+    //
+    // For example:
+    //
+    //   CMD /V:on "set foo=bar& calc.exe"
+    //
+    //
+    // The important part is the location of the first dquote, which
+    // tells us where the COMMAND part of the line begins.  We capture
+    // the location of this char (if exists), and use its string
+    // offset as the point at which we stop looking for command
+    // switches.
+    //
+    const first_dquote_offset = cmd.split("").findIndex(chr => chr === '"'),
+          switch_re           = /\/([A-Z])([:][^\s]+)?(?:$|\s)/ig;
+
+    let match             = undefined,
+        last_match_offset = undefined,
+        switches          = {};
+
+    while ((match = switch_re.exec(cmd))) {
+
+        let wholematch       = match[0],
+            _switch          = match[1],
+            _value           = "",
+            match_end_offset = match[0].length + match.index;
+
+        last_match_offset = match_end_offset;
+
+        if (match[2] !== undefined) {
+            _value = match[2].replace(/^:/, "");
+        }
+
+        if (/^[efv]$/i.test(_switch.toLowerCase())) {
+            switch (_value.toLowerCase()) {
+            case "off":
+                _value = false;
+                break;
+            default:
+                _value = true;
+            }
+        }
+
+        switches[_switch] = _value;
+
+        if (match_end_offset && (match_end_offset > first_dquote_offset)) {
+            break;
+        }
+    }
+
+    // Now we've finished parsing the command arguments, we can strip
+    // the args leaving only the next part of the command string.
+    if (last_match_offset !== undefined) {
+        cmd = cmd.substr(last_match_offset);
+    }
+
+    return {
+        tokens: tokenise(cmd),
+        switches: switches
+    };
 }
 
 /**
@@ -91,22 +156,43 @@ function FILTER_handle_cmd (ident, tokens) {
  * de-obfuscated.
  *
 */
-function parse_cmdstr (cmdstr, collector) {
+function parse_cmdstr (cmdstr, options) {
 
-    collector = collector || { vars: {}, output: [] };
+    const DEFAULTS = {
+        expand_vars: false
+    };
 
-    split_command(cmdstr).forEach(cmd => {
+    options = options || {};
+    options = Object.assign(DEFAULTS, options);
 
-        let result = interpret_command(cmd);
-        collector.vars = Object.assign(collector.vars, result.vars);
+    let collector = { vars: {}, output: [] };
 
-        if (result.ident.command === "cmd") {
-            parse_cmdstr(result.ident.tokens.map(t => t.text).join(""), collector);
-        }
-        else {
-            collector.output.push(expand_environment_variables(result.clean, collector.vars));
-        }
-    });
+    (function parse_cmdstr_rec (cmdstr) {
+
+        split_command(cmdstr).forEach(cmd => {
+
+            let result = interpret_command(cmd);
+            collector.vars = Object.assign(collector.vars, result.vars);
+
+            if (result.ident.command === "cmd") {
+                let new_cmd = result.ident.tokens.map(t => t.text).join("");
+                if (new_cmd.toLowerCase() !== "cmd") { // infinite loop protection.
+                    parse_cmdstr_rec(result.ident.tokens.map(t => t.text).join(""));
+                }
+            }
+            else {
+
+                if (options.expand_vars) {
+                    // Expansion is off by default because that's how
+                    // Windows works.
+                    collector.output.push(expand_environment_variables(result.clean, collector.vars));
+                }
+                else {
+                    collector.output.push(result.clean);
+                }
+            }
+        });
+    }(cmdstr));
 
     return collector.output;
 }
@@ -131,8 +217,9 @@ function try_identify_command (tokens) {
     tokens = Array.prototype.slice.call(tokens);
 
     let identified_command = {
-        command: "",
-        offset:  -1
+        command : "",
+        args    : {},
+        offset  : -1
     };
 
     /*
@@ -153,7 +240,7 @@ function try_identify_command (tokens) {
         if (!dquote_end_index) {
             // We can't do much if the CMD doesn't have an ending
             // DQUOTE.  Bad command.
-            return "";
+            return identified_command;
         }
 
         let cmd = tokens
@@ -170,18 +257,12 @@ function try_identify_command (tokens) {
         identified_command.offset  = 1;
     }
     else {
-        /*
-         * Because we've already checked to see if the command starts with
-         * a DQUOTE, we can skip ahead until we find a whitespace char of
-         * the end of the token array, at which point we'll see what we've
-         * collected and try and identify the command that way...
-         */
 
-        let space_or_end_index = tokens.findIndex(t => t.text === " ");
-        space_or_end_index = (space_or_end_index < 0) ? tokens.length : space_or_end_index;
+        let end_index = tokens.findIndex(t => (t.text === " " || t.name === "SEMICOLON"));
+        end_index = (end_index < 0) ? tokens.length : end_index;
 
         let cmd = tokens
-                .splice(0, space_or_end_index)
+                .splice(0, end_index)
                 .map(tok => tok.text)
                 .join("");
 
@@ -190,11 +271,11 @@ function try_identify_command (tokens) {
             // identifier such as 'C:', then clean-up the path and
             // return the command.
             identified_command.command = path.basename(cmd).replace(/\.exe$/i, "");
-            identified_command.offset  = space_or_end_index + 1;
+            identified_command.offset  = end_index + 1;
         }
         else if (cmd) {
             identified_command.command = cmd.replace(/\.exe$/i, "");
-            identified_command.offset  = space_or_end_index;
+            identified_command.offset  = end_index;
         }
     }
 
@@ -336,6 +417,17 @@ function FILTER_strip_empty_strings (tokens) {
 }
 
 /**
+ * Given an array of Tokens, attempts to remove all unnecessary commas
+ * from the tokenised sequence.
+ *
+ * @param {Token|Array} tokens - An array of tokens.
+ * @returns {Token|Array}
+ */
+function FILTER_strip_commas (tokens) {
+    return tokens.filter(token => token.name !== "COMMA");
+}
+
+/**
  * Given an array of Tokens, attempts to fix-up all tokens which were
  * previously escaped tokens.
  *
@@ -371,7 +463,9 @@ function interpret_command (cmdstr) {
         ident  = try_identify_command(tokens);
 
     if (cmd_dispatch.hasOwnProperty(ident.command)) {
-        ident.tokens = cmd_dispatch[ident.command](ident, tokens);
+        let handled = cmd_dispatch[ident.command](ident, tokens);
+        ident.tokens   = handled.tokens;
+        ident.switches = handled.switched;
     }
 
     let flags  = {
@@ -476,7 +570,10 @@ function interpret_command (cmdstr) {
             env_var_name = env_var_name.replace(/^%|%$/g, "");
         }
 
-        env_vars[env_var_name] = env_var_value;
+        env_vars[env_var_name] = {
+            first: env_var_value,
+            curr: env_var_value
+        };
     }
 
     return {
@@ -484,14 +581,6 @@ function interpret_command (cmdstr) {
         clean: outbuf.join(""),
         vars: env_vars
     };
-    /*command: {
-            identified : ident,
-            no_escapes : clean_cmdstr,
-            clean      : outbuf.join(""),
-            original   : cmdstr
-        },
-        vars: env_vars
-    };*/
 }
 
 /**
@@ -509,7 +598,7 @@ function split_command (command_str) {
 
     tokens.forEach(tok => {
 
-        if (tok.name === "CALL" || tok.name === "COND_CALL") {
+        if (/^(?:CALL|COND_CALL|SEMICOLON)$/.test(tok.name)) {
             index++;
             commands[index] = "";
         }
@@ -556,6 +645,7 @@ function tokenise (cmdstr, options) {
         tokens = FILTER_strip_empty_strings(tokens);
         tokens = FILTER_slurp_literals_into_strings(tokens);
         tokens = FILTER_strip_excessive_whitespace(tokens);
+        //tokens = FILTER_strip_commas(tokens);
     }
 
     return tokens;
@@ -579,7 +669,7 @@ function tokenise (cmdstr, options) {
  */
 function substr_replace (cmdstr, vars) {
 
-    let find_replace_re = /%([a-z][0-9a-z_]*):([^\s]+)=([^\s]+)?%/ig,
+    let find_replace_re = /%([^:]*):([^\s]+)=([^\s]+)?%/ig,
         got_match;
 
     while ((got_match = find_replace_re.exec(cmdstr))) {
@@ -594,7 +684,7 @@ function substr_replace (cmdstr, vars) {
             continue;
         }
 
-        let replaced_varvalue = varvalue.split(findstr).join(replstr);
+        let replaced_varvalue = varvalue.first.split(findstr).join(replstr);
 
         cmdstr = cmdstr.split(wholematch).join(replaced_varvalue);
     }
@@ -612,12 +702,35 @@ function substr_replace (cmdstr, vars) {
  *   -
  *
  */
-function expand_environment_variables (cmdstr, vars) {
+function expand_environment_variables (cmdstr, vars, options) {
 
-     const default_vars = {
-        appdata: `C:\\Users\\whoami\\AppData\\Roaming`,
-        comspec: `C:\\Windows\\System32\\cmd.exe`
+    options = options || {};
+    options = Object.assign({
+        delayed_expansion: false
+    });
+
+    const default_vars = {
+        appdata: {
+            first: `C:\\Users\\whoami\\AppData\\Roaming`,
+            curr:  `C:\\Users\\whoami\\AppData\\Roaming`
+        },
+        comspec: {
+            first: `C:\\Windows\\System32\\cmd.exe`,
+            curr:  `C:\\Windows\\System32\\cmd.exe`
+        }
     };
+
+    if (vars) {
+        Object.keys(vars).forEach(varname => {
+            const varvalue = vars[varname];
+            if (typeof varvalue === "string") {
+                vars[varname] = {
+                    first: varvalue,
+                    curr:  varvalue
+                };
+            }
+        });
+    }
     vars = Object.assign(default_vars, vars);
 
     // Expand Variables
@@ -628,7 +741,21 @@ function expand_environment_variables (cmdstr, vars) {
     //
     let cmd = cmdstr;
     Object.keys(vars).forEach(varname => {
-        cmd = cmd.replace(new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname]);
+        cmd = cmd.replace(
+            new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname].first
+        );
+    });
+
+    // Delayed Expansion
+    // =================
+    //
+    // Instead of '%foo%', delayed expansion works with '!foo!', and
+    // reads from '.curr' instead of '.first'.
+    //
+    Object.keys(vars).forEach(varname => {
+        cmd = cmd.replace(
+            new RegExp(escapeRegexpString(`!${varname}%`), "gi"), vars[varname].curr
+        );
     });
 
     // Apply Find/Replace
@@ -674,6 +801,9 @@ function expand_environment_variables (cmdstr, vars) {
 
         if (var_value === undefined) {
             continue;
+        }
+        else {
+            var_value = var_value.first;
         }
 
         let replace = {
@@ -755,6 +885,7 @@ module.exports = {
         strip_escapes:       FILTER_apply_escapes,
         strip_whitespace:    FILTER_strip_excessive_whitespace,
         strip_empty_strings: FILTER_strip_empty_strings,
+        strip_commas:        FILTER_strip_commas,
 
         // Command handlers
         handle_CMD: FILTER_handle_cmd,
