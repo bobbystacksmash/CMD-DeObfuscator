@@ -30,6 +30,20 @@ describe("Command Splitter", () => {
         });
     });
 
+    describe("Semi-Colon (SEMICOLON)", () => {
+
+        it("should split a command separated by semi-colons", () => {
+
+            const tests = [
+                { input: "calc.exe ; notepad.exe", output: ["calc.exe", "notepad.exe"] }
+            ];
+
+            tests.forEach(t => {
+                assert.deepEqual(DOS.split_command(t.input), t.output);
+            });
+        });
+    });
+
     describe("Double Ampersand (COND_CALL)", () => {
 
         it("should split '&&' (conditional call)", () => {
