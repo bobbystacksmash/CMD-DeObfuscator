@@ -48,7 +48,7 @@ describe("Deobfuscator: Variable Expansion", () => {
         it("should leave the string unchanged if VAR is not defined", () => {
 
             const input  = `%FOO:~3%`,
-                  output = input;
+                  output = `%FOO:~3%`;
 
             assert.equal(CMD.expand_variables(input), output);
         });
@@ -141,6 +141,18 @@ describe("Deobfuscator: Variable Expansion", () => {
 
             assert.equal(CMD.expand_variables(input, vars), "powershell");
         });
+    });
+
+    describe("Delayed expansion of variables", () => {
+
+        xit("xx", () => {
+
+            const input = `set _var=first`;
+
+            console.log(CMD.expand_variables(input));
+            assert.isTrue(false);
+        });
+
     });
 
     describe("%COMSPEC% specific tests from FireEye DOSFuscation whitepaper", () => {

@@ -13,7 +13,34 @@ describe("Command Deobfuscator: Integration Tests", () => {
             assert.deepEqual(CMD.parse(input), output);
         });
 
-        it("should perform command-specific handling for certain (known) commands", () => {
+        describe("CMD handling", () => {
+
+            describe("CMD.EXE sub-execing itself", () => {
+
+                it("should correctly identify CMD.EXE sub/sub/sub execs", () => {
+
+                    const command  = `cmd /c c^m^d; calc.exe`,
+                          expected = ["calc.exe"];
+
+                    assert.deepEqual(CMD.parse(command), expected);
+                });
+            });
+
+            describe("Delayed Expansion (DE)", () => {
+
+                it("should not perform delayed expansion by default", () => {
+
+                    const input  = `Set "foo=bar" & echo !foo!`,
+                          output = [`Set "foo=bar"`, `echo !foo!`];
+
+                    assert.deepEqual(CMD.parse(input), output);
+                });
+            });
+        });
+    });
+
+        // TODO: add other tests, like 'foo && bar', 'foo || bar', etc.
+    /*it("should perform command-specific handling for certain (known) commands", () => {
 
             const tests = [
                 { input: `cmd "set foo=bar & echo %foo%"`, output: [`set foo=bar`, `echo bar`] },
@@ -23,9 +50,17 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
             tests.forEach(t => assert.deepEqual(CMD.parse(t.input), t.output));
         });
-    });
+    });*/
 
     describe("Environment variable handling", () => {
+
+        it("should not expand environment variables (delayed expansion is off)", () => {
+
+            const input  = `set "foo=bar" & echo %foo%`,
+                  output = [`set "foo=bar"`, `echo %foo%`];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
 
         it("should not expand a variable which has been used before it was defined", () => {
 
@@ -37,8 +72,8 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
         it("should expand environment variables introduced with set", () => {
 
-            const input  = `SET foo=bar & echo %foo%`,
-                  output = [`SET foo=bar`, `echo bar`];
+            const input  = `SET foo=bar & !echo %foo%`,
+                  output = [`SET foo=bar`, `!echo bar`];
 
             assert.deepEqual(CMD.parse(input), output);
         });
@@ -62,8 +97,8 @@ describe("Command Deobfuscator: Integration Tests", () => {
         });
 
         it("should allow escaping of chars in the LHS of a SET expression", () => {
-            assert.deepEqual(CMD.parse(`SET ^>=foo & echo %>%`), [`SET >=foo`, `echo foo`]);
-            assert.deepEqual(CMD.parse(`SET ^^=foo & echo %^^%`), [`SET ^=foo`, `echo foo`]);
+            assert.deepEqual(CMD.parse(`SET ^>=foo & echo %>%`, { expand_vars: true }), [`SET >=foo`, `echo foo`]);
+            assert.deepEqual(CMD.parse(`SET ^^=foo & echo %^^%`, { expand_vars: true }), [`SET ^=foo`, `echo foo`]);
         });
     });
 
@@ -121,6 +156,19 @@ describe("Command Deobfuscator: Integration Tests", () => {
         });
     });
 
+    describe("Deobfuscation tests", () => {
+
+        it("should correctly identify a cmd launching an obfuscated cmd", () => {
+
+            // TODO: finish implementing this.
+
+            const input = `"C:\\Windows\\System32\\cmd.exe" c^m^d /V "set foo=bar & echo !foo!"`,
+                  output = ["set foo=bar", "echo bar"];
+
+            assert.deepEqual(CMD.parse(input), output);
+        });
+    });
+
     describe("FireEye: Dosfuscation Report Examples", () => {
 
         it("should decode use of %COMSPEC% to echo 'SET'", () =>{
@@ -128,7 +176,7 @@ describe("Command Deobfuscator: Integration Tests", () => {
             const input  = `%comspec:~-16,1%%comspec:~-1%%comspec:~-13,1%`,
                   output = [`Set`];
 
-            assert.deepEqual(CMD.parse(input), output);
+            assert.deepEqual(CMD.parse(input, { expand_vars: true }), output);
         });
 
         it("should allow setting a single quote ' to some value", () => {
@@ -136,19 +184,7 @@ describe("Command Deobfuscator: Integration Tests", () => {
             const input  = `SET '=abc & echo %'%`,
                   output = [`SET '=abc`, `echo abc`];
 
-            assert.deepEqual(CMD.parse(input), output);
-        });
-
-        it("should fail", () => {
-            // TODO: need to add some tests for:
-            //
-            //   SET %foo%=bar
-            //
-            // vs.
-            //
-            //   SET %%foo%%=bar
-            //
-            assert.isTrue(false);
+            assert.deepEqual(CMD.parse(input, { expand_vars: true }), output);
         });
     });
 });
