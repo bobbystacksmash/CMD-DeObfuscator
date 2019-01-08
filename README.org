@@ -84,3 +84,7 @@ we transform this:
  - [[https://ss64.com/nt/syntax-substring.html][DOS CMD Substrings]]
  - [[https://docs.microsoft.com/en-gb/windows/desktop/ProcThread/environment-variables][MSDN: Environment Variables]]
  - [[https://www.fireeye.com/blog/threat-research/2017/06/obfuscation-in-the-wild.html][FireEye: Obfuscation in the Wild]]
+ - [[https://superuser.com/questions/223104/setting-and-using-variable-within-same-command-line-in-windows-cmd-exe][setting and using a variable within Windows cmd.exe]]
+ - [[https://ss64.com/nt/delayedexpansion.html][Delayed Expansion]]
+ - [[https://ss64.com/nt/cmd.html][SS64: CMD.exe]]
+ - [[https://hackinparis.com/data/slides/2018/talks/HIP2018_Daniel_Bohannon_Invoke_Dosfuscation.pdf][HackInParis Invoke Dosfuscation Slides]]
