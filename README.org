@@ -41,6 +41,7 @@ CMD.parse(`cmd /V:O "set foo=bar& echo !foo!"`);
 ** API
 
 *** =CMD.parse(cmdstr, [options])=
+ *Returns*: /<string[]>/
 
  - =cmdstr= /<string>/ the command string to parse
  - =options= /<Object>/
@@ -48,9 +49,15 @@ CMD.parse(`cmd /V:O "set foo=bar& echo !foo!"`);
    - =expand_inline= /<bool>/ *Default*: =false=
    - =vars= /<Object>/ *Default*: ={}=
 
+#+BEGIN_SRC javascript
+CMD.parse(`p^ow^er""she"l"l`);
+CMD.parse(`echo !hello!`, { delayed_expansion: true, vars: { hello: "world" } });
+CMD.parse(`echo %hello%`, { expand_inline:     true, vars: { hello: "world" } });
+#+END_SRC
+
 Parses a given command string in to individual commands before
 applying variable expansion and de-obfuscation filters to each
-identified command.
+identified command.  Returns an array of cleaned-up commands.
 
 If =delayed_expansion= is set to =true=, the given =cmdstr= will be
 evaluated as if CMD.EXE had been started with =/V:ON= or =SETLOCAL
