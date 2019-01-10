@@ -12,7 +12,7 @@ describe("Command identification tests", () => {
             CMD.try_identify_command(tokens),
             {
                 command: "cmd",
-                args: {},
+                switches: {},
                 offset:  3
             }
         );

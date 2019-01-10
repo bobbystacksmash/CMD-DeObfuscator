@@ -43,6 +43,24 @@ describe("Deobfuscator: Variable Expansion", () => {
         });
     });
 
+    describe("Delayed Environment Variable Expansion", () => {
+
+        it("should expand delayed expansion variables when configured to do so", () => {
+
+            const tests = [
+                { expand: false, input: `echo !foo!`, output: `echo !foo!` },
+                { expand: true,  input: `echo !foo!`, output: `echo bar`   }
+            ];
+
+            const varmap = { foo: "bar" };
+
+            tests.forEach(test => {
+                let opts = { delayed_expansion: test.expand };
+                assert.equal(CMD.expand_variables(test.input, varmap, opts), test.output);
+            });
+        });
+    });
+
     describe("Variable substring operations", () => {
 
         it("should leave the string unchanged if VAR is not defined", () => {

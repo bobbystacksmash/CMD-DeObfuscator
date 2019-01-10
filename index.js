@@ -6,6 +6,18 @@ const JisonLex           = require("jison-lex"),
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
 
+function has (obj, key) {
+    return obj.hasOwnProperty(key);
+}
+
+function hasAll (obj, keys) {
+    return keys.every(k => obj.hasOwnProperty(k));
+}
+
+function hasAny (obj, keys) {
+    return keys.some(k => obj.hasOwnProperty(k));
+}
+
 // ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 // ;;                                    ;;
 // ;; TYPE DEFINITIONS FOR DOCUMENTATION ;;
@@ -70,7 +82,11 @@ function FILTER_handle_cmd (ident, tokens) {
     tokens = Array.prototype.slice.call(tokens);
 
     if (ident.offset >= tokens.length) {
-        return tokens;
+        return {
+            tokens: tokens,
+            switches: {},
+            finished: true
+        };
     }
 
     let cmd = tokens
@@ -104,7 +120,20 @@ function FILTER_handle_cmd (ident, tokens) {
 
     let match             = undefined,
         last_match_offset = undefined,
-        switches          = {};
+        switches          = {
+            delayed_expansion: false
+        };
+
+    const switch_lookup = {
+        "c": "run_then_terminate",
+        "C": "run_then_terminate",
+        "v": "delayed_expansion",
+        "V": "delayed_expansion",
+        "e": "cmd_extensions",
+        "E": "cmd_extensions",
+        "f": "path_autocomplete",
+        "F": "path_autocomplete"
+    };
 
     while ((match = switch_re.exec(cmd))) {
 
@@ -119,7 +148,8 @@ function FILTER_handle_cmd (ident, tokens) {
             _value = match[2].replace(/^:/, "");
         }
 
-        if (/^[efv]$/i.test(_switch.toLowerCase())) {
+        if (/^[efv]$/i.test(_switch)) {
+            _switch = switch_lookup[_switch];
             switch (_value.toLowerCase()) {
             case "off":
                 _value = false;
@@ -127,6 +157,9 @@ function FILTER_handle_cmd (ident, tokens) {
             default:
                 _value = true;
             }
+        }
+        else if (has(switch_lookup, _switch)) {
+            _switch = switch_lookup[_switch];
         }
 
         switches[_switch] = _value;
@@ -142,9 +175,14 @@ function FILTER_handle_cmd (ident, tokens) {
         cmd = cmd.substr(last_match_offset);
     }
 
+    // If the remaining command part starts and ends with a double
+    // quote, we strip them.
+    cmd = cmd.replace(/^\"|\"$/g, "");
+
     return {
         tokens: tokenise(cmd),
-        switches: switches
+        switches: switches,
+        finished: false
     };
 }
 
@@ -159,39 +197,76 @@ function FILTER_handle_cmd (ident, tokens) {
 function parse_cmdstr (cmdstr, options) {
 
     const DEFAULTS = {
-        expand_vars: false
+        delayed_expansion: false,
+        expand_inline:     false,
+        vars: {}
     };
 
     options = options || {};
-    options = Object.assign(DEFAULTS, options);
+    options = Object.assign({}, DEFAULTS, options);
 
-    let collector = { vars: {}, output: [] };
+    let collector = { vars: {}, switches: {}, output: [] };
 
-    (function parse_cmdstr_rec (cmdstr) {
+    cmdstr = expand_environment_variables(cmdstr, options.vars);
+
+    (function parse_cmdstr_rec (cmdstr, switches) {
+
+        switches = switches || {};
 
         split_command(cmdstr).forEach(cmd => {
 
             let result = interpret_command(cmd);
             collector.vars = Object.assign(collector.vars, result.vars);
 
-            if (result.ident.command === "cmd") {
+            if (result.ident.finished) {
+                collector.output.push(result.ident.tokens.map(t => t.text).join(""));
+            }
+            else if (result.ident.command === "cmd") {
+                //
+                // NOTES ON DELAYED EXPANSION
+                // ==========================
+                //
+                // We have support for delayed expansion.  Tests on
+                // Win7 and Win10 hosts show that delayed expansion is
+                // only enabled for the current CMD context, for
+                // example, given the following command:
+                //
+                //   cmd /V "set foo=bar& echo !foo!"
+                //
+                // The output will be "echo bar" because delayed
+                // expansion is set.  However, it does not cascade in
+                // to lower-down CMD instances, for example:
+                //
+                //   cmd /V "cmd \"set foo=bar& echo !foo!\""
+                //
+                // This will produce "echo !foo!" because we created a
+                // sub-cmd context, and the default was applied.
+                //
                 let new_cmd = result.ident.tokens.map(t => t.text).join("");
+
                 if (new_cmd.toLowerCase() !== "cmd") { // infinite loop protection.
-                    parse_cmdstr_rec(result.ident.tokens.map(t => t.text).join(""));
+                    parse_cmdstr_rec(
+                        result.ident.tokens.map(t => t.text).join(""),
+                        result.ident.switches
+                    );
                 }
             }
             else {
 
-                if (options.expand_vars) {
-                    // Expansion is off by default because that's how
-                    // Windows works.
-                    collector.output.push(
-                        expand_environment_variables(result.clean, collector.vars)
-                    );
-                }
-                else {
-                    collector.output.push(result.clean);
-                }
+                let delayed_exp = Object.assign({}, options, switches).delayed_expansion;
+
+                // We do not want to expand percentage vars as
+                // that time has passed.
+                cmd = expand_environment_variables(
+                    result.clean,
+                    collector.vars,
+                    {
+                        expand_percent_vars: options.expand_inline,
+                        delayed_expansion: delayed_exp
+                    }
+                );
+
+                collector.output.push(cmd);
             }
         });
     }(cmdstr));
@@ -220,7 +295,7 @@ function try_identify_command (tokens) {
 
     let identified_command = {
         command : "",
-        args    : {},
+        switches: {},
         offset  : -1
     };
 
@@ -467,7 +542,8 @@ function interpret_command (cmdstr) {
     if (cmd_dispatch.hasOwnProperty(ident.command)) {
         let handled = cmd_dispatch[ident.command](ident, tokens);
         ident.tokens   = handled.tokens;
-        ident.switches = handled.switched;
+        ident.switches = handled.switches;
+        ident.finished = handled.finished;
     }
 
     let flags  = {
@@ -707,9 +783,11 @@ function substr_replace (cmdstr, vars) {
 function expand_environment_variables (cmdstr, vars, options) {
 
     options = options || {};
-    options = Object.assign({
+    const defaults = {
+        expand_percent_vars: true,
         delayed_expansion: false
-    });
+    };
+    options = Object.assign({}, defaults, options);
 
     const default_vars = {
         appdata: {
@@ -742,11 +820,14 @@ function expand_environment_variables (cmdstr, vars, options) {
     // within the 'vars' dict.
     //
     let cmd = cmdstr;
-    Object.keys(vars).forEach(varname => {
-        cmd = cmd.replace(
-            new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname].first
-        );
-    });
+
+    if (options.expand_percent_vars) {
+        Object.keys(vars).forEach(varname => {
+            cmd = cmd.replace(
+                new RegExp(escapeRegexpString(`%${varname}%`), "gi"), vars[varname].first
+            );
+        });
+    }
 
     // Delayed Expansion
     // =================
@@ -754,11 +835,14 @@ function expand_environment_variables (cmdstr, vars, options) {
     // Instead of '%foo%', delayed expansion works with '!foo!', and
     // reads from '.curr' instead of '.first'.
     //
-    Object.keys(vars).forEach(varname => {
-        cmd = cmd.replace(
-            new RegExp(escapeRegexpString(`!${varname}%`), "gi"), vars[varname].curr
-        );
-    });
+    if (options.delayed_expansion) {
+        Object.keys(vars).forEach(varname => {
+            cmd = cmd.replace(
+                new RegExp(escapeRegexpString(`!${varname}!`), "gi"), // find
+                vars[varname].curr                                    // replace
+            );
+        });
+    }
 
     // Apply Find/Replace
     // ==================

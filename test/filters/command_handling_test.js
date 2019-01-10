@@ -19,9 +19,26 @@ describe("Command handlers", () => {
             it("should correctly identify the various cmd.exe switches", () => {
 
                 let tests = [
-                    { input: `cmd.exe /V`, expected: { V: true } },
-                    { input: `"C:\\Windows\\System32\\cmd.exe" /c c^m^d`, expected: { "c": "" } },
-                    { input: `"cmd.exe" /R "set x=y"`, expected: { "R": "" } },
+                    {
+                        input: `cmd.exe /V`,
+                        expected: {
+                            delayed_expansion: true
+                        }
+                    },
+                    {
+                        input: `"C:\\Windows\\System32\\cmd.exe" /c c^m^d`,
+                        expected: {
+                            delayed_expansion: false,
+                            run_then_terminate: ""
+                        }
+                    },
+                    {
+                        input: `"cmd.exe" /R "set x=y"`,
+                        expected: {
+                            R: "",
+                            delayed_expansion: false
+                        }
+                    },
                 ];
 
                 tests.forEach(test => {
@@ -51,8 +68,17 @@ describe("Command handlers", () => {
                     ident  = CMD.try_identify_command(tokens),
                     output = CMD.filter.handle_CMD(ident, tokens);
 
-                assert.deepEqual(output, tokens);
+                assert.deepEqual(output.tokens, tokens);
             });
+        });
+
+        it("should remove the surrounding double quotes from a sub CMD string", () => {
+
+            let tokens = CMD.tokenise(`cmd "set foo=bar"`),
+                ident  = CMD.try_identify_command(tokens),
+                output = CMD.filter.handle_CMD(ident, tokens);
+
+            assert.deepEqual(output.tokens[0].name, "SET");
         });
 
         xit("should also strip command flags before the body of the command", () => {
