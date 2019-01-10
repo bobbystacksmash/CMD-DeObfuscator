@@ -54,6 +54,14 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
     describe("Environment variable handling", () => {
 
+        it("should expand environment variables that are already defined", () => {
+
+            const input  = `%COMSPEC%`,
+                  output = `C:\\Windows\\System32\\cmd.exe`;
+
+            assert.equal(CMD.parse(input, { expand_vars: true }), output);
+        });
+
         it("should not expand environment variables (delayed expansion is off)", () => {
 
             const input  = `set "foo=bar" & echo %foo%`,
@@ -70,12 +78,21 @@ describe("Command Deobfuscator: Integration Tests", () => {
             assert.deepEqual(CMD.parse(input), output);
         });
 
-        it("should expand environment variables introduced with set", () => {
+        it("should handle delayed expansion via the expand_vars flag", () => {
 
-            const input  = `SET foo=bar & !echo %foo%`,
-                  output = [`SET foo=bar`, `!echo bar`];
+            const input  = `SET foo=bar & echo %foo%`,
+                  tests = [
+                      {
+                          output: [`SET foo=bar`, `echo %foo%`],
+                          expand: false
+                      },
+                      {
+                          output: [`SET foo=bar`, `echo bar`],
+                          expand: true
+                      }
+                  ];
 
-            assert.deepEqual(CMD.parse(input), output);
+            tests.forEach(t => assert.deepEqual(CMD.parse(input, {expand_vars: t.expand}), t.output));
         });
 
         it("should allow many ASCII chars on the LHS of a SET expression", () => {
@@ -91,14 +108,23 @@ describe("Command Deobfuscator: Integration Tests", () => {
             var_names.forEach(v => {
                 let cmd = `SET ${v}=foo & echo %${v}%`;
                 assert.deepEqual(
-                    assert.deepEqual(CMD.parse(cmd), [`SET ${v}=foo`, `echo foo`])
+                    assert.deepEqual(
+                        CMD.parse(cmd, { expand_vars: true }), [`SET ${v}=foo`, `echo foo`]
+                    )
                 );
             });
         });
 
         it("should allow escaping of chars in the LHS of a SET expression", () => {
-            assert.deepEqual(CMD.parse(`SET ^>=foo & echo %>%`, { expand_vars: true }), [`SET >=foo`, `echo foo`]);
-            assert.deepEqual(CMD.parse(`SET ^^=foo & echo %^^%`, { expand_vars: true }), [`SET ^=foo`, `echo foo`]);
+            assert.deepEqual(
+                CMD.parse(`SET ^>=foo & echo %>%`, { expand_vars: true }),
+                [`SET >=foo`, `echo foo`]
+            );
+
+            assert.deepEqual(
+                CMD.parse(`SET ^^=foo & echo %^^%`, { expand_vars: true }),
+                [`SET ^=foo`, `echo foo`]
+            );
         });
     });
 
@@ -162,7 +188,8 @@ describe("Command Deobfuscator: Integration Tests", () => {
 
             // TODO: finish implementing this.
 
-            const input = `"C:\\Windows\\System32\\cmd.exe" c^m^d /V "set foo=bar & echo !foo!"`,
+            const input = `"C:\\Windows\\System32\\cmd.exe" ` +
+                          `c^m^d /V "set foo=bar & echo !foo!"`,
                   output = ["set foo=bar", "echo bar"];
 
             assert.deepEqual(CMD.parse(input), output);

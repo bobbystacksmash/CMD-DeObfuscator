@@ -185,7 +185,9 @@ function parse_cmdstr (cmdstr, options) {
                 if (options.expand_vars) {
                     // Expansion is off by default because that's how
                     // Windows works.
-                    collector.output.push(expand_environment_variables(result.clean, collector.vars));
+                    collector.output.push(
+                        expand_environment_variables(result.clean, collector.vars)
+                    );
                 }
                 else {
                     collector.output.push(result.clean);
