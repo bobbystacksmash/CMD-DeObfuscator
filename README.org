@@ -10,18 +10,32 @@ free of obfuscation characters.
 
 ** USAGE
 #+BEGIN_SRC javascript
-const CMD = require("./index"); // Module is not yet on NPM.
+const CMD  = require("./index"),
+      opts = { expand_inline: true };
 
-CMD.parse(`SET foo=p^o^w^e^r^s^h^e^l^l & echo %foo%`);
-// => [ "SET foo=powershell", "echo powershell" ]
+// Strip escape sequences:
+CMD.parse(`p^o^w^e^r^s^h^e^l^l`);
+// => [ "powershell" ]
 
-// Example from FireEye's DOSfuscation Report:
-CMD.parse(`%comspec:~-16,1%%comspec:~-1%%comspec:~-13,1% foo=bar`);
-// => [ "Set foo=bar" ]
-
-// String clean-up
+// Command clean-up:
 CMD.parse(`w""sc"r"i"p"t e""vil.js`);
 // => [ `"wscript" evil.js ]`
+
+// Expand environment variables with substrings:
+CMD.parse(`%comspec:~-16,1%%comspec:~-1%%comspec:~-13,1% foo=bar`, opts);
+// => [ "Set foo=bar" ]
+
+// Find/replace known values in environment variables:
+CMD.parse(`%comspec:cmd=powershell%`)
+// => C:\Windows\System32\powershell.exe
+
+// Flattens nested 'CMD.EXE' instances:
+CMD.parse(`cmd cmd cmd cmd calc.exe`);
+// => [ "calc.exe" ]
+
+// Handles delayed expansion within nested CMD contexts
+CMD.parse(`cmd /V:O "set foo=bar& echo !foo!"`);
+// => [ "set foo=bar", "echo bar" ]
 #+END_SRC
 
 ** EXAMPLES
