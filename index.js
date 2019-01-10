@@ -188,7 +188,7 @@ function FILTER_handle_cmd (ident, tokens) {
 
 /**
  * Parses a given command string in to individual commands, before
- * applying expansion and de-obfuscation filters to the each command.
+ * applying expansion and de-obfuscation filters to each command.
  *
  * @param {string} cmdstr - The original command string to be
  * de-obfuscated.
