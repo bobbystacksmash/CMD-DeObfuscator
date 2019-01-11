@@ -708,18 +708,28 @@ function split_command (command_str) {
 function tokenise (cmdstr, options) {
 
     options = options || {};
-    options = Object.assign({}, { filter: true }, options);
+    options = Object.assign({}, { escapes_as_literals: false, filter: true }, options);
 
     lexer.setInput(cmdstr);
 
     let tokens = [];
 
     while (true) {
-
         let token = lexer.lex();
+        if (token === "EOF") break;
 
-        if (token === "EOF") {
-            break;
+        if (options.escapes_as_literals) {
+            if (token.name === "ESCAPE") {
+                token.name = "LITERAL";
+            }
+            else if (token.name === "ESCAPED_LITERAL") {
+                if (token.text === "=") {
+                    token.name = "SET_ASSIGNMENT";
+                }
+                else {
+                    token.name = "LITERAL";
+                }
+            }
         }
 
         tokens.push(token);
@@ -731,6 +741,12 @@ function tokenise (cmdstr, options) {
         tokens = FILTER_slurp_literals_into_strings(tokens);
         tokens = FILTER_strip_excessive_whitespace(tokens);
         //tokens = FILTER_strip_commas(tokens);
+    }
+
+    let cleancmd = stringify_tokens(tokens);
+
+    if (cmdstr !== cleancmd) {
+        return tokenise(cleancmd, { escapes_as_literals: true });
     }
 
     return tokens;

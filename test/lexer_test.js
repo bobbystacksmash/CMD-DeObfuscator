@@ -189,6 +189,23 @@ describe("CMD Tests", () => {
 
             assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
         });
+
+        it("should tokenise an obfuscated SET command in to a clean SET command", () => {
+
+            const input  = `^S^ET foo=bar`,
+                  output = [
+                      "SET",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "SET_ASSIGNMENT",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+        });
     });
 
     describe("Quotes", () => {
@@ -361,6 +378,23 @@ describe("CMD Tests", () => {
 
                 const input  = `f^o^o`,
                       output = [
+                          "LITERAL",
+                          "LITERAL",
+                          "LITERAL"
+                      ];
+
+                assert.deepEqual(util.tokens(CMD.tokenise(input)), output);
+            });
+
+            it("should correctly deobfuscate and identify 'SET'", () => {
+
+                const input  = "S^E^T foo=bar",
+                      output = [
+                          "SET",
+                          "LITERAL",
+                          "LITERAL",
+                          "LITERAL",
+                          "SET_ASSIGNMENT",
                           "LITERAL",
                           "LITERAL",
                           "LITERAL"
