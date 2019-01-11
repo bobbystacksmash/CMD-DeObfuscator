@@ -6,6 +6,13 @@ const JisonLex           = require("jison-lex"),
 const grammar = fs.readFileSync(require.resolve("./comspec.l")).toString(),
       lexer   = new JisonLex(grammar);
 
+// ;;;;;;;;;;;;;;;;;;;;;;;
+// ;; Utility functions ;;
+// ;;;;;;;;;;;;;;;;;;;;;;;
+//
+function stringify_tokens(tokens) {
+    return tokens.map(t => t.text).join("");
+}
 function has (obj, key) {
     return obj.hasOwnProperty(key);
 }
@@ -219,7 +226,7 @@ function parse_cmdstr (cmdstr, options) {
             collector.vars = Object.assign(collector.vars, result.vars);
 
             if (result.ident.finished) {
-                collector.output.push(result.ident.tokens.map(t => t.text).join(""));
+                collector.output.push(stringify_tokens(result.ident.tokens));
             }
             else if (result.ident.command === "cmd") {
                 //
@@ -242,11 +249,11 @@ function parse_cmdstr (cmdstr, options) {
                 // This will produce "echo !foo!" because we created a
                 // sub-cmd context, and the default was applied.
                 //
-                let new_cmd = result.ident.tokens.map(t => t.text).join("");
+                let new_cmd = stringify_tokens(result.ident.tokens);
 
                 if (new_cmd.toLowerCase() !== "cmd") { // infinite loop protection.
                     parse_cmdstr_rec(
-                        result.ident.tokens.map(t => t.text).join(""),
+                        stringify_tokens(result.ident.tokens),
                         result.ident.switches
                     );
                 }
