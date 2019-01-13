@@ -119,6 +119,20 @@ describe.only("Phase 1: Percent Expansion", () => {
                 });
             });
 
+            it("should identify hex and octal range numbers", () => {
+
+                const tests = [
+                    { input: "%comspec:~0xB%", output: "System32\\cmd.exe" },
+                    { input: "%comspec:~0xB,6%", output: "System" },
+                    { input: "%comspec:~0XB,0x6%", output: "System" },
+                    { input: "%comspec:~013,6%", output: "System" },
+                    { input: "%comspec:~013,0xC%", output: "System32\\cmd" },
+                    { input: "%comspec:~-0xA%", output: "32\\cmd.exe" }
+                ];
+
+                tests.forEach(t => assert.deepEqual(expander(t.input), t.output));
+            });
+
             it("should replace the whole value when using %VAR:~0%", () => {
 
                 const opts = {
