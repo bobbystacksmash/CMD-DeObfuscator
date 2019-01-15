@@ -1,27 +1,36 @@
 %x DQS SQS ESC SET SETDQS
 
 %{
+
 function token (state, name) {
 
     let obj = {
         name  : name,
         match : state.match,
-        line  : yylineno,
         text  : yytext,
-        len   : yyleng,
-        loc   : yylloc
     };
 
     return obj;
 }
 %}
 
-
-Delimiter                   [\s,;=]+
+Any                         [\n\s\w\d\W]
+AnyExceptLF                 [^\n]
+Delimiter                   [\n\s,;=\xff\x0b\x0c]+
+DoubleQuote                 '"'
+Escape                      "^"
 
 %%
 
-<INITIAL>{Delimiter}        { return token(this, "DELIMITER"); }
+<INITIAL>{Escape}           { this.begin("ESC"); return token(this, "ESCAPE"); }
+<ESC>{AnyExceptLF}          { this.popState(); return token(this, "ESCAPED_LITERAL"); }
 
-<*>{Unknown}                { return token(this, "LITERAL"); }
+<INITIAL>{Delimiter}+       { return token(this, "DELIMITER"); }
+
+<INITIAL>{DoubleQuote}      { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
+<DQS>[^\"]+                 { return token(this, "STRING_DQUOTE_CHAR"); }
+<DQS>{DoubleQuote}          { this.popState(); return token(this, "STRING_DQUOTE_END"); }
+
+
+<*>{Any}                    { return token(this, "LITERAL"); }
 <*><<EOF>>                  { return token(this, "EOF"); }
