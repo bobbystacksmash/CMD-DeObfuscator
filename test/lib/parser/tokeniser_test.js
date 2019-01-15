@@ -91,13 +91,49 @@ describe("Tokeniser", () => {
             });
         });
 
-        // TODO:
-        //
-        //   test that `^" hello "world"` identifies the starting
-        //   quote as being escaped.
-        //
-        //   test that the closing quote cannot ever be escaped.
+        it("should not be possible to escape a closing double quote", () => {
 
+            const tests = [
+                {
+                    input: `^",^"a"`,
+                    output: [
+                        "ESCAPE",
+                        "ESCAPED_LITERAL",
+                        "DELIMITER",
+                        "ESCAPE",
+                        "ESCAPED_LITERAL",
+                        "LITERAL",
+                        "STRING_DQUOTE_START"
+                    ]
+                },
+                {
+                    input: `^"a"`,
+                    output: [
+                        "ESCAPE",
+                        "ESCAPED_LITERAL",
+                        "LITERAL",
+                        "STRING_DQUOTE_START"
+                    ]
+                },
+                {
+                    lexemes: true,
+                    input:   `"a^"`,
+                    output: [
+                        "STRING_DQUOTE"
+                    ]
+                }
+            ];
+
+            tests.forEach(t => {
+
+                assert.deepEqual(util.names(tokenise(t.input)), t.output);
+
+                if (t.hasOwnProperty("lexemes")) {
+                    // Input should match output
+                    assert.deepEqual(util.lexemes(tokenise(t.input)), [t.input]);
+                }
+            });
+        });
     });
 
     describe("String Identification", () => {
@@ -134,6 +170,11 @@ describe("Tokeniser", () => {
                     assert.deepEqual(util.lexemes(tokens), t.lexemes, t.msg);
                     assert.deepEqual(util.names(tokens),   t.names, t.msg);
                 });
+            });
+
+            it("should identify a lone dquote as a literal", () => {
+                const tokens = tokenise(`"`);
+                assert.deepEqual(util.names(tokens), ["STRING_DQUOTE_START"]);
             });
         });
     });
