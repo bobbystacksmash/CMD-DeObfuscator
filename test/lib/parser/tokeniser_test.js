@@ -176,6 +176,16 @@ describe("Tokeniser", () => {
                 const tokens = tokenise(`"`);
                 assert.deepEqual(util.names(tokens), ["STRING_DQUOTE_START"]);
             });
+
+            it("should identify an unterminated string", () => {
+                const tokens = tokenise(`"ab`);
+                assert.deepEqual(
+                    util.names(tokens),
+                    ["STRING_DQUOTE_START", "STRING_DQUOTE_CHAR"]
+                );
+
+                assert.deepEqual(util.lexemes(tokens), [`"`, "ab"]);
+            });
         });
     });
 
