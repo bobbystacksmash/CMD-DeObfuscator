@@ -227,6 +227,22 @@ describe("Tokeniser", () => {
             assert.equal(output[0].name, "DELIMITER");
             assert.equal(output[0].text, input);
         });
+
+        it("should identify a runs of alternating delimiter/literal units", () => {
+
+            const input  = `,;,cmd,;,`,
+                  output = tokenise(input),
+                  expected = [
+                      { name: "DELIMITER", lexeme: ",;," },
+                      { name: "LITERAL",   lexeme: "c"   },
+                      { name: "LITERAL",   lexeme: "m"   },
+                      { name: "LITERAL",   lexeme: "d"   },
+                      { name: "DELIMITER", lexeme: ",;," },
+                  ];
+
+            assert.deepEqual(util.names(output),   expected.map(x => x.name));
+            assert.deepEqual(util.lexemes(output), expected.map(x => x.lexeme));
+        });
     });
 
     describe("Delayed Expansion", () => {
