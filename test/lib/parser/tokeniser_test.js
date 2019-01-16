@@ -1,5 +1,5 @@
 const assert   = require("chai").assert,
-      tokenise = require("../../../lib/tokeniser");
+      tokenise = require("../../../lib/parser/tokeniser");
 
 const util = {
     filterEOF: (tokens) => tokens.filter(t => t.name !== "EOF"),
@@ -83,7 +83,27 @@ describe("Tokeniser", () => {
                 {
                     input: `^\xff`,
                     output: ["ESCAPE", "ESCAPED_LITERAL"]
-                }
+                },
+                //
+                // Parenthesis
+                //
+                {
+                    input: "^( ^)",
+                    output: [
+                        "ESCAPE",
+                        "ESCAPED_LITERAL",
+                        "DELIMITER",
+                        "ESCAPE",
+                        "ESCAPED_LITERAL"
+                    ]
+                },
+                //
+                // Command Terminations (&, &&, ||)
+                //
+                /*{
+                    input: "todo: command grouping",
+                    output: []
+                }*/
             ];
 
             tests.forEach(t => {
@@ -243,6 +263,39 @@ describe("Tokeniser", () => {
             assert.deepEqual(util.names(output),   expected.map(x => x.name));
             assert.deepEqual(util.lexemes(output), expected.map(x => x.lexeme));
         });
+    });
+
+    describe("Parenthesis", () => {
+
+        const input = `(cmd)`,
+              output = tokenise(input);
+
+        assert.deepEqual(
+            util.names(output),
+            ["LPAREN", "LITERAL", "LITERAL", "LITERAL", "RPAREN"]
+        );
+
+        it("should detect nested parens", () => {
+
+            const input = `((()))`,
+                  output = tokenise(input);
+
+            assert.deepEqual(
+                util.names(output),
+                [
+                    "LPAREN",
+                    "LPAREN",
+                    "LPAREN",
+                    "RPAREN",
+                    "RPAREN",
+                    "RPAREN"
+                ]
+            );
+        });
+    });
+
+    describe("Command Grouping '&', '&&', '||'", () => {
+        //it("todo", () => assert.isTrue(false));
     });
 
     describe("Delayed Expansion", () => {

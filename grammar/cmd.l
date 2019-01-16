@@ -17,13 +17,18 @@ function token (state, name) {
 Any                         [\n\s\w\d\W]
 AnyExceptLF                 [^\n]
 Delimiter                   [\n\s,;=\xff\x0b\x0c]+
-DoubleQuote                 '"'
+LParen                      "("
+RParen                      ")"
+DoubleQuote                 [\"]
 Escape                      "^"
 
 %%
 
 <INITIAL>{Escape}           { this.begin("ESC"); return token(this, "ESCAPE"); }
 <ESC>{AnyExceptLF}          { this.popState(); return token(this, "ESCAPED_LITERAL"); }
+
+<INITIAL>{LParen}           { return token(this, "LPAREN"); }
+<INITIAL>{RParen}           { return token(this, "RPAREN"); }
 
 <INITIAL>{Delimiter}+       { return token(this, "DELIMITER"); }
 

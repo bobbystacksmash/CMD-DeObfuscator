@@ -8,7 +8,7 @@ const VARS = {
     "'"    : "quote"
 };
 
-describe.only("Phase 1: Percent Expansion", () => {
+describe("Phase 1: Percent Expansion", () => {
 
     describe("Basic Expansions", () => {
 
