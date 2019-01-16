@@ -22,20 +22,28 @@ RParen                      ")"
 DoubleQuote                 [\"]
 Escape                      "^"
 
+ConditionalAlways           "&"
+ConditionalSuccess          "&&"
+ConditionalOr               "||"
+
 %%
 
-<INITIAL>{Escape}           { this.begin("ESC"); return token(this, "ESCAPE"); }
-<ESC>{AnyExceptLF}          { this.popState(); return token(this, "ESCAPED_LITERAL"); }
+<INITIAL>{Escape}             { this.begin("ESC"); return token(this, "ESCAPE"); }
+<ESC>{AnyExceptLF}            { this.popState(); return token(this, "ESCAPED_LITERAL"); }
 
-<INITIAL>{LParen}           { return token(this, "LPAREN"); }
-<INITIAL>{RParen}           { return token(this, "RPAREN"); }
+<INITIAL>{LParen}             { return token(this, "LPAREN"); }
+<INITIAL>{RParen}             { return token(this, "RPAREN"); }
 
-<INITIAL>{Delimiter}+       { return token(this, "DELIMITER"); }
+<INITIAL>{ConditionalSuccess} { return token(this, "COND_SUCCESS"); }
+<INITIAL>{ConditionalAlways}  { return token(this, "COND_ALWAYS"); }
+<INITIAL>{ConditionalOr}      { return token(this, "COND_OR"); }
 
-<INITIAL>{DoubleQuote}      { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
-<DQS>[^\"]+                 { return token(this, "STRING_DQUOTE_CHAR"); }
-<DQS>{DoubleQuote}          { this.popState(); return token(this, "STRING_DQUOTE_END"); }
+<INITIAL>{Delimiter}+         { return token(this, "DELIMITER"); }
+
+<INITIAL>{DoubleQuote}        { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
+<DQS>[^\"]+                   { return token(this, "STRING_DQUOTE_CHAR"); }
+<DQS>{DoubleQuote}            { this.popState(); return token(this, "STRING_DQUOTE_END"); }
 
 
-<*>{Any}                    { return token(this, "LITERAL"); }
-<*><<EOF>>                  { return token(this, "EOF"); }
+<*>{Any}                      { return token(this, "LITERAL"); }
+<*><<EOF>>                    { return token(this, "EOF"); }

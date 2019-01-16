@@ -98,12 +98,20 @@ describe("Tokeniser", () => {
                     ]
                 },
                 //
-                // Command Terminations (&, &&, ||)
+                // Conditional Processing (&, &&, ||)
                 //
-                /*{
-                    input: "todo: command grouping",
-                    output: []
-                }*/
+                {
+                    input: "^&",
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                {
+                    input: "^&^&",
+                    output: ["ESCAPE", "ESCAPED_LITERAL", "ESCAPE", "ESCAPED_LITERAL"]
+                },
+                {
+                    input: "^|^|",
+                    output: ["ESCAPE", "ESCAPED_LITERAL", "ESCAPE", "ESCAPED_LITERAL"]
+                }
             ];
 
             tests.forEach(t => {
@@ -294,8 +302,61 @@ describe("Tokeniser", () => {
         });
     });
 
-    describe("Command Grouping '&', '&&', '||'", () => {
-        //it("todo", () => assert.isTrue(false));
+    describe("Conditional Processing '&', '&&', '||'", () => {
+
+        it("should identify all of the grouping operators", () => {
+
+            const tests = [
+                { input: "&", name: "COND_ALWAYS" },
+                { input: "&&", name: "COND_SUCCESS" },
+                { input: "||", name: "COND_OR" }
+            ];
+
+            tests.forEach(t => assert.deepEqual(util.names(tokenise(t.input)), [t.name]));
+        });
+
+        it("should identify grouping operators when used in a command with other tokens", () => {
+
+            const tests = [
+                {
+                    input: "a & b",
+                    output: [
+                        "LITERAL",
+                        "DELIMITER",
+                        "COND_ALWAYS",
+                        "DELIMITER",
+                        "LITERAL"
+                    ]
+                },
+                {
+                    input: "a && b",
+                    output: [
+                        "LITERAL",
+                        "DELIMITER",
+                        "COND_SUCCESS",
+                        "DELIMITER",
+                        "LITERAL"
+                    ]
+                },
+                {
+                    input: "(a || b)",
+                    output: [
+                        "LPAREN",
+                        "LITERAL",
+                        "DELIMITER",
+                        "COND_OR",
+                        "DELIMITER",
+                        "LITERAL",
+                        "RPAREN"
+                    ]
+                }
+            ];
+
+            tests.forEach(t => {
+                assert.deepEqual(util.names(tokenise(t.input)), t.output);
+            });
+
+        });
     });
 
     describe("Delayed Expansion", () => {
