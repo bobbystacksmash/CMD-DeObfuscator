@@ -420,6 +420,30 @@ describe("Tokeniser", () => {
         });
     });
 
+    describe("IF statements", () => {
+        it("should detect an 'IF DEFINED _var' sequence", () => {
+
+            const input  = "IF DEFINED _x CALL calc",
+                  output = [
+                      "IF",
+                      "DELIMITER",
+                      "DEFINED",
+                      "DELIMITER",
+                      "LITERAL",
+                      "LITERAL",
+                      "DELIMITER",
+                      "CALL",
+                      "DELIMITER",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.names(tokenise(input)), output);
+        });
+    });
+
     describe("Redirection and Pipes", () => {
 
         it("should identify <, >, >>, and |", () => {

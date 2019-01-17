@@ -1,4 +1,4 @@
-%x DQS SQS ESC SET SETDQS
+%x DQS SQS ESC SET SETDQS IF
 
 %{
 
@@ -33,6 +33,15 @@ ConditionalAlways           "&"
 ConditionalSuccess          "&&"
 ConditionalOr               "||"
 
+Call                        [cC][aA][lL]{2}
+
+If                          [iI][fF]                     // IF
+Else x                      [eE][lL][sS][eE]             // ELSE
+Not                         [nN][oO][tT]                 // NOT
+Exist                       [eE][xX][iI][sS][tT]         // EXIST
+Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
+
+
 %%
 
 <INITIAL>{Escape}             { this.begin("ESC"); return token(this, "ESCAPE"); }
@@ -54,9 +63,13 @@ ConditionalOr               "||"
 <INITIAL>{RedirectOut}        { return token(this, "REDIRECT_OUT"); }
 <INITIAL>{RedirectPipe}       { return token(this, "REDIRECT_PIPE"); }
 
+<INITIAL,IF>{Call}            { this.popState(); return token(this, "CALL"); }
 
+// IF STATEMENT
+<INITIAL>{If}                 { this.begin("IF"); return token(this, "IF"); }
+<IF>{Defined}                 { return token(this, "DEFINED"); }
 
-<INITIAL>{Delimiter}+         { return token(this, "DELIMITER"); }
+<INITIAL,IF>{Delimiter}+      { return token(this, "DELIMITER"); }
 
 <INITIAL>{DoubleQuote}        { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
 <DQS>[^\"]+                   { return token(this, "STRING_DQUOTE_CHAR"); }
