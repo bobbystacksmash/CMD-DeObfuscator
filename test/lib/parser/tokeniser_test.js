@@ -98,6 +98,67 @@ describe("Tokeniser", () => {
                     ]
                 },
                 //
+                // Brackets
+                //
+                {
+                    input: `^[^]^{^}`,
+                    output: [
+                        "ESCAPE", "ESCAPED_LITERAL",
+                        "ESCAPE", "ESCAPED_LITERAL",
+                        "ESCAPE", "ESCAPED_LITERAL",
+                        "ESCAPE", "ESCAPED_LITERAL"
+                    ]
+                },
+                //
+                // Escape an escape
+                //
+                {
+                    input: `^^`,
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
+                // Escape an exclaimation mark
+                //
+                {
+                    input: `^!`,
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
+                // Single quotes
+                //
+                {
+                    input: `^'`,
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
+                // Plus (+)
+                //
+                {
+                    input: `^+`,
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
+                // Commas
+                //
+                {
+                    input: `^,`,
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
+                // Backtick
+                //
+                {
+                    input: "^`",
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
+                // Tilde
+                //
+                {
+                    input: `^~`,
+                    output: ["ESCAPE", "ESCAPED_LITERAL"]
+                },
+                //
                 // Conditional Processing (&, &&, ||)
                 //
                 {
@@ -356,6 +417,23 @@ describe("Tokeniser", () => {
                 assert.deepEqual(util.names(tokenise(t.input)), t.output);
             });
 
+        });
+    });
+
+    describe("Redirection and Pipes", () => {
+
+        it("should identify <, >, >>, and |", () => {
+
+            const tests = [
+                { input: `<`,  output: "REDIRECT_IN"         },
+                { input: `>`,  output: "REDIRECT_OUT"        },
+                { input: `>>`, output: "REDIRECT_OUT_APPEND" },
+                { input: `|`,  output: "REDIRECT_PIPE"       }
+            ];
+
+            tests.forEach(
+                t => assert.deepEqual(util.names(tokenise(t.input)), [t.output])
+            );
         });
     });
 

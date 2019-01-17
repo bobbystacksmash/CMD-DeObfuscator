@@ -21,6 +21,10 @@ LParen                      "("
 RParen                      ")"
 DoubleQuote                 [\"]
 Escape                      "^"
+RedirectIn                  "<"
+RedirectOut                 ">"
+RedirectOutAppend           ">>"
+RedirectPipe                "|"
 
 ConditionalAlways           "&"
 ConditionalSuccess          "&&"
@@ -37,6 +41,13 @@ ConditionalOr               "||"
 <INITIAL>{ConditionalSuccess} { return token(this, "COND_SUCCESS"); }
 <INITIAL>{ConditionalAlways}  { return token(this, "COND_ALWAYS"); }
 <INITIAL>{ConditionalOr}      { return token(this, "COND_OR"); }
+
+// Redirection
+<INITIAL>{RedirectIn}         { return token(this, "REDIRECT_IN");  }
+<INITIAL>{RedirectOutAppend}  { return token(this, "REDIRECT_OUT_APPEND"); }
+<INITIAL>{RedirectOut}        { return token(this, "REDIRECT_OUT"); }
+<INITIAL>{RedirectPipe}        { return token(this, "REDIRECT_PIPE"); }
+
 
 <INITIAL>{Delimiter}+         { return token(this, "DELIMITER"); }
 
