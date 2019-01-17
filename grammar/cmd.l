@@ -21,10 +21,13 @@ LParen                      "("
 RParen                      ")"
 DoubleQuote                 [\"]
 Escape                      "^"
+
 RedirectIn                  "<"
 RedirectOut                 ">"
+RedirectOutTo               \d\>
 RedirectOutAppend           ">>"
 RedirectPipe                "|"
+RedirectStdoutToStdErr      \&\d
 
 ConditionalAlways           "&"
 ConditionalSuccess          "&&"
@@ -38,6 +41,8 @@ ConditionalOr               "||"
 <INITIAL>{LParen}             { return token(this, "LPAREN"); }
 <INITIAL>{RParen}             { return token(this, "RPAREN"); }
 
+<INITIAL>{RedirectStdoutToStdErr} { return token(this, "REDIRECT_STDERR_STDOUT"); }
+
 <INITIAL>{ConditionalSuccess} { return token(this, "COND_SUCCESS"); }
 <INITIAL>{ConditionalAlways}  { return token(this, "COND_ALWAYS"); }
 <INITIAL>{ConditionalOr}      { return token(this, "COND_OR"); }
@@ -45,8 +50,10 @@ ConditionalOr               "||"
 // Redirection
 <INITIAL>{RedirectIn}         { return token(this, "REDIRECT_IN");  }
 <INITIAL>{RedirectOutAppend}  { return token(this, "REDIRECT_OUT_APPEND"); }
+<INITIAL>{RedirectOutTo}      { return token(this, "REDIRECT_OUT_TO"); }
 <INITIAL>{RedirectOut}        { return token(this, "REDIRECT_OUT"); }
-<INITIAL>{RedirectPipe}        { return token(this, "REDIRECT_PIPE"); }
+<INITIAL>{RedirectPipe}       { return token(this, "REDIRECT_PIPE"); }
+
 
 
 <INITIAL>{Delimiter}+         { return token(this, "DELIMITER"); }

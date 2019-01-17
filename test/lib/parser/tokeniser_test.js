@@ -3,8 +3,8 @@ const assert   = require("chai").assert,
 
 const util = {
     filterEOF: (tokens) => tokens.filter(t => t.name !== "EOF"),
-    lexemes: (tokens) => util.filterEOF(tokens).map(t => t.text),
-    names:   (tokens) => util.filterEOF(tokens).map(t => t.name)
+    lexemes:   (tokens) => util.filterEOF(tokens).map(t => t.text),
+    names:     (tokens) => util.filterEOF(tokens).map(t => t.name)
 };
 
 describe("Tokeniser", () => {
@@ -425,10 +425,12 @@ describe("Tokeniser", () => {
         it("should identify <, >, >>, and |", () => {
 
             const tests = [
-                { input: `<`,  output: "REDIRECT_IN"         },
-                { input: `>`,  output: "REDIRECT_OUT"        },
-                { input: `>>`, output: "REDIRECT_OUT_APPEND" },
-                { input: `|`,  output: "REDIRECT_PIPE"       }
+                { input: `<`,  output: "REDIRECT_IN"            },
+                { input: `>`,  output: "REDIRECT_OUT"           },
+                { input: `2>`, output: "REDIRECT_OUT_TO"        },
+                { input: `&1`, output: "REDIRECT_STDERR_STDOUT" },
+                { input: `>>`, output: "REDIRECT_OUT_APPEND"    },
+                { input: `|`,  output: "REDIRECT_PIPE"          }
             ];
 
             tests.forEach(
