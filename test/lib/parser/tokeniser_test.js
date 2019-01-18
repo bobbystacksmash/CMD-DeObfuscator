@@ -9,6 +9,18 @@ const util = {
 
 describe("Tokeniser", () => {
 
+    describe("Reserved Word List", () => {
+
+        it("should detect words in the reserved word list", () => {
+
+            const reserved = [
+                "SET", "IF", "ELSE", "NOT", "DEFINED", "CALL"
+            ];
+
+            reserved.forEach(r => assert.deepEqual(util.names(tokenise(r)), [r]));
+        });
+    });
+
     describe("Escaping", () => {
 
         it("should identify an escape (^) and its associated escaped literal", () => {
@@ -417,29 +429,123 @@ describe("Tokeniser", () => {
 
             it("should tokenise an input string matching a simple IF EXIST", () => {
 
-                const input  = `IF EXIST "abc.txt" CALL calc`,
-                      output = [
-                          "IF",
-                          "DELIMITER",
-                          "EXIST",
-                          "DELIMITER",
-                          "STRING_DQUOTE",
-                          "DELIMITER",
-                          "CALL",
-                          "DELIMITER",
-                          "LITERAL",
-                      ];
+                const tests = [
+                    {
+                        input: `IF EXIST "abc.txt" CALL calc`,
+                        output: [
+                            "IF",
+                            "DELIMITER",
+                            "EXIST",
+                            "DELIMITER",
+                            "STRING_DQUOTE",
+                            "DELIMITER",
+                            "CALL",
+                            "DELIMITER",
+                            "LITERAL",
+                        ]
+                    },
+                    {
+                        input: `IF EXIST abc.txt CALL calc`,
+                        output: [
+                            "IF",
+                            "DELIMITER",
+                            "EXIST",
+                            "DELIMITER",
+                            "LITERAL",
+                            "DELIMITER",
+                            "CALL",
+                            "DELIMITER",
+                            "LITERAL",
+                        ]
+                    }
+                ];
 
-                assert.deepEqual(util.names(tokenise(input)), output);
+                tests.forEach(t => {
+                    assert.deepEqual(util.names(tokenise(t.input)), t.output, t.input);
+                });
+            });
+
+            it("should tokenise an input string matching a simple 'IF NOT EXIST...'", () => {
+
+                const tests = [
+                    {
+                        input: `IF NOT EXIST "abc.txt" CALL calc`,
+                        output: [
+                            "IF",
+                            "DELIMITER",
+                            "NOT",
+                            "DELIMITER",
+                            "EXIST",
+                            "DELIMITER",
+                            "STRING_DQUOTE",
+                            "DELIMITER",
+                            "CALL",
+                            "DELIMITER",
+                            "LITERAL",
+                        ]
+                    },
+                    {
+                        input: `IF NOT EXIST abc.txt CALL calc`,
+                        output: [
+                            "IF",
+                            "DELIMITER",
+                            "NOT",
+                            "DELIMITER",
+                            "EXIST",
+                            "DELIMITER",
+                            "LITERAL",
+                            "DELIMITER",
+                            "CALL",
+                            "DELIMITER",
+                            "LITERAL",
+                        ]
+                    }
+                ];
+
+                tests.forEach(t => {
+                    assert.deepEqual(util.names(tokenise(t.input)), t.output, t.input);
+                });
             });
 
             it("should tokenise an 'IF EXIST filename (cmd) ELSE (cmd)' expr", () => {
 
+                const tests = [
+                    {
+                        input: `IF EXIST "abc.txt" (CALL calc.exe) ELSE (call wscript.exe)`,
+                        output: [
+                            "IF",
+                            "DELIMITER",
+                            "EXIST",
+                            "DELIMITER",
+                            "STRING_DQUOTE",
+                            "DELIMITER",
+                            "LPAREN",
+                            "CALL",
+                            "DELIMITER",
+                            "LITERAL",
+                            "RPAREN",
+                            "DELIMITER",
+                            "ELSE",
+                            "DELIMITER",
+                            "LPAREN",
+                            "CALL",
+                            "DELIMITER",
+                            "LITERAL",
+                            "RPAREN"
+                        ]
+                    }
+                ];
+
+                tests.forEach(t => {
+                    assert.deepEqual(util.names(tokenise(t.input)), t.output, t.input);
+                });
             });
         });
 
         describe("String Syntax", () => {
-
+            // TODO:
+            //  - IF "%var%"=="" (SET var=default value)
+            //  - IF NOT DEFINED var (SET var=default value)
         });
 
         describe("Error Check Syntax", () => {

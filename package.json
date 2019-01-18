@@ -8,6 +8,7 @@
         "testident": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/try_identify_command_test.js",
         "testrewrite": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/lib/parser/var-expander_test.js",
         "testtokeniser": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/lib/parser/tokeniser_test.js",
+        "testparser": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/lib/parser/parser_test.js",
         "testvar": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/var_expander_test.js",
         "testfilters": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/filters/*_test.js",
         "teststrip": "node_modules/.bin/mocha --watch --recursive --reporter dot ./test/strip_escapes_test.js",
