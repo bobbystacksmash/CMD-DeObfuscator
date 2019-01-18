@@ -68,10 +68,11 @@ Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
 // IF STATEMENT
 <INITIAL>{If}                 { this.begin("IF"); return token(this, "IF"); }
 <IF>{Defined}                 { return token(this, "DEFINED"); }
+<IF>{Exist}                   { return token(this, "EXIST"); }
 
 <INITIAL,IF>{Delimiter}+      { return token(this, "DELIMITER"); }
 
-<INITIAL>{DoubleQuote}        { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
+<INITIAL,IF>{DoubleQuote}     { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
 <DQS>[^\"]+                   { return token(this, "STRING_DQUOTE_CHAR"); }
 <DQS>{DoubleQuote}            { this.popState(); return token(this, "STRING_DQUOTE_END"); }
 

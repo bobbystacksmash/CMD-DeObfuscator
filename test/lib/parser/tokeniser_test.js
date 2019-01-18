@@ -421,6 +421,39 @@ describe("Tokeniser", () => {
     });
 
     describe("IF statements", () => {
+
+        describe("File Syntax", () => {
+
+            it("should tokenise an input string matching a simple IF EXIST", () => {
+
+                const input  = `IF EXIST "abc.txt" CALL calc`,
+                      output = [
+                          "IF",
+                          "DELIMITER",
+                          "EXIST",
+                          "DELIMITER",
+                          "STRING_DQUOTE",
+                          "DELIMITER",
+                          "CALL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "LITERAL",
+                          "LITERAL",
+                          "LITERAL"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+            });
+        });
+
+        describe("String Syntax", () => {
+
+        });
+
+        describe("Error Check Syntax", () => {
+
+        });
+
         it("should detect an 'IF DEFINED _var' sequence", () => {
 
             const input  = "IF DEFINED _x CALL calc",
