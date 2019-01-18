@@ -15,6 +15,7 @@ function token (state, name) {
 %}
 
 Any                         [\n\s\w\d\W]
+Literal                     [^\^\(\)\[\]\(\)\{\}\s,;=\xff\x0b\x0c\"]+
 AnyExceptLF                 [^\n]
 Delimiter                   [\n\s,;=\xff\x0b\x0c]+
 LParen                      "("
@@ -70,12 +71,13 @@ Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
 <IF>{Defined}                 { return token(this, "DEFINED"); }
 <IF>{Exist}                   { return token(this, "EXIST"); }
 
-<INITIAL,IF>{Delimiter}+      { return token(this, "DELIMITER"); }
+<INITIAL,IF>{Delimiter}       { return token(this, "DELIMITER"); }
 
 <INITIAL,IF>{DoubleQuote}     { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
 <DQS>[^\"]+                   { return token(this, "STRING_DQUOTE_CHAR"); }
 <DQS>{DoubleQuote}            { this.popState(); return token(this, "STRING_DQUOTE_END"); }
 
 
-<*>{Any}                      { return token(this, "LITERAL"); }
+<INITIAL,IF>{Literal}         { return token(this, "LITERAL"); }
+<*>{Any}                      { return token(this, "UNKNOWN"); }
 <*><<EOF>>                    { return token(this, "EOF"); }

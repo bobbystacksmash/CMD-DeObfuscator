@@ -27,8 +27,6 @@ describe("Tokeniser", () => {
                         "ESCAPE",
                         "ESCAPED_LITERAL",
                         "LITERAL",
-                        "LITERAL",
-                        "LITERAL",
                         "STRING_DQUOTE"
                     ]
                 },
@@ -38,8 +36,6 @@ describe("Tokeniser", () => {
                         "ESCAPE",
                         "ESCAPED_LITERAL",
                         "LITERAL",
-                        "LITERAL",
-                        "LITERAL",
                         "ESCAPE",
                         "ESCAPED_LITERAL"
                     ]
@@ -48,14 +44,8 @@ describe("Tokeniser", () => {
                 // Delimiters
                 //
                 // Special handling for LF:
-                {
-                    input: `^\n`,
-                    output: ["ESCAPE", "LITERAL"]
-                },
-                {
-                    input: `^ `,
-                    output: ["ESCAPE", "ESCAPED_LITERAL"]
-                },
+                //
+                // TODO: do not think LF loses any special meaning...
                 {
                     input: `^ `,
                     output: ["ESCAPE", "ESCAPED_LITERAL"]
@@ -323,9 +313,7 @@ describe("Tokeniser", () => {
                   output = tokenise(input),
                   expected = [
                       { name: "DELIMITER", lexeme: ",;," },
-                      { name: "LITERAL",   lexeme: "c"   },
-                      { name: "LITERAL",   lexeme: "m"   },
-                      { name: "LITERAL",   lexeme: "d"   },
+                      { name: "LITERAL",   lexeme: "cmd" },
                       { name: "DELIMITER", lexeme: ",;," },
                   ];
 
@@ -336,13 +324,16 @@ describe("Tokeniser", () => {
 
     describe("Parenthesis", () => {
 
-        const input = `(cmd)`,
-              output = tokenise(input);
+        it("should detect '(cmd)'", () => {
 
-        assert.deepEqual(
-            util.names(output),
-            ["LPAREN", "LITERAL", "LITERAL", "LITERAL", "RPAREN"]
-        );
+            const input = `(cmd)`,
+                  output = tokenise(input);
+
+            assert.deepEqual(
+                util.names(output),
+                ["LPAREN", "LITERAL", "RPAREN"]
+            );
+        });
 
         it("should detect nested parens", () => {
 
@@ -437,12 +428,13 @@ describe("Tokeniser", () => {
                           "CALL",
                           "DELIMITER",
                           "LITERAL",
-                          "LITERAL",
-                          "LITERAL",
-                          "LITERAL"
                       ];
 
                 assert.deepEqual(util.names(tokenise(input)), output);
+            });
+
+            it("should tokenise an 'IF EXIST filename (cmd) ELSE (cmd)' expr", () => {
+
             });
         });
 
@@ -463,14 +455,10 @@ describe("Tokeniser", () => {
                       "DEFINED",
                       "DELIMITER",
                       "LITERAL",
-                      "LITERAL",
                       "DELIMITER",
                       "CALL",
                       "DELIMITER",
                       "LITERAL",
-                      "LITERAL",
-                      "LITERAL",
-                      "LITERAL"
                   ];
 
             assert.deepEqual(util.names(tokenise(input)), output);
