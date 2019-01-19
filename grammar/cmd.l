@@ -22,6 +22,8 @@ LParen                      "("
 RParen                      ")"
 DoubleQuote                 [\"]
 Escape                      "^"
+Equals                      "="
+DoubleEquals                "=="
 
 RedirectIn                  "<"
 RedirectOut                 ">"
@@ -43,6 +45,12 @@ Not                         [nN][oO][tT]                 // NOT
 Exist                       [eE][xX][iI][sS][tT]         // EXIST
 Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
 
+If_EQU                      [eE][qQ][uU]                 // EQU (equal to)
+If_NEQ                      [nN][eE][qQ]                 // NEQ (not equal to)
+If_LSS                      [lL][sS]{2}                  // LSS (less than)
+If_LEQ                      [lL][eE][qQ]                 // LEQ (less than or equal to)
+If_GTR                      [gG][tT][rR]                 // GTR (greater than)
+If_GEQ                      [gG][eE][qQ]                 // GEQ (greater than or equal to)
 
 %%
 
@@ -51,6 +59,8 @@ Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
 
 <INITIAL>{LParen}          { return token(this, "LPAREN"); }
 <INITIAL>{RParen}          { return token(this, "RPAREN"); }
+
+<INITIAL>{DoubleEquals}           { return token(this, "DOUBLE_EQUALS"); }
 
 <INITIAL>{RedirectStdoutToStdErr} { return token(this, "REDIRECT_STDERR_STDOUT"); }
 
@@ -74,6 +84,14 @@ Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
 <INITIAL>{Not}                     { return token(this, "NOT"); }
 <INITIAL>{Defined}                 { return token(this, "DEFINED"); }
 <INITIAL>{Exist}                   { return token(this, "EXIST"); }
+
+<INITIAL>{If_EQU}                  { return token(this, "IF_EQU"); }
+<INITIAL>{If_NEQ}                  { return token(this, "IF_NEQ"); }
+<INITIAL>{If_LSS}                  { return token(this, "IF_LSS"); }
+<INITIAL>{If_LEQ}                  { return token(this, "IF_LEQ"); }
+<INITIAL>{If_GTR}                  { return token(this, "IF_GTR"); }
+<INITIAL>{If_GEQ}                  { return token(this, "IF_GEQ"); }
+
 
 <INITIAL>{Delimiter}       { return token(this, "DELIMITER"); }
 

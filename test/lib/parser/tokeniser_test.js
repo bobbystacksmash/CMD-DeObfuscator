@@ -543,6 +543,78 @@ describe("Tokeniser", () => {
         });
 
         describe("String Syntax", () => {
+
+            it("should detect basic string comparison", () => {
+
+                const input  = `IF "%var%"=="Hello, World!" ( ECHO found! )`,
+                      output = [
+                          "IF",
+                          "DELIMITER",
+                          "STRING_DQUOTE",
+                          "DOUBLE_EQUALS",
+                          "STRING_DQUOTE",
+                          "DELIMITER",
+                          "LPAREN",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "RPAREN"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+            });
+
+            it("should detect empty strings when checking if a var is set", () => {
+
+                const input  = `IF "%var%"=="" (SET var=123)`,
+                      output = [
+                          "IF",
+                          "DELIMITER",
+                          "STRING_DQUOTE",
+                          "DOUBLE_EQUALS",
+                          "STRING_DQUOTE",
+                          "DELIMITER",
+                          "LPAREN",
+                          "SET",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "RPAREN"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+            });
+
+            it("should detect all of: EQU, NEQ, LSS, LEQ, GTR, GEQ", () => {
+
+                const comparison_opterators = [
+                    "EQU", "NEQ", "LSS", "LEQ", "GTR", "GEQ"
+                ];
+
+                comparison_opterators.forEach(op => {
+
+                    const input  = `IF "a" ${op} "b" (calc.exe)`,
+                          output = util.names(tokenise(input));
+
+                    assert.deepEqual(output, [
+                        "IF",
+                        "DELIMITER",
+                        "STRING_DQUOTE",
+                        "DELIMITER",
+                        `IF_${op}`,
+                        "DELIMITER",
+                        "STRING_DQUOTE",
+                        "DELIMITER",
+                        "LPAREN",
+                        "LITERAL",
+                        "RPAREN"
+                    ]);
+                });
+            });
+
             // TODO:
             //  - IF "%var%"=="" (SET var=default value)
             //  - IF NOT DEFINED var (SET var=default value)
