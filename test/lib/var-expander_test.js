@@ -1,5 +1,5 @@
 const assert   = require("chai").assert,
-      expander = require("../../../lib/parser/var-expander").expand;
+      expander = require("../../lib/var-expander").expand;
 
 const VARS = {
     hello  : "world",

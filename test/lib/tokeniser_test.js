@@ -1,5 +1,5 @@
 const assert   = require("chai").assert,
-      tokenise = require("../../../lib/parser/tokeniser");
+      tokenise = require("../../lib/tokeniser");
 
 const util = {
     filterEOF: (tokens) => tokens.filter(t => t.name !== "EOF"),
