@@ -615,6 +615,29 @@ describe("Tokeniser", () => {
                 });
             });
 
+            it("should detect an argument between IF and the var", () => {
+
+                const input  = `IF /A "%var%"=="abc" (call calc)`,
+                      output = [
+                          "IF",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "STRING_DQUOTE",
+                          "DOUBLE_EQUALS",
+                          "STRING_DQUOTE",
+                          "DELIMITER",
+                          "LPAREN",
+                          "CALL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "RPAREN"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+
+            });
+
             // TODO:
             //  - IF "%var%"=="" (SET var=default value)
             //  - IF NOT DEFINED var (SET var=default value)
