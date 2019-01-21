@@ -1,4 +1,4 @@
-%x DQS SQS ESC SET SETDQS IF
+%x DQS SQS ESC SET SETDQS IF FOR ASSIGN
 
 %{
 
@@ -16,6 +16,8 @@ function token (state, name) {
 
 Any                         [\n\s\w\d\W]
 Literal                     [^\^\(\)\[\]\(\)\{\}\s,;=\xff\x0b\x0c\"]+
+SetLiteral                  [^=]+
+SetValue                    ([^&]{2})+
 AnyExceptLF                 [^\n]
 Delimiter                   [\n\s,;=\xff\x0b\x0c]+
 LParen                      "("
@@ -52,6 +54,10 @@ If_LEQ                      [lL][eE][qQ]                 // LEQ (less than or eq
 If_GTR                      [gG][tT][rR]                 // GTR (greater than)
 If_GEQ                      [gG][eE][qQ]                 // GEQ (greater than or equal to)
 
+For                         [fF][oO][rR]                 // FOR
+In                          [iI][nN]                     // IN
+Do                          [dD][oO]                     // DO
+
 %%
 
 <INITIAL>{Escape}             { this.begin("ESC"); return token(this, "ESCAPE"); }
@@ -64,9 +70,9 @@ If_GEQ                      [gG][eE][qQ]                 // GEQ (greater than or
 
 <INITIAL>{RedirectStdoutToStdErr} { return token(this, "REDIRECT_STDERR_STDOUT"); }
 
-<INITIAL>{ConditionalSuccess} { return token(this, "COND_SUCCESS"); }
-<INITIAL>{ConditionalAlways}  { return token(this, "COND_ALWAYS"); }
-<INITIAL>{ConditionalOr}      { return token(this, "COND_OR"); }
+<INITIAL,SET>{ConditionalSuccess} { this.popState(); return token(this, "COND_SUCCESS"); }
+<INITIAL,SET>{ConditionalAlways}  { this.popState(); return token(this, "COND_ALWAYS"); }
+<INITIAL,SET>{ConditionalOr}      { this.popState(); return token(this, "COND_OR"); }
 
 // Redirection
 <INITIAL>{RedirectIn}         { return token(this, "REDIRECT_IN");  }
@@ -75,7 +81,11 @@ If_GEQ                      [gG][eE][qQ]                 // GEQ (greater than or
 <INITIAL>{RedirectOut}        { return token(this, "REDIRECT_OUT"); }
 <INITIAL>{RedirectPipe}       { return token(this, "REDIRECT_PIPE"); }
 
-<INITIAL>{Set}                { return token(this, "SET"); }
+// SET
+<INITIAL>{Set}                { this.begin("SET"); return token(this, "SET"); }
+<SET>{Equals}                 { this.popState(); this.begin("ASSIGN"); return token(this, "SET_ASSIGN"); }
+<ASSIGN>{SetValue}            { this.popState(); return token(this, "SET_VALUE"); }
+
 <INITIAL>{Call}            { return token(this, "CALL"); }
 
 // IF STATEMENT
@@ -92,8 +102,14 @@ If_GEQ                      [gG][eE][qQ]                 // GEQ (greater than or
 <INITIAL>{If_GTR}                  { return token(this, "IF_GTR"); }
 <INITIAL>{If_GEQ}                  { return token(this, "IF_GEQ"); }
 
+// FOR LOOP
+<INITIAL>{For}                     { return token(this, "FOR"); }
+<INITIAL>{In}                          { return token(this, "IN"); }
+<INITIAL>{Do}                          { return token(this, "DO"); }
 
-<INITIAL>{Delimiter}       { return token(this, "DELIMITER"); }
+
+<INITIAL,SET,FOR>{Delimiter}       { return token(this, "DELIMITER"); }
+<SET>{SetLiteral}             { return token(this, "SET_LITERAL"); }
 
 <INITIAL>{DoubleQuote}     { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
 <DQS>[^\"]+                   { return token(this, "STRING_DQUOTE_CHAR"); }

@@ -280,6 +280,25 @@ describe("Tokeniser", () => {
         });
     });
 
+    describe.only("SET", () => {
+
+        it("should detect a SET= where the RHS of = contains delimiters", () => {
+
+            const input  = `SET abc=x;y;z;&&echo`,
+                  output = [
+                      "SET",
+                      "DELIMITER",
+                      "SET_LITERAL",
+                      "SET_ASSIGN",
+                      "SET_VALUE",
+                      "COND_SUCCESS",
+                      "LITERAL"
+                  ];
+
+            assert.deepEqual(util.names(tokenise(input)), output);
+        });
+    });
+
     describe("Chars -> Units", () => {
 
         // A unit is just a string of characters that represents some
@@ -635,7 +654,6 @@ describe("Tokeniser", () => {
                       ];
 
                 assert.deepEqual(util.names(tokenise(input)), output);
-
             });
 
             // TODO:
@@ -651,10 +669,6 @@ describe("Tokeniser", () => {
             // IF/I "%var%" EQU "1" ECHO equality with 1
             // IF /I"%var%" EQU "1" ECHO equality with 1
             // IF/I"%var%" EQU "1" ECHO equality with 1
-        });
-
-        describe("Error Check Syntax", () => {
-
         });
 
         it("should detect an 'IF DEFINED _var' sequence", () => {
@@ -673,6 +687,65 @@ describe("Tokeniser", () => {
                   ];
 
             assert.deepEqual(util.names(tokenise(input)), output);
+        });
+    });
+
+    describe.only("FOR loops", () => {
+
+        // See: https://ss64.com/nt/for.html.
+
+        describe("FOR-files", () => {
+
+            // See: https://ss64.com/nt/for2.html
+            it("should detect the basic FOR (files) loop", () => {
+
+                const input  = `FOR %G IN (MyFile.txt) DO copy %G C:\\Windows`,
+                      output = [
+                          "FOR",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "IN",
+                          "DELIMITER",
+                          "LPAREN",
+                          "LITERAL",
+                          "RPAREN",
+                          "DELIMITER",
+                          "DO",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+            });
+
+            it("should tokenise a FOR-files loop with a string paren section", () => {
+
+                const input  = `FOR %G IN ("Hello World") DO Echo %G`,
+                      output = [
+                          "FOR",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "IN",
+                          "DELIMITER",
+                          "LPAREN",
+                          "STRING_DQUOTE",
+                          "RPAREN",
+                          "DELIMITER",
+                          "DO",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+            });
         });
     });
 
