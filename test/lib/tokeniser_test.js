@@ -385,6 +385,18 @@ describe("Tokeniser", () => {
             assert.deepEqual(util.names(tokenise(input)), output);
         });
 
+        it("should detect nested parens surrounding a SET expression", () => {
+
+            const input  = `(((((SET foo=bar)))))`,
+                  output = [
+                      "LPAREN", "LPAREN", "LPAREN", "LPAREN", "LPAREN",
+                      "SET", "DELIMITER", "SET_VAR", "SET_ASSIGN", "SET_VALUE",
+                      "RPAREN", "RPAREN", "RPAREN", "RPAREN", "RPAREN"
+                  ];
+
+            assert.deepEqual(util.names(tokenise(input)), output);
+        });
+
         it("should detect '(cmd)'", () => {
 
             const input = `(cmd)`,
