@@ -17,7 +17,7 @@ function token (state, name) {
 Any                         [\n\s\w\d\W]
 Literal                     [^\^\(\)\[\]\(\)\{\}\s,;=\xff\x0b\x0c\"]+
 SetLiteral                  [^=]+
-SetValue                    ([^&]{2})+
+SetValue                    ([^&]{1,2})+
 AnyExceptLF                 [^\n]
 Delimiter                   [\n\s,;=\xff\x0b\x0c]+
 LParen                      "("

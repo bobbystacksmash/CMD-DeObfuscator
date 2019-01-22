@@ -297,6 +297,20 @@ describe("Tokeniser", () => {
 
             assert.deepEqual(util.names(tokenise(input)), output);
         });
+
+        it("should detect a standard SET statement", () => {
+
+            const input  = `SET abc=def`,
+                  output = [
+                      "SET",
+                      "DELIMITER",
+                      "SET_LITERAL",
+                      "SET_ASSIGN",
+                      "SET_VALUE"
+                  ];
+
+            assert.deepEqual(util.names(tokenise(input)), output);
+        });
     });
 
     describe("Chars -> Units", () => {
@@ -691,9 +705,9 @@ describe("Tokeniser", () => {
     });
 
     describe.only("FOR loops", () => {
-
+        //
         // See: https://ss64.com/nt/for.html.
-
+        //
         describe("FOR-files", () => {
 
             // See: https://ss64.com/nt/for2.html
@@ -742,6 +756,40 @@ describe("Tokeniser", () => {
                           "LITERAL",
                           "DELIMITER",
                           "LITERAL"
+                      ];
+
+                assert.deepEqual(util.names(tokenise(input)), output);
+            });
+        });
+
+        describe("FOR /R - loop through files", () => {
+            //
+            // See: https://ss64.com/nt/for_r.html
+            //
+            it("should detect a for /R loop", () => {
+                const input  = `For /R C:\\temp\\ %G IN (*.bak) do Echo del "%G"`,
+                      output = [
+                          "FOR",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "IN",
+                          "DELIMITER",
+                          "LPAREN",
+                          "LITERAL",
+                          "RPAREN",
+                          "DELIMITER",
+                          "DO",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "LITERAL",
+                          "DELIMITER",
+                          "STRING_DQUOTE"
                       ];
 
                 assert.deepEqual(util.names(tokenise(input)), output);
