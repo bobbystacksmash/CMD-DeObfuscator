@@ -280,7 +280,7 @@ describe("Tokeniser", () => {
         });
     });
 
-    describe.only("SET", () => {
+    describe("SET", () => {
 
         it("should detect a SET= where the RHS of = contains delimiters", () => {
 
@@ -704,7 +704,7 @@ describe("Tokeniser", () => {
         });
     });
 
-    describe.only("FOR loops", () => {
+    describe("FOR loops", () => {
         //
         // See: https://ss64.com/nt/for.html.
         //
