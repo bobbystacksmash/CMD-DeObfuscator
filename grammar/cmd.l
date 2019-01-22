@@ -1,4 +1,4 @@
-%x DQS SQS ESC SET SETDQS IF FOR ASSIGN
+%x DQS SQS ESC SET SETDQS IF FOR ASSIGN ASSIGN_PAREN
 
 %{
 
@@ -12,12 +12,35 @@ function token (state, name) {
 
     return obj;
 }
+
+function addparen (state) {
+  state = init_parens(state);
+  state.parenCounter++;
+}
+
+function subparen (state) {
+  state = init_parens(state);
+  state.parenCounter--;
+}
+
+function betweenparens (state) {
+  state = init_parens(state);
+  return state.parenCounter > 0;
+}
+
+function init_parens(state) {
+  if (!state.hasOwnProperty("parenCounter")) {
+    state.parenCounter = 0;
+  }
+  return state;
+}
 %}
 
 Any                         [\n\s\w\d\W]
 Literal                     [^\^\(\)\[\]\(\)\{\}\s,;=\xff\x0b\x0c\"]+
 SetLiteral                  [^=]+
 SetValue                    ([^&]{1,2})+
+SetValueNoParen             [^&\)]+
 AnyExceptLF                 [^\n]
 Delimiter                   [\n\s,;=\xff\x0b\x0c]+
 LParen                      "("
@@ -63,8 +86,8 @@ Do                          [dD][oO]                     // DO
 <INITIAL>{Escape}             { this.begin("ESC"); return token(this, "ESCAPE"); }
 <ESC>{AnyExceptLF}            { this.popState(); return token(this, "ESCAPED_LITERAL"); }
 
-<INITIAL>{LParen}          { return token(this, "LPAREN"); }
-<INITIAL>{RParen}          { return token(this, "RPAREN"); }
+<INITIAL>{LParen}          { addparen(this); return token(this, "LPAREN"); }
+<INITIAL>{RParen}          { subparen(this); return token(this, "RPAREN"); }
 
 <INITIAL>{DoubleEquals}           { return token(this, "DOUBLE_EQUALS"); }
 
@@ -82,9 +105,10 @@ Do                          [dD][oO]                     // DO
 <INITIAL>{RedirectPipe}       { return token(this, "REDIRECT_PIPE"); }
 
 // SET
-<INITIAL>{Set}                { this.begin("SET"); return token(this, "SET"); }
-<SET>{Equals}                 { this.popState(); this.begin("ASSIGN"); return token(this, "SET_ASSIGN"); }
-<ASSIGN>{SetValue}            { this.popState(); return token(this, "SET_VALUE"); }
+<INITIAL>{Set}              { this.begin("SET"); return token(this, "SET"); }
+<SET>{Equals}               { this.popState(); this.begin(betweenparens(this) ? "ASSIGN_PAREN" : "ASSIGN"); return token(this, "SET_ASSIGN"); }
+<ASSIGN>{SetValue}          { this.popState(); return token(this, "SET_VALUE"); }
+<ASSIGN_PAREN>{SetValueNoParen}    { this.popState(); return token(this, "SET_VALUE"); }
 
 <INITIAL>{Call}            { return token(this, "CALL"); }
 

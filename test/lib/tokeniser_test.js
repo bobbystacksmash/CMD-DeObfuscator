@@ -369,7 +369,7 @@ describe("Tokeniser", () => {
 
     describe("Parenthesis", () => {
 
-        it.only("should not include the parens in a SET command", () => {
+        it("should not include the parens in a SET command", () => {
 
             const input  = `(SET foo=bar)`,
                   output = [
@@ -628,9 +628,9 @@ describe("Tokeniser", () => {
                           "LPAREN",
                           "SET",
                           "DELIMITER",
-                          "LITERAL",
-                          "DELIMITER",
-                          "LITERAL",
+                          "SET_VAR",
+                          "SET_ASSIGN",
+                          "SET_VALUE",
                           "RPAREN"
                       ];
 
