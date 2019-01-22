@@ -288,7 +288,7 @@ describe("Tokeniser", () => {
                   output = [
                       "SET",
                       "DELIMITER",
-                      "SET_LITERAL",
+                      "SET_VAR",
                       "SET_ASSIGN",
                       "SET_VALUE",
                       "COND_SUCCESS",
@@ -304,7 +304,7 @@ describe("Tokeniser", () => {
                   output = [
                       "SET",
                       "DELIMITER",
-                      "SET_LITERAL",
+                      "SET_VAR",
                       "SET_ASSIGN",
                       "SET_VALUE"
                   ];
@@ -368,6 +368,22 @@ describe("Tokeniser", () => {
     });
 
     describe("Parenthesis", () => {
+
+        it.only("should not include the parens in a SET command", () => {
+
+            const input  = `(SET foo=bar)`,
+                  output = [
+                      "LPAREN",
+                      "SET",
+                      "DELIMITER",
+                      "SET_VAR",
+                      "SET_ASSIGN",
+                      "SET_VALUE",
+                      "RPAREN"
+                  ];
+
+            assert.deepEqual(util.names(tokenise(input)), output);
+        });
 
         it("should detect '(cmd)'", () => {
 

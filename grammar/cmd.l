@@ -109,7 +109,7 @@ Do                          [dD][oO]                     // DO
 
 
 <INITIAL,SET,FOR>{Delimiter}       { return token(this, "DELIMITER"); }
-<SET>{SetLiteral}             { return token(this, "SET_LITERAL"); }
+<SET>{SetLiteral}             { return token(this, "SET_VAR"); }
 
 <INITIAL>{DoubleQuote}     { this.begin("DQS"); return token(this, "STRING_DQUOTE_START"); }
 <DQS>[^\"]+                   { return token(this, "STRING_DQUOTE_CHAR"); }
