@@ -7,7 +7,7 @@ const util = {
     names:     (tokens) => util.filterEOF(tokens).map(t => t.name)
 };
 
-describe.only("Interpreter", () => {
+describe("Interpreter", () => {
 
     describe("Variable Expansion", () => {
 
@@ -38,9 +38,9 @@ describe.only("Interpreter", () => {
 
         describe("Strings", () => {
 
-            it("should not collapse regular strings", () => {
+            it("should concatenate runs of regular strings and literals without delims", () => {
                 const input  = `"abc"def"ghi"`,
-                      output = [input];
+                      output = [`"abcdefghi"`];
                 assert.deepEqual(interpret(input), output);
             });
 
@@ -48,6 +48,26 @@ describe.only("Interpreter", () => {
                 const input  = `w""scr""ipt""`,
                       output = [`wscript`];
                 assert.deepEqual(interpret(input), output);
+            });
+
+            it("should unify strings or literals not separated by a delimiter", () => {
+
+                const tests = [
+                    {
+                        input:  `w"s"cri"pt"`,
+                        output: [`"wscript"`]
+                    },
+                    {
+                        input:  `""cscr"ipt"`,
+                        output: [`"cscript"`]
+                     },
+                    {
+                        input:  `"a"b`,
+                        output: [`"ab"`]
+                    }
+                ];
+
+                tests.forEach(t => assert.deepEqual(interpret(t.input), t.output));
             });
         });
     });
