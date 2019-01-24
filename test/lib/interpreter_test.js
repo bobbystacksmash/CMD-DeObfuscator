@@ -1,5 +1,7 @@
 const assert    = require("chai").assert,
-      interpret = require("../../lib/interpreter");
+      tokenise  = require("../../lib/tokeniser"),
+      interpret = require("../../lib/interpreter").interpreter,
+      split_cmd = require("../../lib/interpreter").get_cached_cmd_blocks;
 
 const util = {
     filterEOF: (tokens) => tokens.filter(t => t.name !== "EOF"),
@@ -20,6 +22,32 @@ describe("Interpreter", () => {
     });
 
     describe("De-obfuscation", () => {
+
+        describe("Split in to command blocks", () => {
+
+            it("should create a single block when no other commands exist", () => {
+                const input  = `calc`,
+                      output = [
+                          [{ name: "LITERAL", text: "calc" }]
+                      ];
+
+                assert.deepEqual(split_cmd(tokenise(input)), output);
+            });
+
+            it("should split a command in to blocks", () => {
+
+                const input  = `calc && (powershell) || wscript & notepad`,
+                      output = [
+                          ["calc", " "],
+                          [" ", "(", "powershell", ")", " "],
+                          [" ", "wscript", " "],
+                          [" ", "notepad"]
+                      ];
+
+                let result = split_cmd(tokenise(input));
+                assert.deepEqual(split_cmd(tokenise(input)).map(res => res.map(r => r.text)), output);
+            });
+        });
 
         describe("Escapes", () => {
 
