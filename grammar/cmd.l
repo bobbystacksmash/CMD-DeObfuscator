@@ -6,7 +6,7 @@ function token (state, name) {
 
     let obj = {
         name  : name,
-        match : state.match,
+        //match : state.match,
         text  : yytext,
     };
 
@@ -66,7 +66,7 @@ Call                        [cC][aA][lL]{2}
 
 If                          [iI][fF]                     // IF
 Else                        [eE][lL][sS][eE]             // ELSE
-Not                         [nN][oO][tT]                 // NOT
+Not                         [nN][oO][tT]\b               // NOT
 Exist                       [eE][xX][iI][sS][tT]         // EXIST
 Defined                     [dD][eE][fF][iI][nN][eE][dD] // DEFINED
 
