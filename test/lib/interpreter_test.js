@@ -157,6 +157,11 @@ describe("Interpreter", () => {
                     input: ` regsvr32 a b c`,
                     output: `regsvr32`,
                     msg:    "Strip leading delimiters from cmdstr"
+                },
+                {
+                    input: `((calc.exe))`,
+                    output: `calc`,
+                    msg:    "Strip parens, identify the exe."
                 }
             ];
 
