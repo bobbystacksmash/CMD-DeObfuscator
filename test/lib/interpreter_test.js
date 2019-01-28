@@ -14,6 +14,40 @@ describe("Interpreter", () => {
 
     describe("Variable Expansion", () => {
 
+        it("should expand a lone '%comspec%' correctly", () => {
+
+            const input  = `%comspec%`,
+                  output = [
+                      {
+                          command: { name: "cmd", line: "" },
+                          options: {},
+                          variables: {}
+                      }
+                  ];
+
+            assert.deepEqual(interpret(input), output);
+        });
+
+        it("should expand '%comspec%' and parse its arguments as if it were 'cmd.exe'", () => {
+
+            const input  = `%comspec% /c "calc"`,
+                  output = [
+                      {
+                          command: { name: "cmd", line: `/c "calc"` },
+                          options: { run_then_terminate: true},
+                          variables: {}
+                      },
+                      {
+                          command: { name: "calc", line: "" },
+                          options: { },
+                          variables: {}
+                      }
+                  ];
+
+            const result = interpret(input);
+            assert.deepEqual(result, output);
+        });
+
         it("should return an expanded command as a 1-element array", () => {
 
             const input  = `echo %comspec%`,
