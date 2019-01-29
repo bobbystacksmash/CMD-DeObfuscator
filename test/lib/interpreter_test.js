@@ -301,6 +301,25 @@ describe("Interpreter", () => {
                 let context = interpret(input);
                 assert.deepEqual(context, output);
             });
+
+            it("should not expand variables in the same context as a SET", () => {
+
+                const input  = `SET x=y&& echo %x%`,
+                      output = [
+                          {
+                              command: { name: "set", line: "x=y" },
+                              options: {},
+                              variables: { x: "y" }
+                          },
+                          {
+                              command: { name: "echo", line: "%x%" },
+                              options: {},
+                              variables: {}
+                          }
+                      ];
+
+                assert.deepEqual(interpret(input), output);
+            });
         });
 
         describe("From FireEye DOSFuscation Report", () => {
