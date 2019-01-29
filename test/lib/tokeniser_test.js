@@ -482,6 +482,26 @@ describe("Tokeniser", () => {
             });
 
         });
+
+        it("should identify grouping operators when no delimiters exist between commands", () => {
+
+            const tests = [
+                {
+                    input: "calc&regsvr32",
+                    output: ["LITERAL", "COND_ALWAYS", "LITERAL"]
+                },
+                {
+                    input: "calc&&regsvr32",
+                    output: ["LITERAL", "COND_SUCCESS", "LITERAL"]
+                },
+                {
+                    input: "calc||regsvr32",
+                    output: ["LITERAL", "COND_OR", "LITERAL"]
+                }
+            ];
+
+            tests.forEach(t => assert.deepEqual(util.names(tokenise(t.input)), t.output));
+        });
     });
 
     describe("IF statements", () => {

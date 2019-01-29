@@ -37,7 +37,7 @@ function init_parens(state) {
 %}
 
 Any                         [\n\s\w\d\W]
-Literal                     [^\^\(\)\[\]\(\)\{\}\s,;=\xff\x0b\x0c\"]+
+Literal                     [^\&\|\^\(\)\[\]\(\)\{\}\s,;=\xff\x0b\x0c\"]+
 SetLiteral                  [^=]+
 SetValue                    ([^&]{1,2})+
 SetValueNoParen             [^&\)]+

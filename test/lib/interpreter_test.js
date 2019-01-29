@@ -214,6 +214,11 @@ describe("Interpreter", () => {
                     input: `"set x=y"`,
                     output: "set",
                     msg:    "Identify 'set' between quotes."
+                },
+                {
+                    input: `calc&`,
+                    output: "calc",
+                    msg: "Identify a command with conditional operator at the end."
                 }
             ];
 
@@ -222,7 +227,7 @@ describe("Interpreter", () => {
             );
         });
 
-        it.only("should strip trailing closing parens from a single command", () => {
+        it("should strip trailing closing parens from a single command", () => {
 
             const input = `(((calc)))`,
                   output = [
