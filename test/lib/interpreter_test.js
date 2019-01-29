@@ -322,6 +322,39 @@ describe("Interpreter", () => {
             });
         });
 
+        describe.only("Nested commands", () => {
+
+            it.only("should identify nested commands and write them in to the context", () => {
+
+                const tests = [
+                    {
+                        input: `cmd /c "set a=b&calc"`,
+                        output: [
+                            {
+                                command: { name: "cmd", line: `/c "set a=b&calc"` },
+                                options: { run_then_terminate: true },
+                                variables: {}
+                            },
+                            {
+                                command: { name: "set", line: "a=b" },
+                                options: {},
+                                variables: { a: "b" }
+                            },
+                            {
+                                command: { name: "calc", line: "" },
+                                options: {},
+                                variables: {}
+                            }
+                        ]
+                    }
+                ];
+
+                tests.forEach(t => {
+                    assert.deepEqual(interpret(t.input), t.output);
+                });
+            });
+        });
+
         describe("From FireEye DOSFuscation Report", () => {
 
             it("should clean-up regsvr32 output", () => {
