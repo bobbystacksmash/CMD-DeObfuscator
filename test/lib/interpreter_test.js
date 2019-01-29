@@ -222,6 +222,20 @@ describe("Interpreter", () => {
             );
         });
 
+        it.only("should strip trailing closing parens from a single command", () => {
+
+            const input = `(((calc)))`,
+                  output = [
+                      {
+                          command: { name: "calc", line: "" },
+                          options: {}, variables: {}
+                      }
+                  ];
+
+            assert.deepEqual(interpret(input), output);
+
+        });
+
         it("should trim any trailing delimiters immediately after the identified cmd", () => {
 
             const tests = [
@@ -322,9 +336,9 @@ describe("Interpreter", () => {
             });
         });
 
-        describe.only("Nested commands", () => {
+        describe("Nested commands", () => {
 
-            it.only("should identify nested commands and write them in to the context", () => {
+            it("should identify nested commands and write them in to the context", () => {
 
                 const tests = [
                     {
