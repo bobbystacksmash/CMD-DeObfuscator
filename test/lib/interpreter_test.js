@@ -339,6 +339,18 @@ describe("Interpreter", () => {
 
                 assert.deepEqual(interpret(input), output);
             });
+
+            it.only("should expand variables when 'CALL' is used", () => {
+                // TODO
+                // ====
+                // Get 'CALL' expanding environment variables.
+                //
+                const input  = `cmd /c "set foo=bar&&call echo %foo%"`,
+                      output = [
+                      ];
+
+                assert.deepEqual(interpret(input), output);
+            });
         });
 
         describe("Nested commands", () => {
