@@ -524,8 +524,36 @@ describe("Interpreter", () => {
                         ]
                     }];
 
+                    tests.forEach(
+                        t => assert.deepEqual(interpret(t.cmd), (t.flag) ? on_context : off_context)
+                    );
+                });
 
-                    tests.forEach(t => assert.deepEqual(interpret(t.cmd), (t.flag) ? on_context : off_context));
+                it.only("should perform delayed expansion when enabled", () => {
+
+                    const input  = `cmd /V "set x=y&&echo !x!"`,
+                          output = [
+                              {
+                                  vars: { nextframe: { x: "y" }, thisframe: {} },
+                                  options: { delayed_expansion: true },
+                                  commands: [
+                                      {
+                                          command: { name: "cmd", line: `"set x=y&&echo !x!"` },
+                                          options: { delayed_expansion: true }
+                                      },
+                                      {
+                                          command: { name: "set", line: "x=y" },
+                                          options: {}
+                                      },
+                                      {
+                                          command: { name: "echo", line: "y" },
+                                          options: {}
+                                      }
+                                  ]
+                              },
+                          ];
+
+                    assert.deepEqual(interpret(input), output);
                 });
             });
         });
