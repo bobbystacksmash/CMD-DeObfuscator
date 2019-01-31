@@ -17,13 +17,15 @@ describe("Interpreter", () => {
         it("should expand a lone '%comspec%' correctly", () => {
 
             const input  = `%comspec%`,
-                  output = [
-                      {
-                          command: { name: "cmd", line: "" },
-                          options: {},
-                          variables: {}
-                      }
-                  ];
+                  output = [{
+                      vars: { thisframe: {}, nextframe: {} },
+                      commands: [
+                          {
+                              command: { name: "cmd", line: "" },
+                              options: {}
+                          }
+                      ]
+                  }];
 
             assert.deepEqual(interpret(input), output);
         });
@@ -33,14 +35,17 @@ describe("Interpreter", () => {
             const input  = `%comspec% /c "calc"`,
                   output = [
                       {
-                          command: { name: "cmd", line: `/c "calc"` },
-                          options: { run_then_terminate: true},
-                          variables: {}
-                      },
-                      {
-                          command: { name: "calc", line: "" },
-                          options: { },
-                          variables: {}
+                          vars: { thisframe: {}, nextframe: {} },
+                          commands: [
+                              {
+                                  command: { name: "cmd", line: `"calc"` },
+                                  options: { run_then_terminate: true }
+                              },
+                              {
+                                  command: { name: "calc", line: "" },
+                                  options: {}
+                              }
+                          ]
                       }
                   ];
 
@@ -48,17 +53,18 @@ describe("Interpreter", () => {
             assert.deepEqual(result, output);
         });
 
-        it("should return an expanded command as a 1-element array", () => {
+        it("should create a context correctly for an expanded %comspec% var", () => {
 
             const input  = `echo %comspec%`,
                   output = [
                       {
-                          command: {
-                              name: "echo",
-                              line: "C:\\Windows\\System32\\cmd.exe"
-                          },
-                          options: {},
-                          variables: {}
+                          vars: { thisframe: {}, nextframe: {} },
+                          commands: [
+                              {
+                                  command: { name: "echo", line: "C:\\Windows\\System32\\cmd.exe" },
+                                  options: {}
+                              }
+                          ]
                       }
                   ];
             assert.deepEqual(interpret(input), output);
@@ -349,19 +355,22 @@ describe("Interpreter", () => {
                 assert.deepEqual(context, output);
             });
 
-            it.only("should not expand variables in the same context as a SET", () => {
+            it("should not expand variables in the same context as a SET", () => {
 
                 const input  = `SET x=y&& echo %x%`,
                       output = [
                           {
-                              command: { name: "set", line: "x=y" },
-                              options: {},
-                              variables: { x: "y" }
-                          },
-                          {
-                              command: { name: "echo", line: "%x%" },
-                              options: {},
-                              variables: {}
+                              vars: { thisframe: {}, nextframe: { x: "y" } },
+                              commands: [
+                                  {
+                                      command: { name: "set", line: "x=y" },
+                                      options: {}
+                                  },
+                                  {
+                                      command: { name: "echo", line: "%x%" },
+                                      options: {}
+                                  }
+                              ]
                           }
                       ];
 
@@ -422,19 +431,21 @@ describe("Interpreter", () => {
                         input: `cmd /c "set a=b&calc"`,
                         output: [
                             {
-                                command: { name: "cmd", line: `/c "set a=b&calc"` },
-                                options: { run_then_terminate: true },
-                                variables: {}
-                            },
-                            {
-                                command: { name: "set", line: "a=b" },
-                                options: {},
-                                variables: { a: "b" }
-                            },
-                            {
-                                command: { name: "calc", line: "" },
-                                options: {},
-                                variables: {}
+                                vars: { nextframe: { a: "b" }, thisframe: {} },
+                                commands: [
+                                    {
+                                        command: { name: "cmd", line: `"set a=b&calc"` },
+                                        options: { run_then_terminate: true }
+                                    },
+                                    {
+                                        command: { name: "set", line: "a=b" },
+                                        options: {}
+                                    },
+                                    {
+                                        command: { name: "calc", line: "" },
+                                        options: {}
+                                    }
+                                ]
                             }
                         ]
                     }
