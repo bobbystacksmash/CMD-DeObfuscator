@@ -200,7 +200,7 @@ describe("Phase 1: Percent Expansion", () => {
         });
     });
 
-    describe.only("Delayed Expansion", () => {
+    describe("Delayed Expansion", () => {
 
         it("should expand '!var!'", () => {
             const vars = { var: "value" };
