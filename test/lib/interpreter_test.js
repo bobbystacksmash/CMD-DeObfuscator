@@ -495,7 +495,7 @@ describe("Interpreter", () => {
                     assert.deepEqual(interpret(input), output);
                 });
 
-                it.only("should enable delayed expansion for all valid '/V' combinations", () => {
+                it("should enable delayed expansion for all valid '/V' combinations", () => {
 
                     const tests = [
                         { cmd: `cmd /V`, flag: true },
