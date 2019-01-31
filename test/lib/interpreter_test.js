@@ -543,6 +543,36 @@ describe("Interpreter", () => {
                     );
                 });
 
+                it("should perform find/replace with delayed expansion vars", () => {
+
+                    const input  = `cmd /V:ON "set colour=green&echo !colour:green=red!"`,
+                          output = [
+                              {
+                                  vars: { nextframe: { colour: "green" }, thisframe: {} },
+                                  options: { delayed_expansion: true },
+                                  commands: [
+                                      {
+                                          command: {
+                                              name: "cmd",
+                                              line: `"set colour=green&echo !colour:green=red!"`
+                                          },
+                                          options: { delayed_expansion: true }
+                                      },
+                                      {
+                                          command: { name: "set", line: "colour=green" },
+                                          options: {}
+                                      },
+                                      {
+                                          command: { name: "echo", line: "red" },
+                                          options: {}
+                                      }
+                                  ]
+                              }
+                          ];
+
+                    assert.deepEqual(interpret(input), output);
+                });
+
                 it("should perform delayed expansion when enabled", () => {
 
                     const input  = `cmd /V "set x=y&&echo !x!"`,

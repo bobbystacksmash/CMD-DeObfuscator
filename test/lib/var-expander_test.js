@@ -196,12 +196,20 @@ describe("Phase 1: Percent Expansion", () => {
                     expander("%h:ello%", { enable_command_extensions: false, vars: opts.vars }),
                     opts.vars["h:ello"]
                 );
-
-                // Finally, what about the same expression but with
-                // command extensions disabled?
-                //
-                //
             });
+        });
+    });
+
+    describe.only("Delayed Expansion", () => {
+
+        it("should expand '!var!'", () => {
+            const vars = { var: "value" };
+            assert.deepEqual(expander("!var!", { vars: vars, sigil: "!" }), vars.var);
+        });
+
+        it("should perform find/replace using delayed expansions", () => {
+            const vars = { var: "value" };
+            assert.deepEqual(expander("!var:value=replaced!", { vars: vars, sigil: "!" }), "replaced");
         });
     });
 });
