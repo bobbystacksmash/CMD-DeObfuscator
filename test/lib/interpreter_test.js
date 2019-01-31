@@ -19,6 +19,7 @@ describe("Interpreter", () => {
             const input  = `%comspec%`,
                   output = [{
                       vars: { thisframe: {}, nextframe: {} },
+                      options: {},
                       commands: [
                           {
                               command: { name: "cmd", line: "" },
@@ -36,6 +37,7 @@ describe("Interpreter", () => {
                   output = [
                       {
                           vars: { thisframe: {}, nextframe: {} },
+                          options: { run_then_terminate: true },
                           commands: [
                               {
                                   command: { name: "cmd", line: `"calc"` },
@@ -59,6 +61,7 @@ describe("Interpreter", () => {
                   output = [
                       {
                           vars: { thisframe: {}, nextframe: {} },
+                          options: {},
                           commands: [
                               {
                                   command: { name: "echo", line: "C:\\Windows\\System32\\cmd.exe" },
@@ -106,6 +109,7 @@ describe("Interpreter", () => {
                       output = [
                           {
                               vars: { nextframe: {}, thisframe: {} },
+                              options: {},
                               commands: [
                                   {
                                       command: { name: "powershell", line: "" },
@@ -121,6 +125,7 @@ describe("Interpreter", () => {
                 const input  = `^p^o^w^e^r^s^h^e^l^l`,
                       output = [{
                           vars: { nextframe: {}, thisframe: {} },
+                          options: {},
                           commands: [{
                               command: { name: input, line: "" },
                               options: {}
@@ -143,6 +148,7 @@ describe("Interpreter", () => {
                 const input  = `w""scr""ipt""`,
                       output = [{
                           vars: { thisframe: {}, nextframe: {} },
+                          options: {},
                           commands: [{
                               command: { name: "wscript", line: "" },
                               options: {}
@@ -258,6 +264,7 @@ describe("Interpreter", () => {
             const input = `(((calc)))`,
                   output = [{
                       vars: { thisframe: {}, nextframe: {} },
+                      options: {},
                       commands: [{
                           command: { name: "calc", line: "" },
                           options: {}
@@ -314,6 +321,7 @@ describe("Interpreter", () => {
                       output  = [
                           {
                               vars: { thisframe: {}, nextframe: {} },
+                              options: { run_then_terminate: true },
                               commands: [
                                   {
                                       command: { name: "cmd", line: `"calc"` },
@@ -338,6 +346,7 @@ describe("Interpreter", () => {
                       output = [
                           {
                               vars: { thisframe: {}, nextframe: { x: "y" } },
+                              options: { run_then_terminate: true },
                               commands: [
                                   {
                                       command: { name: "cmd", line: `"set x=y"` },
@@ -361,6 +370,7 @@ describe("Interpreter", () => {
                       output = [
                           {
                               vars: { thisframe: {}, nextframe: { x: "y" } },
+                              options: {},
                               commands: [
                                   {
                                       command: { name: "set", line: "x=y" },
@@ -385,10 +395,8 @@ describe("Interpreter", () => {
                 const input  = `cmd /c "set foo=bar&&call echo %foo%"`,
                       output = [
                           {
-                              vars: {
-                                  nextframe: {},
-                                  thisframe: { foo: "bar" }
-                              },
+                              vars: { nextframe: {}, thisframe: { foo: "bar" } },
+                              options: {},
                               commands: [
                                   {
                                       command: { name: "call", line: "echo %foo%" },
@@ -405,6 +413,7 @@ describe("Interpreter", () => {
                                   nextframe: { foo: "bar" },
                                   thisframe: {}
                               },
+                              options: { run_then_terminate: true },
                               commands: [
                                   {
                                       command: { name: "cmd", line: `"set foo=bar&&call echo %foo%"` },
@@ -432,6 +441,7 @@ describe("Interpreter", () => {
                         output: [
                             {
                                 vars: { nextframe: { a: "b" }, thisframe: {} },
+                                options: { run_then_terminate: true },
                                 commands: [
                                     {
                                         command: { name: "cmd", line: `"set a=b&calc"` },
@@ -466,6 +476,7 @@ describe("Interpreter", () => {
                     const input  = `cmd.exe /C calc`,
                           output = [{
                               vars: { thisframe: {}, nextframe: {} },
+                              options: { run_then_terminate: true },
                               commands: [
                                   {
                                       command: { name: "cmd", line: "calc" },
@@ -486,6 +497,7 @@ describe("Interpreter", () => {
                     const input  = "cmd /V",
                           output = [{
                               vars: { thisframe: {}, nextframe: {} },
+                              options: { delayed_expansion: true },
                               commands: [{
                                   command: { name: "cmd", line: "" },
                                   options: { delayed_expansion: true }
@@ -506,6 +518,7 @@ describe("Interpreter", () => {
 
                     const on_context = [{
                         vars: { thisframe: {}, nextframe: {} },
+                        options: { delayed_expansion: true },
                         commands: [
                             {
                                 command: { name: "cmd", line: "" },
@@ -516,6 +529,7 @@ describe("Interpreter", () => {
 
                     const off_context = [{
                         vars: { thisframe: {}, nextframe: {} },
+                        options: { delayed_expansion: false },
                         commands: [
                             {
                                 command: { name: "cmd", line: "" },
@@ -529,7 +543,7 @@ describe("Interpreter", () => {
                     );
                 });
 
-                it.only("should perform delayed expansion when enabled", () => {
+                it("should perform delayed expansion when enabled", () => {
 
                     const input  = `cmd /V "set x=y&&echo !x!"`,
                           output = [
