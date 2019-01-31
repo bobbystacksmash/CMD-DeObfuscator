@@ -456,5 +456,78 @@ describe("Interpreter", () => {
                 });
             });
         });
+
+        describe("Command-specific features", () => {
+
+            describe("CMD", () => {
+
+                it("should identify CMD when used with an upper-case '/C'", () => {
+
+                    const input  = `cmd.exe /C calc`,
+                          output = [{
+                              vars: { thisframe: {}, nextframe: {} },
+                              commands: [
+                                  {
+                                      command: { name: "cmd", line: "calc" },
+                                      options: { run_then_terminate: true }
+                                  },
+                                  {
+                                      command: { name: "calc", line: "" },
+                                      options: {}
+                                  }
+                              ]
+                          }];
+
+                    assert.deepEqual(interpret(input), output);
+                });
+
+                it("should handle a lone 'cmd.exe' with some flags", () => {
+
+                    const input  = "cmd /V",
+                          output = [{
+                              vars: { thisframe: {}, nextframe: {} },
+                              commands: [{
+                                  command: { name: "cmd", line: "" },
+                                  options: { delayed_expansion: true }
+                              }]
+                          }];
+
+                    assert.deepEqual(interpret(input), output);
+                });
+
+                it.only("should enable delayed expansion for all valid '/V' combinations", () => {
+
+                    const tests = [
+                        { cmd: `cmd /V`, flag: true },
+                        { cmd: `cmd /V:O`, flag: true },
+                        { cmd: `cmd /V:ON`, flag: true },
+                        { cmd: `cmd /V:Off`, flag: false }
+                    ];
+
+                    const on_context = [{
+                        vars: { thisframe: {}, nextframe: {} },
+                        commands: [
+                            {
+                                command: { name: "cmd", line: "" },
+                                options: { delayed_expansion: true }
+                            }
+                        ]
+                    }];
+
+                    const off_context = [{
+                        vars: { thisframe: {}, nextframe: {} },
+                        commands: [
+                            {
+                                command: { name: "cmd", line: "" },
+                                options: { delayed_expansion: false }
+                            }
+                        ]
+                    }];
+
+
+                    tests.forEach(t => assert.deepEqual(interpret(t.cmd), (t.flag) ? on_context : off_context));
+                });
+            });
+        });
     });
 });
