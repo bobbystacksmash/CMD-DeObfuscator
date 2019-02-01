@@ -602,4 +602,13 @@ describe("Interpreter", () => {
             });
         });
     });
+
+    describe.only("FOR loops", () => {
+
+        describe("Files and Folders", () => {});
+        describe("List of numbers", () => {
+            // For an excellent guide, see: https://ss64.com/nt/for_l.html
+        });
+
+    });
 });
