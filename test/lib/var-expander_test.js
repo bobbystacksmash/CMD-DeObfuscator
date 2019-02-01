@@ -211,5 +211,13 @@ describe("Phase 1: Percent Expansion", () => {
             const vars = { var: "value" };
             assert.deepEqual(expander("!var:value=replaced!", { vars: vars, sigil: "!" }), "replaced");
         });
+
+        it("should expand predefined vars such as %COMSPEC%", () => {
+            assert.deepEqual(expander("!comspec!", { sigil: "!" }), "C:\\Windows\\System32\\cmd.exe");
+        });
+
+        it("should suppor substring indexing when using delayed expansion", () => {
+            assert.deepEqual(expander("!comspec:~-7!", { sigil: "!" }), "cmd.exe");
+        });
     });
 });
