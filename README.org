@@ -138,3 +138,6 @@ we transform this:
  - [[https://ss64.com/nt/delayedexpansion.html][Delayed Expansion]]
  - [[https://ss64.com/nt/cmd.html][SS64: CMD.exe]]
  - [[https://hackinparis.com/data/slides/2018/talks/HIP2018_Daniel_Bohannon_Invoke_Dosfuscation.pdf][HackInParis Invoke Dosfuscation Slides]]
+ - [[https://stackoverflow.com/questions/7760545/escape-double-quotes-in-parameter][Using triple quotes in a CMD string]]
+ - [[http://www.windowsinspired.com/understanding-the-command-line-string-and-arguments-received-by-a-windows-program/][Understanding how CMD handles double quotes]]
+ - [[http://www.windowsinspired.com/understanding-the-command-line-string-and-arguments-received-by-a-windows-program/][How arguments are parsed]]
