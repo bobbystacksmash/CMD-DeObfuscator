@@ -1,8 +1,7 @@
 const assert           = require("chai").assert,
       tokenise         = require("../../lib/tokeniser"),
       interpret        = require("../../lib/interpreter").interpreter,
-      identify_command = require("../../lib/interpreter").try_identify_command,
-      split_cmd        = require("../../lib/interpreter").get_cached_cmd_blocks;
+      identify_command = require("../../lib/interpreter").try_identify_command;
 
 const util = {
     filterEOF: (tokens) => tokens.filter(t => t.name !== "EOF"),
@@ -76,32 +75,6 @@ describe("Interpreter", () => {
 
     describe("De-obfuscation", () => {
 
-        describe("Split in to command blocks", () => {
-
-            it("should create a single block when no other commands exist", () => {
-                const input  = `calc`,
-                      output = [
-                          [{ name: "LITERAL", text: "calc" }]
-                      ];
-
-                assert.deepEqual(split_cmd(tokenise(input)), output);
-            });
-
-            it("should split a command in to blocks", () => {
-
-                const input  = `calc && (powershell) || wscript & notepad`,
-                      output = [
-                          ["calc", " "],
-                          [" ", "(", "powershell", ")", " "],
-                          [" ", "wscript", " "],
-                          [" ", "notepad"]
-                      ];
-
-                let result = split_cmd(tokenise(input));
-                assert.deepEqual(split_cmd(tokenise(input)).map(res => res.map(r => r.text)), output);
-            });
-        });
-
         describe("Escapes", () => {
 
             it("should return the input without escapes", () => {
@@ -133,6 +106,23 @@ describe("Interpreter", () => {
                       }];
 
                 assert.deepEqual(interpret(input, { strip_escapes: false }), output);
+            });
+
+            it("should handle a heavily escaped 'set x=y' sequence", () => {
+                const input  = `^s^e^t^ ^x^=^y`,
+                      output = [
+                          {
+                              options: {},
+                              vars: { nextframe: { x: "y" }, thisframe: {} },
+                              commands: [
+                                  {
+                                      command: { name: "set", line: "x=y" },
+                                      options: {}
+                                  }
+                              ]
+                          }
+                      ];
+                assert.deepEqual(interpret(input), output);
             });
         });
 
