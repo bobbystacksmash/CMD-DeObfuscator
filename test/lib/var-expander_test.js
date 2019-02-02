@@ -119,6 +119,13 @@ describe("Phase 1: Percent Expansion", () => {
                 });
             });
 
+            it("should expand multiple vars on the same line", () => {
+                const input  =`%comspec:~-16,1%%comspec:~-1%%comspec:~-13,1% foo=bar`,
+                      output = "Set foo=bar";
+
+                assert.deepEqual(expander(input), output);
+            });
+
             it("should identify hex and octal range numbers", () => {
 
                 const tests = [
