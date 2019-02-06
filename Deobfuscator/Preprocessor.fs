@@ -1,5 +1,4 @@
-﻿module Deobfuscator.Preprocessor
-//
+﻿//
 // A METHOD FOR THINKING ABOUT WINDOWS CMD LINE STRINGS
 // ====================================================
 //
@@ -25,34 +24,77 @@
 //   - FOR
 //   - 'generic handler'
 //
-let (|MetaCharacter|LiteralCharacter|) chr =
-    match chr with
-    | '('
-    | ')'
-    | '%'
-    | '!'
-    | '^'
-    | '"'
-    | '<'
-    | '>'
-    | '&'
-    | '|' -> MetaCharacter
-    | _   -> LiteralCharacter
+    let (|EscapeCharacter|MetaCharacter|QuoteCharacter|LiteralCharacter|) chr =
+        match chr with
+        | '('
+        | ')'
+        | '%'
+        | '!'
+        | '<'
+        | '>'
+        | '&'
+        | '|' -> MetaCharacter
+        | '^' -> EscapeCharacter
+        | '"' -> QuoteCharacter
+        | _   -> LiteralCharacter
+    
+    // Tracks the parser's current state.  When 'IgnoreMeta' is TRUE, we will treat
+    // all MetaCharacters as LiteralCharacters, with the exception of:
+    //
+    //   1. Identification of a variable substring operation.
+    //   2. The end of the line.
+    //   3. Seeing another '"'.
+    //
+    type ParserState = { 
+        IgnoreMeta: bool;
+        Escape: bool 
+        DelayedExpansion: bool
+        EnvironmentVars: Map<string,string>
+    }
 
-// Tracks the parser's current state.  When 'IgnoreMeta' is TRUE, we will treat
-// all MetaCharacters as LiteralCharacters, with the exception of:
-//
-//   1. Identification of a variable substring operation.
-//   2. The end of the line.
-//   3. Seeing another '"'.
-//
-type ParserState = { IgnoreMeta: bool }
+    let defaultParserState = {
+        IgnoreMeta = false ;
+        Escape = false;        
+        DelayedExpansion = false;
+        EnvironmentVars = Map.empty
+            .Add("COMSPEC", "C:\\Windows\\System32\\cmd.exe")
+            .Add("PATHEXT", ".COM;.EXE;.BAT;.JS")
+    }
 
-let rec Parse context (chars: char list) col =
-    let ignoreMetaChars = context.IgnoreMeta
-    match Seq.toList(chars) with
-    | head :: rest ->
-        match head with
-        | MetaCharacter when ignoreMetaChars -> Parse context rest col
-        | _ -> Parse context rest col
-    | [] -> col
+    type TokenMeta = char
+    type TokenLiteral = char
+    type Token =
+        | Meta of TokenMeta
+        | Literal of TokenLiteral
+    
+    let AppendMeta lst chr = (List.append lst [Meta(chr)])
+    let AppendLiteral lst chr = (List.append lst [Literal(chr)])
+
+    let rec Parse context (chars: char list) (col: Token list) =
+        let ignoreMetaChars = context.IgnoreMeta
+        let escape = context.Escape
+        match Seq.toList(chars) with
+        | head :: rest ->
+            match head with
+            | EscapeCharacter when ignoreMetaChars ->
+                Parse context rest (AppendLiteral col head)
+            | EscapeCharacter when escape ->
+                Parse { context with Escape = false } rest (AppendLiteral col head)
+            | EscapeCharacter -> 
+                Parse { context with Escape = true } rest col
+            | QuoteCharacter when ignoreMetaChars ->
+                Parse { context with IgnoreMeta = false; } rest (AppendMeta col head)
+            | QuoteCharacter -> 
+                Parse { context with IgnoreMeta = true; } rest (AppendMeta col head)
+            | MetaCharacter when (ignoreMetaChars || escape) -> 
+                Parse context rest (AppendLiteral col head)
+            | MetaCharacter -> 
+                Parse context rest (AppendMeta col head)
+            | _ -> 
+                Parse context rest (AppendLiteral col head)
+
+        | [] -> col
+
+    let cmd = "\"^^^^^\""
+    let result = Parse defaultParserState (Seq.toList(cmd.ToCharArray())) (List.empty)
+    printfn ">>>>>>> %A" result
