@@ -52,6 +52,20 @@ type TestClass () =
         Assert.That( (pproc "^%"),  Is.EqualTo([Meta('%')]))
         Assert.That( (pproc "\"%"), Is.EqualTo([Meta('"'); Meta('%')]))
 
+        let regularComspec = [
+            Meta('%')
+            Literal('C')
+            Literal('o')
+            Literal('M')
+            Literal('s')
+            Literal('P')
+            Literal('e')
+            Literal('C')
+            Meta('%')
+        ]
+
+        Assert.That((pproc "%CoMsPeC%"), Is.EqualTo(regularComspec))
+
         // Default parser state is DelayedExp=FALSE.  Let's just check that
         // '^!' is not treated as meta in this state.
         Assert.That( (pproc "^!"), Is.EqualTo([Literal('!')]))
@@ -86,3 +100,20 @@ type TestClass () =
         let actual = Preprocess (DefaultParserState ()) "^\""
         let expected = [Meta('"')]
         Assert.That(actual, Is.EqualTo(expected), "Cannot escape a double quote.")
+
+    [<Test>]
+    member this.ExpandDefinedEnvironmentVariables() =
+
+        let tokens = Preprocess (DefaultParserState ()) "%comspec%"
+        let actual = Expand tokens
+
+        Assert.True(true)
+        // TODO: [%COMSPEC%]   -> C:\Windows\System32\cmd.exe
+        // TODO: ["%COMSPEC%"] -> "C:\Windows\System32.cmd.exe"
+        // TODO: [%%COMSPEC%%] -> %C:\Windows\System32\cmd.exe"
+        // TODO: ["%%COMSPEC%%"] -> "%C:\Windows\System32\cmd.exe%"
+        // TODO: Expansions are only applied once. For example, assuming blah is set:
+        //         [echo %%blah%%] -> %comspec%
+        //                            ^^^^^^^^^
+        //                            Not expanded further.
+
