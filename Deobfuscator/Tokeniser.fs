@@ -5,6 +5,13 @@ let (|SpecialChar|RegularChar|) chr =
     match chr with
     | ' ' 
     | '"' 
+    | '('
+    | ')'
+    | '!'
+    | '<'
+    | '>'
+    | '&'
+    | '|'
     | '^' 
     | '\\' -> SpecialChar
     | _    -> RegularChar
@@ -12,6 +19,11 @@ let (|SpecialChar|RegularChar|) chr =
 type TokeniserState = { IgnoreSpecialChars: bool}
 
 let cmd = "\"Ar\"g\"u^m\"e\"n\"t\" W\"it\"h Sp\"aces\"\""
+
+// The parser runs in two modes:
+//
+//   1. IgnoreSpecialChars: true
+//      When in this mode, the parser will treat
 
 let rec QuoteReader (chars: char list) state col =
     let parserState = state.IgnoreSpecialChars
