@@ -47,6 +47,9 @@ type TestClass () =
        // ~~~~
        // This command: [echo ^%COMSPEC%] yields: [^C:\Windows\System32\cmd.exe]
        // Need to add some tests to check that '%' is not escaped outside of a string.
+       //
+       // This command: [echo ^%COMSPEC^%] yields: [%COMSPEC%]
+       // Need to add some handling to make sure this behaviour is replicated.
 
         for chr in metaChars do
             Assert.That(pproc chr, Is.EqualTo([Literal(chr)]))
