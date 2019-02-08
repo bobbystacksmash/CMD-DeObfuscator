@@ -57,6 +57,20 @@ type TestClass () =
         Assert.That( (pproc "^!"), Is.EqualTo([Literal('!')]))
         Assert.That( (pproc "\"!"), Is.EqualTo([Meta('"'); Literal('!')]))
 
+        let comspec = [
+            Literal('!')
+            Literal('C')
+            Literal('O')
+            Literal('M')
+            Literal('S')
+            Literal('P')
+            Literal('E')
+            Literal('C')
+            Literal('!')
+        ]
+        let output = (pproc "^!COMSPEC^!")
+        Assert.That( (pproc "^!COMSPEC^!"), Is.EqualTo(comspec), output.[8].ToString())
+
         // '!' is similar, but only when delayed expansion is set.
         let pprocDelayed cmd =
             let delayedExpansionState = {

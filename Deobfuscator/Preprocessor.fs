@@ -94,7 +94,7 @@
             | MetaCharacter when (head = '%' || (head = '!' && context.DelayedExpansion)) ->
                 Tokenise context rest (AppendMeta col head)
             | MetaCharacter when (ignoreMetaChars || escape) ->
-                Tokenise context rest (AppendLiteral col head)
+                Tokenise { context with Escape = false } rest (AppendLiteral col head)
             | MetaCharacter ->
                 Tokenise context rest (AppendMeta col head)
             | _ ->
