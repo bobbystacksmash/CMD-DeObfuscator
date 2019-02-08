@@ -38,7 +38,7 @@
         | '^' -> EscapeCharacter
         | '"' -> QuoteCharacter
         | _   -> LiteralCharacter
-    
+
     // Tracks the parser's current state.  When 'IgnoreMeta' is TRUE, we will treat
     // all MetaCharacters as LiteralCharacters, with the exception of:
     //
@@ -46,32 +46,36 @@
     //   2. The end of the line.
     //   3. Seeing another '"'.
     //
-    type ParserState = { 
-        IgnoreMeta: bool;
-        Escape: bool; 
-        DelayedExpansion: bool;
-        EnvironmentVars: Map<string,string>;
+    type ParserState = {
+        IgnoreMeta: bool
+        Escape: bool
+        DelayedExpansion: bool
+        VarExpression: bool
+        EnvironmentVars: Map<string,string>
     }
 
-    let defaultParserState = {
-        IgnoreMeta = false ;
-        Escape = false;        
-        DelayedExpansion = false;
-        EnvironmentVars = Map.empty
-            .Add("COMSPEC", "C:\\Windows\\System32\\cmd.exe")
-            .Add("PATHEXT", ".COM;.EXE;.BAT;.JS")
-    }
+    let DefaultParserState () =
+        let defaultCtx = {
+            IgnoreMeta = false
+            Escape = false
+            VarExpression = false
+            DelayedExpansion = false
+            EnvironmentVars = Map.empty
+                .Add("COMSPEC", "C:\\Windows\\System32\\cmd.exe")
+                .Add("PATHEXT", ".COM;.EXE;.BAT;.JS")
+        }
+        defaultCtx
 
     type TokenMeta = char
     type TokenLiteral = char
     type Token =
         | Meta of TokenMeta
         | Literal of TokenLiteral
-    
+
     let AppendMeta lst chr = (List.append lst [Meta(chr)])
     let AppendLiteral lst chr = (List.append lst [Literal(chr)])
 
-    let rec Tokenise context (chars: char list) (col: Token list) =
+    let rec Tokenise (context: ParserState) (chars: char list) (col: Token list) =
         let ignoreMetaChars = context.IgnoreMeta
         let escape = context.Escape
         match Seq.toList(chars) with
@@ -81,19 +85,21 @@
                 Tokenise context rest (AppendLiteral col head)
             | EscapeCharacter when escape ->
                 Tokenise { context with Escape = false } rest (AppendLiteral col head)
-            | EscapeCharacter -> 
+            | EscapeCharacter ->
                 Tokenise { context with Escape = true } rest col
             | QuoteCharacter when ignoreMetaChars ->
                 Tokenise { context with IgnoreMeta = false; } rest (AppendMeta col head)
-            | QuoteCharacter -> 
+            | QuoteCharacter ->
                 Tokenise { context with IgnoreMeta = true; } rest (AppendMeta col head)
-            | MetaCharacter when (ignoreMetaChars || escape) -> 
-                Tokenise context rest (AppendLiteral col head)
-            | MetaCharacter -> 
+            | MetaCharacter when (head = '%' || (head = '!' && context.DelayedExpansion)) ->
                 Tokenise context rest (AppendMeta col head)
-            | _ -> 
+            | MetaCharacter when (ignoreMetaChars || escape) ->
+                Tokenise context rest (AppendLiteral col head)
+            | MetaCharacter ->
+                Tokenise context rest (AppendMeta col head)
+            | _ ->
                 Tokenise context rest (AppendLiteral col head)
         | [] -> col
 
-    let Preprocess (cmdstr: string) =
-        Tokenise defaultParserState (Seq.toList(cmdstr.ToCharArray())) (List.empty)
+    let Preprocess (ctx: ParserState) (cmdstr: string) =
+        Tokenise ctx (Seq.toList(cmdstr.ToCharArray())) (List.empty)
