@@ -20,6 +20,14 @@ type TestClass () =
         Assert.That((expand "%comspec%" vars), Is.EqualTo(expected), "Match lower-case varname")
         Assert.That((expand "%cOmSpEc%" vars), Is.EqualTo(expected), "Match mixed-case varname")
 
+
+    [<Test>]
+    member this.VarNotDefined() =
+        let vars = Map.empty
+        Assert.That((expand "%NOT_DEFINED%" vars), Is.EqualTo("%NOT_DEFINED%"))
+        Assert.That((expand "%NOT_DEFINED:-3,4%" vars), Is.EqualTo("%NOT_DEFINED:-3,4%"))
+        Assert.That((expand "%NOT_DEFINED:foo=bar%" vars), Is.EqualTo("%NOT_DEFINED:foo=bar%"))
+
     [<Test>]
     member this.TrailingColonEdgeCaseExpansion() =
 
