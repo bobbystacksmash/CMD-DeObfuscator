@@ -59,3 +59,18 @@ type TestClass () =
 
         let badInput2 = "%FOO::~3,4%"
         Assert.That((expand badInput2 vars), Is.EqualTo(badInput2))
+
+    [<Test>]
+    member this.SubstringExpansion() =
+
+        let vars = Map.empty.Add("FOO", "123456789ABCDEF")
+        let varexp   (a, _, _) = a
+        let expected (_, b, _) = b
+        let message  (_, _, c) = c
+
+        let tests = [
+            ("%FOO:~0,5%", "12345", "Extract only the first 5 chars")
+        ]
+
+        for test in tests do
+            Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))

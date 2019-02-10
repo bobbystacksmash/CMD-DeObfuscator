@@ -21,7 +21,7 @@ module ExpanderWithCommandExtensions =
 
     type private SubstringExpression = {
         Start: int
-        Finish: int
+        Length: int
     }
 
 
@@ -83,14 +83,14 @@ module ExpanderWithCommandExtensions =
                            | RangeOct -> octRangeToInt32 startStr
                            | _        -> 0
 
-            let finishStr = m.Groups.[2].Value
-            let finishNum = match finishStr with
-                            | RangeDec -> decRangeToInt32 finishStr
-                            | RangeHex -> hexRangeToInt32 finishStr
-                            | RangeOct -> octRangeToInt32 finishStr
+            let lengthStr = m.Groups.[2].Value
+            let lengthNum = match lengthStr with
+                            | RangeDec -> decRangeToInt32 lengthStr
+                            | RangeHex -> hexRangeToInt32 lengthStr
+                            | RangeOct -> octRangeToInt32 lengthStr
                             | _        -> 0
 
-            Some { Start = startNum; Finish = finishNum }
+            Some { Start = startNum; Length = lengthNum }
 
 
     let rec private parseCmdExtExpr (ctx: VarnameContext) (cmd: char list) =
@@ -121,11 +121,11 @@ module ExpanderWithCommandExtensions =
 
 
     let private doSubstring (value: string) (substr: SubstringExpression) =
-        printfn "Doing substring"
-        "I AM A SUBSTRINGED VALUE"
+        // TODO: finish this implementation.
+        value.Substring(substr.Start, substr.Length)
+
 
     let private doFindReplace (value: string) (findreplace: FindReplaceExpression) =
-        printfn "DOING FIND/REPLACE"
         "THIS IS A REPLACED VALUE"
 
     let rec expandEnvironmentVariable (cmdstr: string) (vars: Map<string,string>) =
