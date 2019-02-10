@@ -26,7 +26,7 @@ module ExpanderWithCommandExtensions =
 
 
     let private (|FindReplace|_|) expression =
-        let m = Regex.Match(expression, "^([^=]+)[=]([^=]+)?$")
+        let m = Regex.Match(expression, "^:([^=]+)[=]([^=]+)?$")
         if m.Success then
             Some ({ Find = m.Groups.[1].Value; Replace = m.Groups.[2].Value})
         else
@@ -72,7 +72,7 @@ module ExpanderWithCommandExtensions =
     let private (|Substring|_|) (expression: string) =
 
         let expNoSpaces = Regex.Replace(expression, "\s*", "")
-        let m = Regex.Match(expNoSpaces, "^~([^,]+)(?:,(.+)$)?")
+        let m = Regex.Match(expNoSpaces, "^:~([^,]+)(?:,(.+)$)?")
         if not m.Success then
             None
         else
@@ -99,7 +99,7 @@ module ExpanderWithCommandExtensions =
             match head with
             | '=' -> {ctx with Failed = true}
             | ':' when rest.Length = 0 -> {ctx with Name = (ctx.Name + head.ToString())}
-            | ':' -> {ctx with Rest = (String.concat "" <| List.map string rest)}
+            | ':' -> {ctx with Rest = (":" + (String.concat "" <| List.map string rest))}
             | _ -> parseCmdExtExpr {ctx with Name = (ctx.Name + head.ToString())} rest
         | _ -> ctx
 
@@ -149,6 +149,7 @@ module ExpanderWithCommandExtensions =
             varValue vars expr.Name
 
         | _ ->
+            // The assumption that there's always a colon may cause problems later.
             "%" + expr.Name + expr.Rest + "%"
 
 
