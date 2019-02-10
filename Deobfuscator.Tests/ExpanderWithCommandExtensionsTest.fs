@@ -15,7 +15,8 @@ type TestClass () =
 
         let vars     = Map.empty.Add("COMSPEC", "C:\\Windows\\System32\\cmd.exe")
         let expected = vars.["COMSPEC"]
-        let actual = expand "%COMSPEC%" vars
-        Assert.That(actual, Is.EqualTo(expected))
 
+        Assert.That((expand "%COMSPEC%" vars), Is.EqualTo(expected), "Match upper-case varname")
+        Assert.That((expand "%comspec%" vars), Is.EqualTo(expected), "Match lower-case varname")
+        Assert.That((expand "%cOmSpEc%" vars), Is.EqualTo(expected), "Match mixed-case varname")
 
