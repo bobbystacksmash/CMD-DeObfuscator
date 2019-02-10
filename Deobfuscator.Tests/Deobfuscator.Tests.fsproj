@@ -13,7 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="PreprocessorTest.fs" />
+    <!--<Compile Include="ParserTest.fs" />
+    <Compile Include="Preprocessor/PreprocessorWithCommandExtensionsTest.fs" />-->
+    <Compile Include="ExpanderWithCommandExtensionsTest.fs" />
   </ItemGroup>
 
   <ItemGroup>
