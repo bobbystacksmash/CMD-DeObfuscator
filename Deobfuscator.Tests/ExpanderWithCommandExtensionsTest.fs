@@ -29,6 +29,21 @@ type TestClass () =
         Assert.That((expand "%NOT_DEFINED:foo=bar%" vars), Is.EqualTo("%NOT_DEFINED:foo=bar%"))
 
     [<Test>]
+    member this.VarsDefinedTogether() =
+        let vars     = Map.empty.Add("FOO", "bar").Add("HELLO", "world")
+        let actual   = expand "%FOO%%HELLO%%FOO%%HELLO%" vars
+        let expected = "barworldbarworld"
+        Assert.That(actual, Is.EqualTo(expected))
+
+    [<Test>]
+    member this.VarsDefinedTogetherWithMissingPercent() =
+        let vars = Map.empty.Add("FOO", "bar")
+        let actual = expand "%FOO%FOO%" vars
+        let expected = "barFOO%"
+        Assert.That(actual, Is.EqualTo(expected))
+
+
+    [<Test>]
     member this.TrailingColonEdgeCaseExpansion() =
 
         let vars     = Map.empty.Add("FOO:", "bar")
