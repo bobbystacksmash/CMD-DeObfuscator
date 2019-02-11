@@ -121,8 +121,34 @@ module ExpanderWithCommandExtensions =
 
 
     let private doSubstring (value: string) (substr: SubstringExpression) =
-        // TODO: finish this implementation.
-        value.Substring(substr.Start, substr.Length)
+
+        let rev (str: string) =
+            String.concat ""
+                (str.ToCharArray() |> Seq.rev |> Seq.map (fun x -> x.ToString()))
+
+        match (substr.Start, substr.Length) with
+        | (st, len) when st >= 0 && len > 0 ->
+            value.Substring(st, len)
+
+        | (st, len) when st >= 0 && len = 0 ->
+            value.Substring(st)
+
+        | (st, len) when st > 0 && len < 0 ->
+            value.Substring(st, ((value.Length - st) + len) + 1)
+
+        | (st, len) when st <  0 && len = 0  ->
+            (rev value).Substring(0, st * -1) |> rev
+
+        | (st, len) when st = 0 && len < 0 ->
+            (rev value).Substring(len * -1) |> rev
+
+        | (st, len) when st < 0 && len < 0 ->
+            // 'st' becomes 'len', and 'len' becomes 'st.
+            let start  = (len * -1) - 1
+            let length = (st * -1) - (start + 1)
+            (rev value).Substring(start, length) |> rev
+
+        | _ -> value
 
 
     let private doFindReplace (value: string) (findreplace: FindReplaceExpression) =

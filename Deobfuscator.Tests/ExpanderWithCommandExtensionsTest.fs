@@ -68,8 +68,15 @@ type TestClass () =
         let expected (_, b, _) = b
         let message  (_, _, c) = c
 
+        // Tests from: https://ss64.com/nt/syntax-substring.html.
         let tests = [
             ("%FOO:~0,5%", "12345", "Extract only the first 5 chars")
+            ("%FOO:~7,5%", "89ABC", "Skip 7 chars and then extract the next 5")
+            ("%FOO:~7%", "89ABCDEF", "Skip 7 characters and then extract everything else.")
+            ("%FOO:~-7%", "9ABCDEF", "Extract only the last 7 characters.")
+            ("%FOO:~0,-7%", "12345678", "Extract everything BUT the last 7 characters.")
+            ("%FOO:~7,-5%", "89AB", "Extract between 7 from the front and 5 from the end.")
+            ("%FOO:~-7,-5%", "AB", "Extract between 7 from the end and 5 from the end.")
         ]
 
         for test in tests do
