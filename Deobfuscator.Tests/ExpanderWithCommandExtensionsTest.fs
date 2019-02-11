@@ -78,6 +78,18 @@ type TestClass () =
             ("%FOO:~7,-5%", "89AB", "Extract between 7 from the front and 5 from the end.")
             ("%FOO:~-7,-5%", "AB", "Extract between 7 from the end and 5 from the end.")
         ]
-
         for test in tests do
             Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))
+
+        // Tests for cases where the substrings fall beyond the bounds of the string.
+        let failingTests = [
+            ("%FOO:~100%", "", "Skip 100 chars, then just return the empty string.")
+            ("%FOO:~100,500%", "", "Skip 100 chars, then try to read 500 more - return the empty string.")
+            ("%FOO:~0,500%", vars.["FOO"], "Read the first 500 chars - return the whole string")
+            ("%FOO:~1,15%", "23456789ABCDEF", "Read 1 char, then fetch remander of value.")
+            ("%FOO:~-15%", vars.["FOO"], "Should read the whole string when negative length = strlen.")
+            ("%FOO:~-16%", vars.["FOO"], "Should read the whole string when negative length > strlen.")
+            ("%FOO:~-26%", vars.["FOO"], "Should read the whole string when negative length > strlen.")
+        ]
+        for failingTest in failingTests do
+            Assert.That((expand (varexp failingTest) vars), Is.EqualTo(expected failingTest), (message failingTest))
