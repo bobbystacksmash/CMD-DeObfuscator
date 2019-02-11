@@ -60,6 +60,12 @@ type TestClass () =
         let badInput2 = "%FOO::~3,4%"
         Assert.That((expand badInput2 vars), Is.EqualTo(badInput2))
 
+
+    [<Test>]
+    member this.FindReplaceExpansion() =
+        Assert.IsTrue(true)
+
+
     [<Test>]
     member this.SubstringExpansion() =
 
@@ -70,6 +76,9 @@ type TestClass () =
 
         // Tests from: https://ss64.com/nt/syntax-substring.html.
         let tests = [
+            ("%FOO:~-0,0%", "", "Do not extract any chars when 0,0")
+            ("%FOO:~-0,-0%", "", "Do not extract any chars when -0,-0")
+            ("%FOO:~0,-0%", "", "Do not extract any chars when 0,-0")
             ("%FOO:~0,5%", "12345", "Extract only the first 5 chars")
             ("%FOO:~7,5%", "89ABC", "Skip 7 chars and then extract the next 5")
             ("%FOO:~7%", "89ABCDEF", "Skip 7 characters and then extract everything else.")
@@ -93,3 +102,24 @@ type TestClass () =
         ]
         for failingTest in failingTests do
             Assert.That((expand (varexp failingTest) vars), Is.EqualTo(expected failingTest), (message failingTest))
+
+        // Hexadecimal substr handling
+        let hexadecimalTests = [
+            ("%FOO:~0x00,0xf%", "123456789ABCDEF", "Correctly convert hex to dec and return expected.")
+            ("%FOO:~0x00,0x0000%", "", "Correctly convert hex to dec and return expected.")
+            ("%FOO:~0xa,0xf%", "BCDEF", "Correctly convert hex to dec and return expected.")
+            ("%FOO:~-0xb%", "56789ABCDEF", "Correctly convert hex to dec and return expected.")
+        ]
+        for hexTest in hexadecimalTests do
+            Assert.That((expand (varexp hexTest) vars), Is.EqualTo(expected hexTest), (message hexTest))
+
+        // Octal substr handling
+        let octalTests = [
+            ("%FOO:~0,012%", "123456789A", "Correctly convert oct to dec and return expected.")
+            ("%FOO:~0,00%", "", "Correctly convert oct to dec and return expected.")
+        ]
+        for octTest in octalTests do
+            Assert.That((expand (varexp octTest) vars), Is.EqualTo(expected octTest), (message octTest))
+
+        // Should not replace a variable that is not defined.
+        Assert.That((expand "%NOT_DEFINED:~3,5%" vars), Is.EqualTo("%NOT_DEFINED:~3,5%"))

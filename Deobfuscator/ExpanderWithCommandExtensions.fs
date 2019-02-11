@@ -134,6 +134,8 @@ module ExpanderWithCommandExtensions =
 
         match (substr.Start, substr.Length) with
 
+        | (st, len) when st = 0 && len = 0 -> ""
+
         // Cases where substr exceeds the bounds of the string.
         | (st, len) when st > value.Length -> ""
         | (st, len) when st = 0 && len >= value.Length -> value
