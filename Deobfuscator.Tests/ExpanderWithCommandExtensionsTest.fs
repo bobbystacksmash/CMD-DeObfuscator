@@ -63,7 +63,30 @@ type TestClass () =
 
     [<Test>]
     member this.FindReplaceExpansion() =
-        Assert.IsTrue(true)
+
+        let varexp   (a, _, _) = a
+        let expected (_, b, _) = b
+        let message  (_, _, c) = c
+
+        let vars = Map
+                    .empty
+                    .Add("ONE",   "AABBCCDDEEFF")
+                    .Add("TWO",   "HELLO WORLD")
+                    .Add("THREE", "w|s|c|r|i|p|t")
+
+        let findReplaceTests = [
+            ("%ONE:A=Z%", "ZZBBCCDDEEFF", "Replace all occurrances of a char within the string.")
+            ("%ONE:a=z%", "zzBBCCDDEEFF", "Replace all occurrances of a char within the string (case-insensitive).")
+            ("%ONE:B=%", "AACCDDEEFF", "Remove all matches from the string when no RHS of replace.")
+            ("%ONE:X=Z%", "AABBCCDDEEFF", "Leave string as-is when find cannot be found.")
+            ("%ONE:AABBCCDDEEFF=x%", "x", "Replace whole string with new char.")
+            ("%ONE:AABBCCDDEEFF=%", "", "Replace whole string - return empty string.")
+            ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
+            ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
+            ("%THREE:|=%", "wscript", "Remove regexp metachar '|'")
+        ]
+        for test in findReplaceTests do
+            Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))
 
 
     [<Test>]

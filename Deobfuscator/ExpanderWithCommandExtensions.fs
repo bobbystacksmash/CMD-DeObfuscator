@@ -167,7 +167,9 @@ module ExpanderWithCommandExtensions =
 
 
     let private doFindReplace (value: string) (findreplace: FindReplaceExpression) =
-        "THIS IS A REPLACED VALUE"
+        let safeFindRe = Regex.Replace(findreplace.Find, "([\-\|\\\{\}\(\)\[\]\^\%\+\*\?\.])", "\\$1")
+        Regex.Replace(value, safeFindRe, findreplace.Replace, RegexOptions.IgnoreCase)
+
 
     let rec expandEnvironmentVariable (cmdstr: string) (vars: Map<string,string>) =
 
