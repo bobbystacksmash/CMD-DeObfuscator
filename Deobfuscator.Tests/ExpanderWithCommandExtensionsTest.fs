@@ -60,6 +60,35 @@ type TestClass () =
         let badInput2 = "%FOO::~3,4%"
         Assert.That((expand badInput2 vars), Is.EqualTo(badInput2))
 
+
+    [<Test>]
+    member this.FindReplaceExpansion() =
+
+        let varexp   (a, _, _) = a
+        let expected (_, b, _) = b
+        let message  (_, _, c) = c
+
+        let vars = Map
+                    .empty
+                    .Add("ONE",   "AABBCCDDEEFF")
+                    .Add("TWO",   "HELLO WORLD")
+                    .Add("THREE", "w|s|c|r|i|p|t")
+
+        let findReplaceTests = [
+            ("%ONE:A=Z%", "ZZBBCCDDEEFF", "Replace all occurrances of a char within the string.")
+            ("%ONE:a=z%", "zzBBCCDDEEFF", "Replace all occurrances of a char within the string (case-insensitive).")
+            ("%ONE:B=%", "AACCDDEEFF", "Remove all matches from the string when no RHS of replace.")
+            ("%ONE:X=Z%", "AABBCCDDEEFF", "Leave string as-is when find cannot be found.")
+            ("%ONE:AABBCCDDEEFF=x%", "x", "Replace whole string with new char.")
+            ("%ONE:AABBCCDDEEFF=%", "", "Replace whole string - return empty string.")
+            ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
+            ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
+            ("%THREE:|=%", "wscript", "Remove regexp metachar '|'")
+        ]
+        for test in findReplaceTests do
+            Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))
+
+
     [<Test>]
     member this.SubstringExpansion() =
 
@@ -70,6 +99,9 @@ type TestClass () =
 
         // Tests from: https://ss64.com/nt/syntax-substring.html.
         let tests = [
+            ("%FOO:~-0,0%", "", "Do not extract any chars when 0,0")
+            ("%FOO:~-0,-0%", "", "Do not extract any chars when -0,-0")
+            ("%FOO:~0,-0%", "", "Do not extract any chars when 0,-0")
             ("%FOO:~0,5%", "12345", "Extract only the first 5 chars")
             ("%FOO:~7,5%", "89ABC", "Skip 7 chars and then extract the next 5")
             ("%FOO:~7%", "89ABCDEF", "Skip 7 characters and then extract everything else.")
@@ -78,6 +110,39 @@ type TestClass () =
             ("%FOO:~7,-5%", "89AB", "Extract between 7 from the front and 5 from the end.")
             ("%FOO:~-7,-5%", "AB", "Extract between 7 from the end and 5 from the end.")
         ]
-
         for test in tests do
             Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))
+
+        // Tests for cases where the substrings fall beyond the bounds of the string.
+        let failingTests = [
+            ("%FOO:~100%", "", "Skip 100 chars, then just return the empty string.")
+            ("%FOO:~100,500%", "", "Skip 100 chars, then try to read 500 more - return the empty string.")
+            ("%FOO:~0,500%", vars.["FOO"], "Read the first 500 chars - return the whole string")
+            ("%FOO:~1,15%", "23456789ABCDEF", "Read 1 char, then fetch remander of value.")
+            ("%FOO:~-15%", vars.["FOO"], "Should read the whole string when negative length = strlen.")
+            ("%FOO:~-16%", vars.["FOO"], "Should read the whole string when negative length > strlen.")
+            ("%FOO:~-26%", vars.["FOO"], "Should read the whole string when negative length > strlen.")
+        ]
+        for failingTest in failingTests do
+            Assert.That((expand (varexp failingTest) vars), Is.EqualTo(expected failingTest), (message failingTest))
+
+        // Hexadecimal substr handling
+        let hexadecimalTests = [
+            ("%FOO:~0x00,0xf%", "123456789ABCDEF", "Correctly convert hex to dec and return expected.")
+            ("%FOO:~0x00,0x0000%", "", "Correctly convert hex to dec and return expected.")
+            ("%FOO:~0xa,0xf%", "BCDEF", "Correctly convert hex to dec and return expected.")
+            ("%FOO:~-0xb%", "56789ABCDEF", "Correctly convert hex to dec and return expected.")
+        ]
+        for hexTest in hexadecimalTests do
+            Assert.That((expand (varexp hexTest) vars), Is.EqualTo(expected hexTest), (message hexTest))
+
+        // Octal substr handling
+        let octalTests = [
+            ("%FOO:~0,012%", "123456789A", "Correctly convert oct to dec and return expected.")
+            ("%FOO:~0,00%", "", "Correctly convert oct to dec and return expected.")
+        ]
+        for octTest in octalTests do
+            Assert.That((expand (varexp octTest) vars), Is.EqualTo(expected octTest), (message octTest))
+
+        // Should not replace a variable that is not defined.
+        Assert.That((expand "%NOT_DEFINED:~3,5%" vars), Is.EqualTo("%NOT_DEFINED:~3,5%"))

@@ -126,7 +126,21 @@ module ExpanderWithCommandExtensions =
             String.concat ""
                 (str.ToCharArray() |> Seq.rev |> Seq.map (fun x -> x.ToString()))
 
+        let makeSafeLength len =
+            if len > value.Length then
+                value.Length
+            else
+                len
+
         match (substr.Start, substr.Length) with
+
+        | (st, len) when st = 0 && len = 0 -> ""
+
+        // Cases where substr exceeds the bounds of the string.
+        | (st, len) when st > value.Length -> ""
+        | (st, len) when st = 0 && len >= value.Length -> value
+        | (st, len) when st > 0 && len >= value.Length -> value.Substring(st, (value.Length - st))
+
         | (st, len) when st >= 0 && len > 0 ->
             value.Substring(st, len)
 
@@ -137,7 +151,8 @@ module ExpanderWithCommandExtensions =
             value.Substring(st, ((value.Length - st) + len) + 1)
 
         | (st, len) when st <  0 && len = 0  ->
-            (rev value).Substring(0, st * -1) |> rev
+            let safeLen = makeSafeLength (st * -1)
+            (rev value).Substring(0, safeLen) |> rev
 
         | (st, len) when st = 0 && len < 0 ->
             (rev value).Substring(len * -1) |> rev
@@ -152,7 +167,9 @@ module ExpanderWithCommandExtensions =
 
 
     let private doFindReplace (value: string) (findreplace: FindReplaceExpression) =
-        "THIS IS A REPLACED VALUE"
+        let safeFindRe = Regex.Replace(findreplace.Find, "([\-\|\\\{\}\(\)\[\]\^\%\+\*\?\.])", "\\$1")
+        Regex.Replace(value, safeFindRe, findreplace.Replace, RegexOptions.IgnoreCase)
+
 
     let rec expandEnvironmentVariable (cmdstr: string) (vars: Map<string,string>) =
 
