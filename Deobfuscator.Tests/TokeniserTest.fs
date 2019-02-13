@@ -2,6 +2,7 @@ namespace Deobfuscator.Tests.Tokeniser
 
 open System
 open NUnit.Framework
+open Deobfuscator
 open Deobfuscator.Tokeniser
 
 [<TestFixture>]
@@ -12,11 +13,8 @@ type TestClass () =
 
         let input    = "abc"
         let actual   = tokenise input
+        let expected = [
+            RegularChar('a') ; RegularChar('b') ; RegularChar('c')
+        ]
 
-        let thing = RegularChar('a')
-
-        printfn "This is a thing!"
-        Assert.IsTrue(true)
-
-        
-        
+        Assert.That(actual, Is.EqualTo(expected))
