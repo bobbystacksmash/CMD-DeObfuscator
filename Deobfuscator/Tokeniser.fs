@@ -1,18 +1,24 @@
 namespace Deobfuscator
 
-type private CharMatcher =
+type private TagMatcher =
     | MatchingSpecialChars
     | IgnoringSpecialChars
 
-type private ReaderState = {
+type private TagReaderState = {
     Escape: bool
-    Mode: CharMatcher
+    Mode: TagMatcher
 }
 
-type TokenChar =
-    | EscapeChar  of char
+type private TagChar =
     | SpecialChar of char
     | RegularChar of char
+
+
+type private Token =
+    | LPAREN
+    | RPAREN
+    | DELIMITER
+
 
 module Tokeniser =
 
@@ -32,7 +38,7 @@ module Tokeniser =
         | _    -> RegularChar chr
 
 
-    let rec private tagChars (cmdstr: char list) (ctx: ReaderState) (col: TokenChar list) =
+    let rec private tagChars (cmdstr: char list) (ctx: TagReaderState) (col: TagChar list) =
         match cmdstr with
         | chr :: rest ->
             match chr with
@@ -60,6 +66,9 @@ module Tokeniser =
         | _ ->
             col
 
+    let rec private tokeniseTags (tags: TagChar list) =
+        12
+
     /// <summary>Tagging is the first part of the tokenising process.  As the tagger
     /// scans the input text, it classifies tokens in to two types: SpecialChars, and
     /// RegularChars.  Once tagged, we feed these tokens in to the tokeniser, which will
@@ -68,3 +77,6 @@ module Tokeniser =
         let cmdstrSeq = cmdstr.ToString() |> Seq.toList
         tagChars cmdstrSeq { Mode = MatchingSpecialChars; Escape = false } []
 
+
+    let tokenise (cmdstr: string) =
+        tag cmdstr |> tokeniseTags

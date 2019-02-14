@@ -19,13 +19,12 @@ type TestClass () =
                 match chr with
                 | 'R' -> RegularChar(rest.[0])
                 | 'S' -> SpecialChar(rest.[0])
-                | 'E' -> EscapeChar(rest.[0])
                 | _ -> raise (ExBadShorthandInputException("Unknown leading symbol: " + chr.ToString()))
             | _ -> raise (ExBadShorthandInputException("Cannot create list with input: " + str))
         )
 
     [<Test>]
-    member this.StandardCharTagging() =
+    member this.CharTagging() =
 
         let tests = [
             ("calc.exe", ["Rc" ; "Ra"; "Rl" ; "Rc" ; "R." ; "Re" ; "Rx" ; "Re"], "Regular char tokenising.")
@@ -57,3 +56,12 @@ type TestClass () =
 
             Assert.That(actual, Is.EqualTo(expectedTags), msg)
         )
+
+
+    [<Test>]
+    member this.Tokenising() =
+        let input    = "(foo)"
+        let actual   = tokenise input
+        let expected = []
+
+        Assert.IsTrue(true)
