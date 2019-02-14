@@ -1,5 +1,8 @@
 namespace Deobfuscator
 
+//
+// TAGGER
+//
 type private TagMatcher =
     | MatchingSpecialChars
     | IgnoringSpecialChars
@@ -14,6 +17,9 @@ type TagChar =
     | RegularChar of char
 
 
+//
+// TOKENISER
+//
 type private Token =
     | LPAREN
     | RPAREN
