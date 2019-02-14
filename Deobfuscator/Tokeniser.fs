@@ -9,7 +9,7 @@ type private TagReaderState = {
     Mode: TagMatcher
 }
 
-type private TagChar =
+type TagChar =
     | SpecialChar of char
     | RegularChar of char
 

@@ -73,6 +73,7 @@ type TestClass () =
                     .Add("ONE",   "AABBCCDDEEFF")
                     .Add("TWO",   "HELLO WORLD")
                     .Add("THREE", "w|s|c|r|i|p|t")
+                    .Add("PATH", "C:\\Windows\\System32\\")
 
         let findReplaceTests = [
             ("%ONE:A=Z%", "ZZBBCCDDEEFF", "Replace all occurrances of a char within the string.")
@@ -84,6 +85,7 @@ type TestClass () =
             ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
             ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
             ("%THREE:|=%", "wscript", "Remove regexp metachar '|'")
+            ("%PATH:\\=/%", "C:/Windows/System32/", "Replace \\ with /")
         ]
         for test in findReplaceTests do
             Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))
