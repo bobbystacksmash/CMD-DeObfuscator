@@ -13,8 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--<Compile Include="ParserTest.fs" />
-    <Compile Include="Preprocessor/PreprocessorWithCommandExtensionsTest.fs" />-->
     <Compile Include="ExpanderWithCommandExtensionsTest.fs" />
     <Compile Include="TokeniserTest.fs" />
   </ItemGroup>
