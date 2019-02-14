@@ -139,3 +139,4 @@ we transform this:
  - [[https://ss64.com/nt/cmd.html][SS64: CMD.exe]]
  - [[https://hackinparis.com/data/slides/2018/talks/HIP2018_Daniel_Bohannon_Invoke_Dosfuscation.pdf][HackInParis Invoke Dosfuscation Slides]]
  - [[http://www.windowsinspired.com/50-ways-to-say-hello/][50 Ways to Say Hello]]
+ - [[http://www.daviddeley.com/autohotkey/parameters/parameters.htm][Command line delimiters write-up]]
