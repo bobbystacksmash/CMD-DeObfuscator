@@ -37,6 +37,12 @@ module Tokeniser =
         | chr :: rest ->
             match chr with
 
+            | _ when ctx.Escape ->
+                tagChars rest { ctx with Escape = false } (List.append col [RegularChar(chr)])
+
+            | EscapeChar escape ->
+                tagChars rest { ctx with Escape = true } col
+
             | QuoteChar dquote when ctx.Mode = MatchingSpecialChars ->
                 tagChars rest { ctx with Escape = false ; Mode = IgnoringSpecialChars; } (List.append col [SpecialChar(chr)])
 
@@ -45,15 +51,6 @@ module Tokeniser =
 
             | _ when ctx.Mode = IgnoringSpecialChars ->
                 tagChars rest ctx (List.append col [RegularChar(chr)])
-
-            | EscapeChar escape when ctx.Escape ->
-                tagChars rest { ctx with Escape = false } (List.append col [RegularChar(chr)])
-
-            | EscapeChar escape ->
-                tagChars rest { ctx with Escape = true } col
-
-            | _ when ctx.Escape ->
-                tagChars rest { ctx with Escape = false} (List.append col [RegularChar(chr)])
 
             | SpecialChar special ->
                 tagChars rest ctx (List.append col [SpecialChar(chr)])

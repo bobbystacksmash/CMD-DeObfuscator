@@ -33,8 +33,8 @@ type TestClass () =
             ("&", ["S&"], "Identify a known special char.")
             ("^&", ["R&"], "Escape a known special char.")
             ("^^", ["R^"], "Escape the escape char.")
-            ("^\"", ["S\""], "Cannot escape a double quote.")
-            ("^\"ab^\"", ["S\"" ; "Ra" ; "Rb" ; "R^"; "S\""], "Cannot escape an opening or closing double quote.")
+            ("^\"", ["R\""], "Can escape a double quote.")
+            ("^\"ab^\"", ["R\"" ; "Ra" ; "Rb" ; "R\""], "Can escape an opening or closing double quote.")
             ("(foo)", ["S(" ; "Rf" ; "Ro" ; "Ro" ; "S)"], "Identify parens.")
             (
                 "\"!()|?&%><\"",
@@ -43,14 +43,17 @@ type TestClass () =
             )
             ("ab\"\"cd", ["Ra" ; "Rb" ; "S\"" ; "S\"" ; "Rc" ; "Rd"], "Empty dquote resets special char matcher.")
             ("\"\"\"", ["S\"" ; "S\"" ; "S\""], "Handling lines of quotes.")
+            ("^\"&", ["R\"" ; "S&"], "Can escape double quotes.")
         ]
 
         tests |> List.iter (fun test ->
             let input, expected, msg = test
-            let expectedTokens = this.ToTokenList expected
+            let expectedTags = this.ToTokenList expected
             let actual = tag input
 
-            printfn "%A" actual
+            printfn "EXPECTED -> %A" expectedTags
+            printfn "ACTUAL   -> %A" actual
+            printfn "------"
 
-            Assert.That(actual, Is.EqualTo(expectedTokens), msg)
+            Assert.That(actual, Is.EqualTo(expectedTags), msg)
         )
