@@ -70,22 +70,28 @@ type TestClass () =
 
         let vars = Map
                     .empty
-                    .Add("ONE",   "AABBCCDDEEFF")
+                    .Add("ONE",   "AABBCCDDEEFFAABB")
                     .Add("TWO",   "HELLO WORLD")
                     .Add("THREE", "w|s|c|r|i|p|t")
                     .Add("PATH", "C:\\Windows\\System32\\")
 
         let findReplaceTests = [
-            ("%ONE:A=Z%", "ZZBBCCDDEEFF", "Replace all occurrances of a char within the string.")
-            ("%ONE:a=z%", "zzBBCCDDEEFF", "Replace all occurrances of a char within the string (case-insensitive).")
-            ("%ONE:B=%", "AACCDDEEFF", "Remove all matches from the string when no RHS of replace.")
-            ("%ONE:X=Z%", "AABBCCDDEEFF", "Leave string as-is when find cannot be found.")
-            ("%ONE:AABBCCDDEEFF=x%", "x", "Replace whole string with new char.")
-            ("%ONE:AABBCCDDEEFF=%", "", "Replace whole string - return empty string.")
+            ("%ONE:A=Z%", "ZZBBCCDDEEFFZZBB", "Replace all occurrances of a char within the string.")
+            ("%ONE:a=z%", "zzBBCCDDEEFFzzBB", "Replace all occurrances of a char within the string (case-insensitive).")
+            ("%ONE:B=%", "AACCDDEEFFAA", "Remove all matches from the string when no RHS of replace.")
+            ("%ONE:X=Z%", "AABBCCDDEEFFAABB", "Leave string as-is when find cannot be found.")
+            ("%ONE:AABBCCDDEEFFAABB=x%", "x", "Replace whole string with new char.")
+            ("%ONE:AABBCCDDEEFFAABB=%", "", "Replace whole string - return empty string.")
             ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
             ("%TWO: =_%", "HELLO_WORLD", "Replace spaces")
             ("%THREE:|=%", "wscript", "Remove regexp metachar '|'")
             ("%PATH:\\=/%", "C:/Windows/System32/", "Replace \\ with /")
+            ("%ONE:*BB=XX%", "XXCCDDEEFFAABB", "Drop everything before and replace first match.")
+            ("%TWO:*LD=TEST%", "TEST", "Replace first instance of str")
+
+
+            // Causes a syntax error, but no way of handling those ATM.
+            //("%ONE:*=%", "XXCCDDEEFFAABB", "Replace first instance of str")
         ]
         for test in findReplaceTests do
             Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))

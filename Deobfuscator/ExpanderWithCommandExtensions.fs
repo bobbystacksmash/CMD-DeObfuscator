@@ -167,8 +167,28 @@ module ExpanderWithCommandExtensions =
 
 
     let private doFindReplace (value: string) (findreplace: FindReplaceExpression) =
-        let safeFindRe = Regex.Replace(findreplace.Find, "([\-\|\\\{\}\(\)\[\]\^\%\+\*\?\.])", "\\$1")
-        Regex.Replace(value, safeFindRe, findreplace.Replace, RegexOptions.IgnoreCase)
+        //
+        // Handle the special case, which is something like:
+        //
+        //   %COMSPEC:*Windows=%   -> \system\cmd.exe
+        //
+        let safeRemainder (str: string) (matchIdx: int) (replace: string) =
+            if (matchIdx + replace.Length) > str.Length then
+                ""
+            else
+                str.Substring (matchIdx + replace.Length)
+
+        let m = Regex.Match(findreplace.Find, "^\*(.*)$")
+        if m.Success then
+            let matchIndex = value.ToLower().IndexOf(m.Groups.[1].Value.ToLower())
+            match matchIndex with
+            | matchIndex when matchIndex > -1 ->
+                findreplace.Replace + safeRemainder value matchIndex findreplace.Replace
+
+            | _ -> value
+        else
+            let safeFindRe = Regex.Replace(findreplace.Find, "([\-\|\\\{\}\(\)\[\]\^\%\+\*\?\.])", "\\$1")
+            Regex.Replace(value, safeFindRe, findreplace.Replace, RegexOptions.IgnoreCase)
 
 
     let rec expandEnvironmentVariable (cmdstr: string) (vars: Map<string,string>) =
