@@ -24,21 +24,8 @@ type TestClass () =
             | _ -> raise (ExBadShorthandInputException("Cannot create list with input: " + str))
         )
 
-
     [<Test>]
-    member this.SimpleTokenising() =
-
-        let input    = "abc"
-        let actual   = tag input
-        let expected = [
-            RegularChar('a') ; RegularChar('b') ; RegularChar('c')
-        ]
-
-        Assert.That(actual, Is.EqualTo(expected))
-
-
-    [<Test>]
-    member this.StandardCommandTokenising() =
+    member this.StandardCharTagging() =
 
         let tests = [
             ("calc.exe", ["Rc" ; "Ra"; "Rl" ; "Rc" ; "R." ; "Re" ; "Rx" ; "Re"], "Regular char tokenising.")
