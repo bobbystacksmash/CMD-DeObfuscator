@@ -111,6 +111,10 @@ type TestClass () =
             ("%FOO:~0,-7%", "12345678", "Extract everything BUT the last 7 characters.")
             ("%FOO:~7,-5%", "89AB", "Extract between 7 from the front and 5 from the end.")
             ("%FOO:~-7,-5%", "AB", "Extract between 7 from the end and 5 from the end.")
+            // Whitespace
+            ("%FOO:~      -7,-5%", "AB", "Ignore whitespace, and extract between 7 from the end and 5 from the end.")
+            ("%FOO:~-7,      -5%", "AB", "Ignore whitespace, and extract between 7 from the end and 5 from the end.")
+            ("%FOO:~  -7,    -5%", "AB", "Ignore whitespace, and extract between 7 from the end and 5 from the end.")
         ]
         for test in tests do
             Assert.That((expand (varexp test) vars), Is.EqualTo(expected test), (message test))
