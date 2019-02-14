@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="ExpanderWithCommandExtensions.fs" />
     <Compile Include="Tokeniser.fs" />
+    <Compile Include="CommandLineParser.fs" />
   </ItemGroup>
 
 </Project>
