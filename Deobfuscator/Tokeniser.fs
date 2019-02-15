@@ -20,10 +20,14 @@ type TagChar =
 //
 // TOKENISER
 //
-type private Token =
-    | LPAREN
-    | RPAREN
-    | DELIMITER
+type Token =
+    | LPAREN    of string
+    | RPAREN    of string
+    | LITERAL   of string
+    | DELIMITER of string
+    | CONDSUCCESS of string
+    | CONDALWAYS  of string
+    | CONDOR      of string
 
 
 module Tokeniser =
@@ -42,6 +46,24 @@ module Tokeniser =
         | '"'  -> QuoteChar   chr
         | '^'  -> EscapeChar  chr
         | _    -> RegularChar chr
+
+
+    let (|CONDALWAYS|CONDOR|CONDSUCCESS|Other|) (tags: TagChar list) =
+        // Both '||' and '&&' are defined in the tags list as: [&; &; |; |;].
+        // We want to be able to distinguish a single '&' from a pair of '&&'s, and
+        // a single '|' (PIPE) from a double '||' (OR).  This mechanism handles
+        // this case of looking ahead to detmine the token type to return.
+        if tags.Length > 1 then
+            let tup = (tags.[0], tags.[1])
+            match tup with
+            | (SpecialChar('&'), SpecialChar('&')) -> CONDSUCCESS("&&")
+            _ -> Other
+        else
+            Other
+
+
+
+
 
 
     let rec private tagChars (cmdstr: char list) (ctx: TagReaderState) (col: TagChar list) =
@@ -71,6 +93,7 @@ module Tokeniser =
                 tagChars rest ctx (List.append col [RegularChar(chr)])
         | _ ->
             col
+
 
     let rec private tokeniseTags (tags: TagChar list) =
         12

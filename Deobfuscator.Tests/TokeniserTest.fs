@@ -62,6 +62,10 @@ type TestClass () =
     member this.Tokenising() =
         let input    = "(foo)"
         let actual   = tokenise input
-        let expected = []
+        let expected = [
+            LPAREN("(")
+            LITERAL("foo")
+            RPAREN(")")
+        ]
 
-        Assert.IsTrue(true)
+        Assert.That(actual, Is.EqualTo(expected))
