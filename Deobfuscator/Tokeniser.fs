@@ -106,9 +106,9 @@ module Tokeniser =
         | chr::rest ->
             match chr with
             | _ when ctx.Escape ->
-                tokeniseList rest {ctx with Escape=false} (List.append acc [Literal chr])
+                tokeniseList rest {ctx with Escape=false} (appendToken acc (Literal chr))
 
-            | ESC _ ->
+            | ESC _ when ctx.Mode = MatchingSpecialChars ->
                 tokeniseList rest {ctx with Escape=true} acc
 
             | QUOTE _ when ctx.Mode = MatchingSpecialChars ->

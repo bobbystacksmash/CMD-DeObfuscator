@@ -21,6 +21,7 @@ type TestClass () =
         let CS = CondSuccess "&&"
         let PI = Pipe        "|"
         let CO = CondOr      "||"
+        let QT = Quote       "\""
 
         let tests = [
             // Special char identification
@@ -32,8 +33,12 @@ type TestClass () =
             ("|",  [PI], "Identify Pipe")
             ("||", [CO], "Identify CondOr")
 
+            // Quotes
+            ("\"&^()!\"", [QT; Literal "&^()!"; QT], "Special chars within quotes are ignored.")
             ("calc", [Literal "calc"], "Read literals.")
+            ("c^alc", [Literal "calc"], "Read escaped literals as literals.")
             ("a && b", [Literal "a"; Delimiter " "; CondSuccess "&&"; Delimiter " "; Literal "b"], "& become &&")
+
         ]
 
         tests |> List.iter (fun test ->
