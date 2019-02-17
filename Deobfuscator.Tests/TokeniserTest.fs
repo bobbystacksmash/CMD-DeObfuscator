@@ -67,7 +67,7 @@ type TestClass () =
         )
 
     [<Test>]
-    (*member this.GroupIntoCmdBlocks() =
+    member this.GroupIntoCmdBlocks() =
         let input = "(foo || (bar|baz))"
         let expected = [
             [Literal "foo"]
