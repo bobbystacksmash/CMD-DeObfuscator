@@ -5,25 +5,48 @@ open System.Text.RegularExpressions
 open NUnit.Framework
 open Deobfuscator
 open Deobfuscator.Tokeniser
+open NUnit.Framework
 
 exception ExBadShorthandInputException of string
 
 [<TestFixture>]
 type TestClass () =
 
-    member this.ToTokenList(exp: string list) =
+    [<Test>]
+    member this.Tokeniseaa() =
 
-        exp |> List.map (fun str ->
-            match (str.ToCharArray() |> Seq.toList) with
-            | chr :: rest ->
-                match chr with
-                | 'R' -> RegularChar(rest.[0])
-                | 'S' -> SpecialChar(rest.[0])
-                | _ -> raise (ExBadShorthandInputException("Unknown leading symbol: " + chr.ToString()))
-            | _ -> raise (ExBadShorthandInputException("Cannot create list with input: " + str))
+        let LP = LeftParen "("
+        let RP = RightParen ")"
+        let CA = CondAlways "&"
+        let CS = CondSuccess "&&"
+        let PI = Pipe        "|"
+        let CO = CondOr      "||"
+
+        let tests = [
+            // Special char identification
+            ("(", [LP], "Identify left paren")
+            (")", [RP], "Identify right paren")
+            ("()", [LP; RP], "Identify left and right parens")
+            ("&",  [CA], "Identify CondAlways")
+            ("&&", [CS], "Identify CondSuccess")
+            ("|",  [PI], "Identify Pipe")
+            ("||", [CO], "Identify CondOr")
+
+            ("calc", [Literal "calc"], "Read literals.")
+            ("a && b", [Literal "a"; Delimiter " "; CondSuccess "&&"; Delimiter " "; Literal "b"], "& become &&")
+        ]
+
+        tests |> List.iter (fun test ->
+            let input, expected, msg = test
+            let actual = tokenise input
+            printfn "========================="
+            printfn "Actual   -> %A" actual
+            printfn "Expected -> %A" expected
+            printfn "========================="
+            Assert.That(actual, Is.EqualTo(expected))
         )
 
-    [<Test>]
+    (*[<Test>]
     member this.CharTagging() =
 
         let tests = [
@@ -56,16 +79,4 @@ type TestClass () =
 
             Assert.That(actual, Is.EqualTo(expectedTags), msg)
         )
-
-
-    [<Test>]
-    member this.Tokenising() =
-        let input    = "(foo)"
-        let actual   = tokenise input
-        let expected = [
-            LPAREN("(")
-            LITERAL("foo")
-            RPAREN(")")
-        ]
-
-        Assert.That(actual, Is.EqualTo(expected))
+    *)

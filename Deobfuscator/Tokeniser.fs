@@ -1,5 +1,7 @@
 namespace Deobfuscator
 
+open System.Text.RegularExpressions
+
 //
 // TAGGER
 //
@@ -21,91 +23,133 @@ type TagChar =
 // TOKENISER
 //
 type Token =
-    | LPAREN    of string
-    | RPAREN    of string
-    | LITERAL   of string
-    | DELIMITER of string
-    | CONDSUCCESS of string
-    | CONDALWAYS  of string
-    | CONDOR      of string
+    | LeftParen     of string // (
+    | RightParen    of string // )
+    | Literal       of string
+    | Delimiter     of string
+    | CondSuccess   of string // &&
+    | CondAlways    of string // &
+    | CondOr        of string // ||
+    | LeftRedirect  of string // <
+    | RightRedirect of string // >
+    | Pipe          of string // |
+    | Quote         of string // "
+    static member (+) (a, b) =
+        match a, b with
+        | Literal a0, Literal a1 -> Literal (a0 + a1)
+        | Delimiter d0, Delimiter d1 -> Delimiter (d0 + d1)
+        | CondAlways c0, CondAlways c1 -> CondSuccess (c0 + c1)
+        | Pipe p0, Pipe p1 -> CondOr (p0 + p1)
+        | _ -> failwith "invalid arguments to perform token join"
+
+    static member CanConcat =
+        function
+            | Literal _
+            | Delimiter _
+            | Pipe _
+            | CondAlways _ -> true
+            | _ -> false
 
 
 module Tokeniser =
 
-    let (|SpecialChar|QuoteChar|RegularChar|EscapeChar|) chr =
+    let sameType a b = a.GetType() = b.GetType()
+
+    let private (|ESC|QUOTE|LPAREN|RPAREN|LREDIRECT|RREDIRECT|OTHER|) str =
+        match str with
+        | "^"  -> ESC   str
+        | "\"" -> QUOTE str
+        | "("  -> LPAREN str
+        | ")"  -> RPAREN str
+        | "<"  -> LREDIRECT str
+        | ">"  -> RREDIRECT str
+        | _    -> OTHER str
+
+    let private (|AMPERSAND|PIPE|OTHER|) str =
+        match str with
+        | "&" -> AMPERSAND str
+        | "|" -> PIPE str
+        | _   -> OTHER str
+
+    let private (|DELIM|OTHER|) chr =
         match chr with
-        | ' '
-        | '('
-        | ')'
-        | '!'
-        | '<'
-        | '>'
-        | '&'
-        | '|'
-        | '\\' -> SpecialChar chr
-        | '"'  -> QuoteChar   chr
-        | '^'  -> EscapeChar  chr
-        | _    -> RegularChar chr
+        | ","
+        | "="
+        | " "
+        | ";" -> DELIM chr
+        | _   -> OTHER chr
 
+    let appendToken (lst: Token list) tok =
 
-    let (|CONDALWAYS|CONDOR|CONDSUCCESS|Other|) (tags: TagChar list) =
-        // Both '||' and '&&' are defined in the tags list as: [&; &; |; |;].
-        // We want to be able to distinguish a single '&' from a pair of '&&'s, and
-        // a single '|' (PIPE) from a double '||' (OR).  This mechanism handles
-        // this case of looking ahead to detmine the token type to return.
-        if tags.Length > 1 then
-            let tup = (tags.[0], tags.[1])
-            match tup with
-            | (SpecialChar('&'), SpecialChar('&')) -> CONDSUCCESS("&&")
-            _ -> Other
+        let safeRest (lst: Token list) =
+            if lst.Length = 0 then []
+            else lst |> List.tail
+
+        if lst.Length > 0 then
+
+            printfn "APPEND A=(%A), B=(%A)"  lst.Head tok
+
+            // A length of >= 2 is all we need for the concat
+            let prevTok = lst.Head
+            if Token.CanConcat(tok) && sameType tok prevTok then
+                (prevTok + tok) :: (lst |> safeRest)
+            else
+                printfn "THIS BRANCH --> %A" (tok :: lst)
+                tok :: lst
         else
-            Other
+            tok :: lst
 
 
+    let rec private tokeniseList (cmdstr: string list) (ctx: TagReaderState) acc =
 
-
-
-
-    let rec private tagChars (cmdstr: char list) (ctx: TagReaderState) (col: TagChar list) =
         match cmdstr with
-        | chr :: rest ->
+        | chr::rest ->
             match chr with
-
             | _ when ctx.Escape ->
-                tagChars rest { ctx with Escape = false } (List.append col [RegularChar(chr)])
+                tokeniseList rest {ctx with Escape=false} (List.append acc [Literal chr])
 
-            | EscapeChar escape ->
-                tagChars rest { ctx with Escape = true } col
+            | ESC _ ->
+                tokeniseList rest {ctx with Escape=true} acc
 
-            | QuoteChar dquote when ctx.Mode = MatchingSpecialChars ->
-                tagChars rest { ctx with Escape = false ; Mode = IgnoringSpecialChars; } (List.append col [SpecialChar(chr)])
+            | QUOTE _ when ctx.Mode = MatchingSpecialChars ->
+                tokeniseList rest {ctx with Escape=false; Mode=IgnoringSpecialChars} (appendToken acc (Quote "\""))
 
-            | QuoteChar dquote ->
-                tagChars rest { ctx with Mode = MatchingSpecialChars } (List.append col [SpecialChar(chr)])
+            | QUOTE _ ->
+                tokeniseList rest {ctx with Mode=MatchingSpecialChars} (appendToken acc (Quote "\""))
 
             | _ when ctx.Mode = IgnoringSpecialChars ->
-                tagChars rest ctx (List.append col [RegularChar(chr)])
+                tokeniseList rest ctx (appendToken acc (Literal(chr)))
 
-            | SpecialChar special ->
-                tagChars rest ctx (List.append col [SpecialChar(chr)])
+            | LPAREN lp ->
+                tokeniseList rest ctx (appendToken acc (LeftParen lp))
 
-            | RegularChar regular ->
-                tagChars rest ctx (List.append col [RegularChar(chr)])
-        | _ ->
-            col
+            | RPAREN rp ->
+                tokeniseList rest ctx (appendToken acc (RightParen rp))
+
+            | LREDIRECT lrd ->
+                tokeniseList rest ctx (appendToken acc (LeftRedirect lrd))
+
+            | RREDIRECT rrd ->
+                tokeniseList rest ctx (appendToken acc (RightRedirect rrd))
+
+            | DELIM delim ->
+                tokeniseList rest ctx (appendToken acc (Delimiter delim))
+
+            | AMPERSAND amp ->
+                tokeniseList rest ctx (appendToken acc (CondAlways amp))
+
+            | PIPE pipe ->
+                tokeniseList rest ctx (appendToken acc (Pipe pipe))
+
+            | _ ->
+                tokeniseList rest ctx (appendToken acc (Literal chr))
+
+        | _ -> acc |> List.rev
 
 
-    let rec private tokeniseTags (tags: TagChar list) =
-        12
-
-    /// <summary>Tagging is the first part of the tokenising process.  As the tagger
-    /// scans the input text, it classifies tokens in to two types: SpecialChars, and
-    /// RegularChars.  Once tagged, we feed these tokens in to the tokeniser, which will
-    /// take is from 'SpecialChar('&&')' to the token 'CALL_UPON_SUCCESS'.</summary>
-    let tag (cmdstr: string) =
-        let cmdstrSeq = cmdstr.ToString() |> Seq.toList
-        tagChars cmdstrSeq { Mode = MatchingSpecialChars; Escape = false } []
-
-
-    let tokenise (cmdstr: string) =
-        tag cmdstr |> tokeniseTags
+    let tokenise cmdstr =
+        let state = { Escape = false; Mode = MatchingSpecialChars }
+        cmdstr.ToString()
+        |> Seq.toList
+        |> List.map (fun ch -> ch.ToString())
+        |> (fun x -> tokeniseList x state [])
