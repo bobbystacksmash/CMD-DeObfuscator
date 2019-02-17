@@ -13,7 +13,7 @@ exception ExBadShorthandInputException of string
 type TestClass () =
 
     [<Test>]
-    member this.Tokeniseaa() =
+    member this.Tokenise() =
 
         let LP = LeftParen "("
         let RP = RightParen ")"
@@ -33,11 +33,17 @@ type TestClass () =
             ("|",  [PI], "Identify Pipe")
             ("||", [CO], "Identify CondOr")
 
-            // Quotes
-            ("\"&^()!\"", [QT; Literal "&^()!"; QT], "Special chars within quotes are ignored.")
+            // Literals
             ("calc", [Literal "calc"], "Read literals.")
+
+            // Quotes & Escapes
             ("c^alc", [Literal "calc"], "Read escaped literals as literals.")
+            ("\"&^()!\"", [QT; Literal "&^()!"; QT], "Special chars within quotes are ignored.")
+
+            // Conditionals & Redirections
+            ("a|b", [Literal "a"; PI; Literal "b"], "Identify pipes without delimiters.")
             ("a && b", [Literal "a"; Delimiter " "; CondSuccess "&&"; Delimiter " "; Literal "b"], "& become &&")
+
 
         ]
 
