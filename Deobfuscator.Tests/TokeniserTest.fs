@@ -67,14 +67,14 @@ type TestClass () =
         )
 
     [<Test>]
-    member this.GroupIntoCmdBlocks() =
+    member this.BuildAST() =
         let input = "(foo || (bar|baz))"
         let expected = [
             [Literal "foo"]
             [CondOr "||"]
             [Literal "bar"; Pipe "|"; Literal "baz"]
         ]
-        let actual = tokenise input |> toCommandBlocks
+        let actual = tokenise input |> buildAST
 
         Assert.That(actual, Is.EqualTo(expected))
 

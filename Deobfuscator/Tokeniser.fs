@@ -3,25 +3,17 @@ namespace Deobfuscator
 open System.Text.RegularExpressions
 
 //
-// TAGGER
+// TOKENISER
 //
-type private TagMatcher =
+type private Matcher =
     | MatchingSpecialChars
     | IgnoringSpecialChars
 
-type private TagReaderState = {
+type private TokeniserState = {
     Escape: bool
-    Mode: TagMatcher
+    Mode: Matcher
 }
 
-type TagChar =
-    | SpecialChar of char
-    | RegularChar of char
-
-
-//
-// TOKENISER
-//
 type Token =
     | LeftParen     of string // (
     | RightParen    of string // )
@@ -95,7 +87,7 @@ module Tokeniser =
             tok :: lst
 
 
-    let rec private tokeniseList (cmdstr: string list) (ctx: TagReaderState) acc =
+    let rec private tokeniseList (cmdstr: string list) (ctx: TokeniserState) acc =
 
         match cmdstr with
         | chr::rest ->
@@ -150,5 +142,25 @@ module Tokeniser =
         |> (fun x -> tokeniseList x state [])
 
 
-    let toCommandBlocks (tokens: Token list) =
-        tokens
+    let buildAST (tokens: Token list) =
+
+        let rec walk (lst: Token list) col acc =
+            printfn "----------------------------"
+            printfn "COL -> %A" col
+            printfn "ACC -> %A" acc
+            printfn "----------------------------"
+
+            match lst with
+            | head :: rest ->
+                match head with
+                | LeftParen  _ ->
+                    walk rest [] (col :: acc)
+
+                | RightParen _ ->
+                    walk rest [] (col :: acc)
+
+                | _ ->
+                    walk rest (head :: col) acc
+            | _ -> acc
+
+        walk tokens [] []
