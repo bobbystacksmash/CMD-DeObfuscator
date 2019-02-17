@@ -22,6 +22,7 @@ type TestClass () =
         let PI = Pipe        "|"
         let CO = CondOr      "||"
         let QT = Quote       "\""
+        let SP = Delimiter " "
 
         let tests = [
             // Special char identification
@@ -38,13 +39,21 @@ type TestClass () =
 
             // Quotes & Escapes
             ("c^alc", [Literal "calc"], "Read escaped literals as literals.")
+            ("^c^a^l^c", [Literal "calc"], "Read escaped literals as literals.")
             ("\"&^()!\"", [QT; Literal "&^()!"; QT], "Special chars within quotes are ignored.")
+            ("^&", [Literal "&"], "Escape a special char.")
+            ("^\"&", [Literal "\""; CA], "Can escape double quotes.")
 
             // Conditionals & Redirections
             ("a|b", [Literal "a"; PI; Literal "b"], "Identify pipes without delimiters.")
-            ("a && b", [Literal "a"; Delimiter " "; CondSuccess "&&"; Delimiter " "; Literal "b"], "& become &&")
+            ("a && b", [Literal "a"; SP; CondSuccess "&&"; SP; Literal "b"], "& become &&")
 
-
+            // Commands
+            (
+                "cmd /C \"echo hello\"",
+                [Literal "cmd"; SP; Literal "/C"; SP; QT; Literal "echo hello"; QT],
+                "Tokenise a command."
+            )
         ]
 
         tests |> List.iter (fun test ->
@@ -56,6 +65,18 @@ type TestClass () =
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
         )
+
+    [<Test>]
+    (*member this.GroupIntoCmdBlocks() =
+        let input = "(foo || (bar|baz))"
+        let expected = [
+            [Literal "foo"]
+            [CondOr "||"]
+            [Literal "bar"; Pipe "|"; Literal "baz"]
+        ]
+        let actual = tokenise input |> toCommandBlocks
+
+        Assert.That(actual, Is.EqualTo(expected))
 
     (*[<Test>]
     member this.CharTagging() =

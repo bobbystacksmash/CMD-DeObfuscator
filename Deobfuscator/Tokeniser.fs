@@ -86,15 +86,10 @@ module Tokeniser =
             else lst |> List.tail
 
         if lst.Length > 0 then
-
-            printfn "APPEND A=(%A), B=(%A)"  lst.Head tok
-
-            // A length of >= 2 is all we need for the concat
             let prevTok = lst.Head
             if Token.CanConcat(tok) && sameType tok prevTok then
                 (prevTok + tok) :: (lst |> safeRest)
             else
-                printfn "THIS BRANCH --> %A" (tok :: lst)
                 tok :: lst
         else
             tok :: lst
@@ -153,3 +148,7 @@ module Tokeniser =
         |> Seq.toList
         |> List.map (fun ch -> ch.ToString())
         |> (fun x -> tokeniseList x state [])
+
+
+    let toCommandBlocks (tokens: Token list) =
+        tokens
