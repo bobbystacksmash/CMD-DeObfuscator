@@ -1,4 +1,79 @@
-open System.Reflection.Emit
+//               T O K E N I S E R
+//              ~-~-~-~-~-~-~-~-~-~
+//
+// HOW IT WORKS
+// ============
+//
+// The entry point to the tokeniser is the function `tokenise', which accepts
+// a single command string, though the real work (internal API) is all handled
+// by `tokeniseCmd'.
+//
+// Tokenising happens in a few different phases.  From a high-level, these are:
+//
+//   1. Split input string in to individual characters.
+//   2. For each char, assign it a Token type (LeftParen, Literal, Quote, ...)
+//   3. IF token is an operator, push on to the OPERATOR stack.
+//   4. IF token is an operand, push on to the OPERAND stack.
+//   5. WHen all tokens are ready, use shunting yard algorithm to build an AST.
+//
+//
+// OPERAND DATA STRUCTURES
+// ========================
+//
+// Operands include the set of all tokens, excluding:
+//
+//   * LEFT PAREN
+//   * RIGHT PAREN
+//   * COND ALWAYS (&)
+//   * COND SUCCESS (&&)
+//   * COND OR (||)
+//   * LEFT REDIRECT (>)
+//   * RIGHT REDIRECT (<)
+//
+// Because the early parts of the tokeniser is dealing with individual characters,
+// we need a mechanism of joining tokens together.  Attacked to the Token DU are two
+// useful members:
+//
+//   (+) - An overloaded + operator which concats tokens together, returning either a
+//         brand new token, or appending the char to an existing token.  The table below
+//         shows how inputs A and B are handled by this operator:
+//
+//         | Input Token A  | Input Token B  | Output Token     |
+//         |----------------|----------------|------------------|
+//         | Literal    "x" | Literal    "y" | Literal     "xy" |
+//         | Pipe       "|" | Pipe       "|" | CondOr      "||" |
+//         | CondAlways "&" | CondAlways "&" | CondSuccess "&&" |
+//
+//
+//   CanConcat - A 'gatekeeper' function which just checks whether tokenA and tokenB
+//               can be concatenated together.  Useful if you want to avoid writing
+//               exception handler code, as the overloaded '+' above will throw if
+//               given types which cannot be joined.
+//
+//
+// STACKS
+// ======
+//
+// During the tokenising phase, two stacks are used; one to hold OPERATORS, and another
+// to hold OPERANDS.  The OPERATOR stack is straightforward, while the OPERAND stack has
+// a slight complication.  The diagram below shows the two stacks, and their differences.
+// Essentially, OPERATORS are always of type Token, while OPERANDS are grouped together.
+//
+//             INPUT:     foo && bar | baz
+//
+//   After tokenisation, the stacks appear:
+//   
+//                   OPERATORS                   OPERANDS
+//                +--------------+           +--------------+
+//                | PIPE         |           | [bar baz]    |
+//                +--------------+           +--------------+
+//                | COND SUCCESS |           | [foo]        |
+//                +--------------+           +--------------+
+//
+// Notice how the OPERANDS stack is grouped in to "commands", which are the instructions
+// between OPERATORS.
+//
+
 type Token =
     | LeftParen     of string // (
     | RightParen    of string // )
@@ -115,12 +190,6 @@ let pushOperator (ctx: TokeniserState) (token: Token) =
 
 let pushOperand (ctx: TokeniserState) (token: Token) =
 
-    printfn "-----------------------------"
-    printfn "Operator Stack = %A" ctx.OperatorStack
-    printfn "Operand Stack  = %A" ctx.OperandStack
-    printfn "Last stack = %A" ctx.LastModifiedStack
-    printfn "Pushing Operand -> %A" token
-
     let operandsGroup = ctx.OperandStack.Head
 
     if ctx.OperandStack.Length = 0 then
@@ -130,7 +199,6 @@ let pushOperand (ctx: TokeniserState) (token: Token) =
         // in to the current group.
         ((token :: operandsGroup) |> catStack) :: ctx.OperandStack.Tail
     else
-        printfn "!! OPERATOR STACK WAS LAST MODIFIED !!"
         // The last thing we saw was an Operator, so start a new
         // operands group...
         [token] :: ctx.OperandStack
@@ -201,20 +269,9 @@ let rec tokeniseCmd (cmdstr: string list) (ctx: TokeniserState) =
 
 let makeAST (operatorStack: Token list) (operandGroups: Token list list) =
 
-    printfn "MK AST STACKS (OPERATOR) %A" operatorStack
-    printfn "MK AST STACKS (OPERAND)  %A" operandGroups
+    let operandStack = operandGroups |> List.map (fun grp -> (Node ((Command (grp |> List.rev)), Empty, Empty)))
 
-    let xx =
-        operandGroups
-        |> List.map(fun group ->
-            List.map(fun operand -> (Node ((Command operand), Empty, Empty))
-            )
-        )
-
-
-    (*let operandStack = operandGroups |> List.map (fun op -> (Node ((Command [op]), Empty, Empty)))
-
-    // Take one from operator stack, push on to operand (tree) stack.
+    // Take one from operator stack, push on to operand stack.
     let addNode (stack: Tree list) newThing =
         let rhs = stack.[0]
         let lhs = stack.[1]
@@ -228,12 +285,12 @@ let makeAST (operatorStack: Token list) (operandGroups: Token list list) =
             let x = (addNode operands operators.Head)
             mkAST (operators.Tail) x
 
-    mkAST operatorStack operandStack*)
+    mkAST operatorStack operandStack
 
 
 
 
-let tokenise cmdstr =
+let tokenise (cmdstr: string) =
     let state = {
         Escape = false
         Mode = MatchingSpecialChars
@@ -241,7 +298,7 @@ let tokenise cmdstr =
         OperandStack = [[]]; OperatorStack = []
     }
     let ast = Empty
-    let ctx =
+    let cmdAST =
         cmdstr.ToString()
             |> Seq.toList
             |> List.map (fun ch -> ch.ToString())
@@ -250,8 +307,8 @@ let tokenise cmdstr =
 
     printfn "#########################################"
     printfn "#########################################"
-    printfn "CTX -> %A" ctx
+    printfn "cmdAST -> %A" cmdAST
     printfn "#########################################"
     printfn "#########################################"
 
-tokenise "foo && bar baz"
+tokenise "|||"
