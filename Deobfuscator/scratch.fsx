@@ -14,7 +14,7 @@
 //   2. For each char, assign it a Token type (LeftParen, Literal, Quote, ...)
 //   3. IF token is an operator, push on to the OPERATOR stack.
 //   4. IF token is an operand, push on to the OPERAND stack.
-//   5. WHen all tokens are ready, use shunting yard algorithm to build an AST.
+//   5. When all tokens read, use shunting yard algorithm to build an AST.
 //
 //
 // OPERAND DATA STRUCTURES
@@ -22,13 +22,13 @@
 //
 // Operands include the set of all tokens, excluding:
 //
-//   * LEFT PAREN
-//   * RIGHT PAREN
-//   * COND ALWAYS (&)
-//   * COND SUCCESS (&&)
-//   * COND OR (||)
-//   * LEFT REDIRECT (>)
-//   * RIGHT REDIRECT (<)
+//   * LEFT PAREN       (
+//   * RIGHT PAREN      )
+//   * COND ALWAYS      &
+//   * COND SUCCESS     &&
+//   * COND OR          ||
+//   * LEFT REDIRECT    >
+//   * RIGHT REDIRECT   <
 //
 // Because the early parts of the tokeniser is dealing with individual characters,
 // we need a mechanism of joining tokens together.  Attacked to the Token DU are two
@@ -62,7 +62,7 @@
 //             INPUT:     foo && bar | baz
 //
 //   After tokenisation, the stacks appear:
-//   
+//
 //                   OPERATORS                   OPERANDS
 //                +--------------+           +--------------+
 //                | PIPE         |           | [bar baz]    |
