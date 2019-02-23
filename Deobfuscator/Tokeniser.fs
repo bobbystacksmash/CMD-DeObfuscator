@@ -303,11 +303,12 @@ module Tokeniser =
 
     let makeAST (operatorStack: Token list) (operandGroups: Token list list) =
 
-        let operandStack = operandGroups |> List.map (fun grp -> (Node ((Command (grp |> List.rev)), Empty, Empty)))
+        let operandStack =
+            operandGroups
+            |> List.map (fun grp -> (Node ((Command (grp |> List.rev)), Empty, Empty)))
 
         let addNode (stack: Tree list) newThing =
             if stack.Length < 2 then
-                printfn "INVALID SYNTAX!"
                 fail InvalidSyntax
             else
                 let rhs = stack.[0]
@@ -333,18 +334,22 @@ module Tokeniser =
         | Success (x, _) -> OK x
         | Failure f -> SyntaxError
 
-    let tokenise (cmdstr: string) =
-        let state = {
-            Escape = false
-            Mode = MatchingSpecialChars
-            LastModifiedStack = Neither
-            OperandStack = [[]]; OperatorStack = []
-        }
 
-        let ast = Empty
-        cmdstr.ToString()
-            |> Seq.toList
-            |> List.map (fun ch -> ch.ToString())
-            |> (fun x -> tokeniseCmd x state)
-            |> (fun ctx -> makeAST ctx.OperatorStack ctx.OperandStack)
-            |> handleResult
+    let tokenise (cmdstr: string) =
+
+        if Regex.IsMatch(cmdstr, "^[|><&]") then
+            handleResult (fail InvalidSyntax)
+        else
+            let state = {
+                Escape = false
+                Mode = MatchingSpecialChars
+                LastModifiedStack = Neither
+                OperandStack = [[]]; OperatorStack = []
+            }
+
+            cmdstr.ToString()
+                |> Seq.toList
+                |> List.map (fun ch -> ch.ToString())
+                |> (fun x -> tokeniseCmd x state)
+                |> (fun ctx -> makeAST ctx.OperatorStack ctx.OperandStack)
+                |> handleResult

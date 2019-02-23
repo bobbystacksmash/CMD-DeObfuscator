@@ -25,6 +25,12 @@ type TestClass () =
             (">>", "Syntax Error: Lone operators are not allowed.")
             ("<", "Syntax Error: Lone operators are not allowed.")
             ("<<", "Syntax Error: Lone operators are not allowed.")
+
+            // Unmatched operators
+            ( "a &", "Syntax Error: Unbalanced operators.")
+            ( "& a", "Syntax Error: Unbalanced operators.")
+            ( "a &&", "Syntax Error: Unbalanced operators.")
+            ( "&& a", "Syntax Error: Unbalanced operators.")
         ]
 
         tests |> List.iter (fun (input, msg) -> Assert.That(tokenise input, Is.EqualTo(SyntaxError), msg))
