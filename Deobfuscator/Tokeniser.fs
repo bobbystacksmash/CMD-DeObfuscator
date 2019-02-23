@@ -77,7 +77,6 @@ namespace Deobfuscator
 
 open System.Text.RegularExpressions
 
-
 type Token =
     | LeftParen     of string // (
     | RightParen    of string // )
@@ -123,6 +122,28 @@ type Tree =
     | Node of value: NodeType * left: Tree * right: Tree
 
 
+// ROP
+// ===
+//
+// Trying out Railway-Oriented-Programming (ROP) for passing success|failure messages
+// downstream.
+//
+// Read more: https://fsharpforfunandprofit.com/rop
+//
+//
+type ErrorMessage =
+    | InvalidSyntax
+
+type ParseResult<'TSuccess, 'TMessage> =
+    | Success of 'TSuccess * 'TMessage list
+    | Failure of ErrorMessage
+
+
+type TokeniserResult =
+    | OK of Tree
+    | SyntaxError
+
+
 type Matcher =
     | MatchingSpecialChars
     | IgnoringSpecialChars
@@ -136,10 +157,25 @@ type TokeniserState = {
     OperatorStack: Token list
 }
 
-
 module Tokeniser =
 
+    let succeed x =
+        Success (x, [])
+
+    let succeedWithMsg x msg =
+        Success (x, [msg])
+
+    let fail msg =
+        Failure msg
+
+    let bind fn result =
+        match result with
+        | Success (x, _) -> fn x
+        | Failure f      -> Failure f
+
+
     let sameType a b = a.GetType() = b.GetType()
+
 
     let private (|ESC|QUOTE|LPAREN|RPAREN|LREDIRECT|RREDIRECT|OTHER|) str =
         match str with
@@ -151,11 +187,13 @@ module Tokeniser =
         | ">"  -> RREDIRECT str
         | _    -> OTHER str
 
+
     let private (|AMPERSAND|PIPE|OTHER|) str =
         match str with
         | "&" -> AMPERSAND str
         | "|" -> PIPE str
         | _   -> OTHER str
+
 
     let private (|DELIM|OTHER|) chr =
         match chr with
@@ -195,7 +233,7 @@ module Tokeniser =
 
         if ctx.OperandStack.Length = 0 then
             ((token :: operandsGroup) |> catStack) :: ctx.OperandStack.Tail
-        elif ctx.LastModifiedStack = Operand or ctx.LastModifiedStack = Neither then
+        elif ctx.LastModifiedStack = Operand || ctx.LastModifiedStack = Neither then
             // When the last modified stack is the operand stack, we shove this token
             // in to the current group.
             ((token :: operandsGroup) |> catStack) :: ctx.OperandStack.Tail
@@ -267,22 +305,33 @@ module Tokeniser =
 
         let operandStack = operandGroups |> List.map (fun grp -> (Node ((Command (grp |> List.rev)), Empty, Empty)))
 
-        // Take one from operator stack, push on to operand stack.
         let addNode (stack: Tree list) newThing =
-            let rhs = stack.[0]
-            let lhs = stack.[1]
-            let node = Node ((Oper newThing), lhs, rhs)
-            node :: (popN stack 2)
+            if stack.Length < 2 then
+                printfn "INVALID SYNTAX!"
+                fail InvalidSyntax
+            else
+                let rhs = stack.[0]
+                let lhs = stack.[1]
+                let node = Node ((Oper newThing), lhs, rhs)
+                succeed (node :: (popN stack 2))
+
 
         let rec mkAST operators (operands: Tree list) =
             match operators with
-            | [] -> operands.Head
+            | [] -> succeed operands.Head
             | _ ->
                 let x = (addNode operands operators.Head)
-                mkAST (operators.Tail) x
+                match x with
+                | Success (ast, _) -> (mkAST (operators.Tail) ast)
+                | Failure f -> fail InvalidSyntax
 
         mkAST operatorStack operandStack
 
+
+    let handleResult result =
+        match result with
+        | Success (x, _) -> OK x
+        | Failure f -> SyntaxError
 
     let tokenise (cmdstr: string) =
         let state = {
@@ -291,9 +340,11 @@ module Tokeniser =
             LastModifiedStack = Neither
             OperandStack = [[]]; OperatorStack = []
         }
+
         let ast = Empty
         cmdstr.ToString()
             |> Seq.toList
             |> List.map (fun ch -> ch.ToString())
             |> (fun x -> tokeniseCmd x state)
             |> (fun ctx -> makeAST ctx.OperatorStack ctx.OperandStack)
+            |> handleResult

@@ -9,11 +9,37 @@ open NUnit.Framework
 
 exception ExBadShorthandInputException of string
 
+
 [<TestFixture>]
 type TestClass () =
 
     [<Test>]
+    member this.TokeniserFailures() =
+
+        let tests = [
+            ("&",  "Syntax Error: Lone operators are not allowed.")
+            ("&&", "Syntax Error: Lone operators are not allowed.")
+            ("|", "Syntax Error: Lone operators are not allowed.")
+            ("||", "Syntax Error: Lone operators are not allowed.")
+            (">", "Syntax Error: Lone operators are not allowed.")
+            (">>", "Syntax Error: Lone operators are not allowed.")
+            ("<", "Syntax Error: Lone operators are not allowed.")
+            ("<<", "Syntax Error: Lone operators are not allowed.")
+        ]
+
+        tests |> List.iter (fun (input, msg) -> Assert.That(tokenise input, Is.EqualTo(SyntaxError), msg))
+
+
+    [<Test>]
     member this.Tokenise() =
+        // Work In Progress
+        let actual = tokenise "&"
+        printfn "AST OUTPUT -> %A" actual
+        Assert.IsTrue(false)
+
+
+    (*[<Test>]
+    member this.OldTokenise() =
 
         let LP = LeftParen "("
         let RP = RightParen ")"
@@ -64,23 +90,28 @@ type TestClass () =
             printfn "Expected -> %A" expected
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
-        )
+        )*)
 
-    [<Test>]
+    (*[<Test>]
     member this.BuildAST() =
-        let input = "(foo || (bar|baz))"
-        let expected = [
-            [Literal "foo"]
-            [CondOr "||"]
-            [Literal "bar"; Pipe "|"; Literal "baz"]
-        ]
+        let input = "foo&bar"
         let actual = tokenise input |> buildAST
 
-        Assert.That(actual, Is.EqualTo(expected))
+        let lhs = ((Command [Literal "foo"]), Empty, Empty)
+        let rhs = ((Command [Literal "bar"]), Empty, Empty)
+        let ast = ((Operator (CondAlways "&"), lhs, rhs))
+
+        Assert.That(actual, Is.EqualTo(ast))
+
+        //let lhs = Command ((Literal "foo"), Empty, Empty)
+        //let rhs = Command ((Literal "bar"), Empty, Empty)
+        //let ast = Operator ((CondAlways "&"), lhs, rhs)
+        //let actual = tokenise input |> buildAST
+        //Assert.That(actual, Is.EqualTo(ast))*)
 
     (*[<Test>]
     member this.CharTagging() =
-
+g
         let tests = [
             ("calc.exe", ["Rc" ; "Ra"; "Rl" ; "Rc" ; "R." ; "Re" ; "Rx" ; "Re"], "Regular char tokenising.")
             ("c^alc", ["Rc" ; "Ra" ; "Rl" ; "Rc"], "Escape tokens are dropped.")
