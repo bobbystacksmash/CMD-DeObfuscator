@@ -8,7 +8,6 @@ type Column = Column of int
 type Length = Length of int
 type Location = Location of Column * Length
 
-
 type Symbol = {
     Value: string
     Location: Location
@@ -27,7 +26,6 @@ type Token =
     | LeftRedirect  of Symbol
     | RightRedirect of Symbol
     | Escape        of Symbol
-
     static member CanConcat =
         function
             | Pipe _
@@ -37,14 +35,14 @@ type Token =
             | _ -> false
 
 
+type Concat =
+    | ConcatSuccess of Token
+    | ConcatFailure
+
+
 type LookaheadToken =
     | Lookahead of Token * Token list
     | NoMoreTokens
-
-
-type JoinedToken =
-    | Joined of Token
-    | NotJoined of Token * Token
 
 
 type TokenReadMode =
@@ -111,6 +109,32 @@ let escapeOff pState =
 
 let escapeOn pState =
     {pState with Escape = true}
+
+
+let concatSymbols symA symB =
+    {
+        Value    = symA.Value + symB.Value
+        Location = symA.Location
+    }
+
+
+let concatTokens tokA tokB =
+    match (tokA, tokB) with
+    | Literal l0, Literal l1 ->
+        ConcatSuccess (Literal(concatSymbols l0 l1))
+
+    | Delimiter d0, Delimiter d1 ->
+        ConcatSuccess (Delimiter(concatSymbols d0 d1))
+
+    | CondAlways c0, CondAlways c1 ->   
+        ConcatSuccess (CondSuccess(concatSymbols c0 c1))
+
+    | Pipe p0, Pipe p1 ->
+        ConcatSuccess (CondOr(concatSymbols p0 p1))
+
+    | _ ->
+        ConcatFailure
+
 
 let lookahead (tokens: Token list) =
     if tokens.Length = 0 then NoMoreTokens
