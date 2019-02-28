@@ -1,4 +1,5 @@
-open System.Web.UI.WebControls
+open System.Collections.Generic
+
 type Result<'a> =
     | Success of 'a
     | Failure of string
@@ -119,52 +120,48 @@ let concatSymbols symA symB =
 
 
 let concatTokens tokA tokB =
-    match (tokA, tokB) with
-    | Literal l0, Literal l1 ->
-        ConcatSuccess (Literal(concatSymbols l0 l1))
-
-    | Delimiter d0, Delimiter d1 ->
-        ConcatSuccess (Delimiter(concatSymbols d0 d1))
-
-    | CondAlways c0, CondAlways c1 ->   
-        ConcatSuccess (CondSuccess(concatSymbols c0 c1))
-
-    | Pipe p0, Pipe p1 ->
-        ConcatSuccess (CondOr(concatSymbols p0 p1))
-
-    | _ ->
+    if tokA.GetType() <> tokB.GetType() then
         ConcatFailure
+    else
+        match (tokA, tokB) with
+        | Literal l0, Literal l1 ->
+            ConcatSuccess (Literal(concatSymbols l0 l1))
+
+        | Delimiter d0, Delimiter d1 ->
+            ConcatSuccess (Delimiter(concatSymbols d0 d1))
+
+        | CondAlways c0, CondAlways c1 ->
+            ConcatSuccess (CondSuccess(concatSymbols c0 c1))
+
+        | Pipe p0, Pipe p1 ->
+            ConcatSuccess (CondOr(concatSymbols p0 p1))
+
+        | _ ->
+            ConcatFailure
 
 
 let lookahead (tokens: Token list) =
     if tokens.Length = 0 then NoMoreTokens
-    else
-        Lookahead(tokens.Head, tokens.Tail)
+    else Lookahead(tokens.Head, tokens.Tail)
+
 
 let catTokens (tokens: Token list) =
-
-    let sameTypeTokens (t0: Token) (t1: Token) =
-        t0.GetType() = t1.GetType()
-
-    let canConcat t0 t1 =
-        sameTypeTokens t0 t1 && Token.CanConcat(t0)
-
-
-    // Contiguous tokens that are of the correct type can be joined together.
-    // The goal is to build-up tokens which contain as many characters as possible.
-    let rec concatenate toks accum =
-
-        match tokens with
-        | tok :: rest ->
-            match lookahead toks with
-            | Lookahead (lahTok, lahRest) when canConcat tok lahTok ->
-                concatenate lahRest (// TODO: Add '+' to Token operator for easier joining of tokens)
-    concatenate tokens []
+    let rec doJoin (todo: Token list) (accum: Token list) =
+        if todo.Length > 0 && accum.Length > 0 then
+            match concatTokens accum.Head todo.Head with
+            | ConcatSuccess newTok -> doJoin todo.Tail (newTok :: accum.Tail)
+            | ConcatFailure -> doJoin todo.Tail (todo.Head :: accum)
+        elif accum.Length = 0 then
+            doJoin todo.Tail (todo.Head :: accum)
+        else
+            accum |> List.rev
+    doJoin tokens []
 
 
 let tokenise symbols =
 
-    let rec symbolsToTokens pState =
+    let rec symbolsToTokens (pState: ParserState) =
+
         match pState.Input with
         | head :: rest ->
             match head with
@@ -202,7 +199,7 @@ let tokenise symbols =
             | _ ->
                 symbolsToTokens (pushToken pState (Literal head) rest)
 
-        | _ -> pState.Tokens |> List.rev
+        | _ -> pState.Tokens |> List.rev |> catTokens
 
 
     let pstate = {
@@ -227,5 +224,6 @@ let toSymbolList (str: string) =
     (Seq.map2 toSymbol chars locs) |> Seq.toList
 
 
-printfn ">>>>>>>>>>>>> %A" (toSymbolList "foo^&" |> tokenise)
 
+let tokens = (toSymbolList "foo" |> tokenise)
+printfn "TOKS > %A" tokens
