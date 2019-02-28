@@ -1,5 +1,4 @@
 open System.Web.UI.WebControls
-
 type Result<'a> =
     | Success of 'a
     | Failure of string
@@ -20,6 +19,7 @@ type Token =
     | Quote         of Symbol
     | LeftParen     of Symbol
     | RightParen    of Symbol
+    | Delimiter     of Symbol
     | CondAlways    of Symbol
     | CondSuccess   of Symbol
     | CondOr        of Symbol
@@ -28,10 +28,18 @@ type Token =
     | RightRedirect of Symbol
     | Escape        of Symbol
 
+    static member CanConcat =
+        function
+            | Pipe _
+            | Literal _
+            | Delimiter _
+            | CondAlways _ -> true
+            | _ -> false
+
 
 type LookaheadToken =
     | Lookahead of Token * Token list
-    | EOL
+    | NoMoreTokens
 
 
 type JoinedToken =
@@ -39,14 +47,14 @@ type JoinedToken =
     | NotJoined of Token * Token
 
 
-type SpecialTokenReadMode =
-    | Match
-    | Ignore
+type TokenReadMode =
+    | MatchSpecial
+    | IgnoreSpecial
 
-// TODO: figure out how to handle "ESCAPE".
 
 type ParserState = {
-    ReadMode: SpecialTokenReadMode
+    ReadMode: TokenReadMode
+    Escape: bool
     Tokens: Token list
     Input: Symbol list
 }
@@ -77,50 +85,109 @@ let (|ESCAPE|_|) sym =
 let (|QUOTE|_|) sym =
     if sym.Value = "^" then Some(Quote sym) else None
 
+let (|AMPERSAND|_|) sym =
+    if sym.Value = "&" then Some(CondAlways sym) else None
 
-(*let addLocations (l0: Location) (l1: Location) =
-    let (Location l0col, l0len) = l0
-    let (Location _, l1len) = l1
-    Location(l0col, (l0len + l1len)
+let (|DELIMITER|_|) sym =
+    match sym.Value with
+    | ","
+    | "="
+    | " "
+    | ";" -> Some(Delimiter sym)
+    | _   -> None
+
+let pushToken pstate tok rest =
+    {
+        pstate with
+            Tokens = (tok :: pstate.Tokens);
+            Input  = rest
+    }
+
+let toggleEscape pState =
+    {pState with Escape = (not pState.Escape)}
+
+let escapeOff pState =
+    {pState with Escape = false}
+
+let escapeOn pState =
+    {pState with Escape = true}
+
+let lookahead (tokens: Token list) =
+    if tokens.Length = 0 then NoMoreTokens
+    else
+        Lookahead(tokens.Head, tokens.Tail)
+
+let catTokens (tokens: Token list) =
+
+    let sameTypeTokens (t0: Token) (t1: Token) =
+        t0.GetType() = t1.GetType()
+
+    let canConcat t0 t1 =
+        sameTypeTokens t0 t1 && Token.CanConcat(t0)
 
 
-let joinLiterals (tokA: Literal) (tokB: Literal) =
-    let newLocation = addLocations tokA tokB
-    let (Literal _, aText) = tokA
-    let (Literal _, bText) = tokB
-    Literal newLocation (aText + bText)
+    // Contiguous tokens that are of the correct type can be joined together.
+    // The goal is to build-up tokens which contain as many characters as possible.
+    let rec concatenate toks accum =
+
+        match tokens with
+        | tok :: rest ->
+            match lookahead toks with
+            | Lookahead (lahTok, lahRest) when canConcat tok lahTok ->
+                concatenate lahRest (// TODO: Add '+' to Token operator for easier joining of tokens)
+    concatenate tokens []
 
 
-let tryJoinTokens tokenA tokenB =
-    match (tokenA, tokenB) with
-    | Literal(_, _), Literal(_, _) -> Joined ((joinLiterals tokenA tokenB))
-    | CondAlways, CondAlways -> Joined CondSuccess
-    | Pipe, Pipe             -> Joined CondOr
-    | _, _                   -> NotJoined (tokenA, tokenB)
+let tokenise symbols =
+
+    let rec symbolsToTokens pState =
+        match pState.Input with
+        | head :: rest ->
+            match head with
+            | _ when pState.Escape ->
+                // The 'escape' flag is set -- ignore any special meaning associated with
+                // the current char, and save as a literal, resetting the escape flag.
+                symbolsToTokens (pushToken pState (Literal head) rest)
+
+            | ESCAPE esc when pState.ReadMode = MatchSpecial ->
+                // We don't push on the '^' (escape) symbol.
+                symbolsToTokens {pState with Input = rest; Escape = true}
+
+            | QUOTE qt when pState.ReadMode = MatchSpecial ->
+                // A quote toggles the matching of special chars.  The default state is to
+                // MATCH special chars.  After the first QUOTE we IGNORE special chars.  This
+                // mode flips each time a QUOTE is seen.
+                symbolsToTokens ((pushToken pState qt rest) |> escapeOff)
+
+            | QUOTE qt ->
+                symbolsToTokens (pushToken pState qt rest)
+
+            | _ when pState.ReadMode = IgnoreSpecial ->
+                // We're ignoring special chars
+                symbolsToTokens (pushToken pState (Literal head) rest)
+
+            | LPAREN    x
+            | RPAREN    x
+            | LREDIRECT x
+            | RREDIRECT x
+            | DELIMITER x
+            | AMPERSAND x
+            | PIPE      x ->
+                symbolsToTokens (pushToken pState x rest)
+
+            | _ ->
+                symbolsToTokens (pushToken pState (Literal head) rest)
+
+        | _ -> pState.Tokens |> List.rev
 
 
-
-
-
-let lookahead (chars: Token list) =
-    match chars with
-    | [] -> EOL
-    | head::tail ->
-        Lookahead(head, tail)
-*)
-
-let pushToken (lst: Token list) (tok: Token) =
-    tok :: lst
-
-
-let rec tokenise (ctx: ParserState) =
-
-    match ctx.Input with
-    | head :: rest ->
-        match head with
-        | _ when ctx.ReadMode = EscapeOne ->
-            tokenise {ctx with Tokens = (pushToken ctx.Tokens (Literal head)); ReadMode = }
-
+    let pstate = {
+        ReadMode = MatchSpecial
+        Escape   = false
+        Tokens   = []
+        Input    = symbols
+    }
+    symbolsToTokens pstate
 
 
 let toSymbol ch loc =
@@ -134,4 +201,7 @@ let toSymbolList (str: string) =
     let chars = List.ofSeq str
     let locs  = [0..str.Length]
     (Seq.map2 toSymbol chars locs) |> Seq.toList
+
+
+printfn ">>>>>>>>>>>>> %A" (toSymbolList "foo^&" |> tokenise)
 
