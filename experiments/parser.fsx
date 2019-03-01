@@ -154,7 +154,7 @@ let catTokens (tokens: Token list) =
     doJoin tokens []
 
 
-let tokenise symbols =
+let tokenise (cmdstr: string) =
 
     let rec symbolsToTokens (pState: ParserState) =
 
@@ -197,7 +197,7 @@ let tokenise symbols =
 
         | _ -> pState.Tokens |> List.rev |> catTokens
 
-
+    let symbols = cmdstr |> List.ofSeq  |> List.map (fun chr -> Symbol(chr.ToString()))
     let pstate = {
         ReadMode = MatchSpecial
         Escape   = false
@@ -206,10 +206,5 @@ let tokenise symbols =
     }
     symbolsToTokens pstate
 
-
-let toSymbolList (str: string) =
-    List.ofSeq str |> List.map (fun chr -> Symbol(chr.ToString()))
-
-
-let tokens = (toSymbolList "foo && bar" |> tokenise)
+let tokens = tokenise "foo &&            bar"
 printfn "TOKS > %A" tokens
