@@ -9,10 +9,7 @@ type Column = Column of int
 type Length = Length of int
 type Location = Location of Column * Length
 
-type Symbol = {
-    Value: string
-    Location: Location
-}
+type Symbol = Symbol of string
 
 type Token =
     | Literal       of Symbol
@@ -61,38 +58,38 @@ type ParserState = {
 
 
 let (|LPAREN|_|) sym =
-    if sym.Value = "(" then Some(LeftParen sym) else None
+    if sym = Symbol("(") then Some(LeftParen sym) else None
 
 let (|RPAREN|_|) sym =
-    if sym.Value = ")" then Some(RightParen sym) else None
+    if sym = Symbol(")") then Some(RightParen sym) else None
 
 let (|PIPE|_|) sym =
-    if sym.Value = "|" then Some(Pipe sym) else None
+    if sym = Symbol("|") then Some(Pipe sym) else None
 
 let (|CONDALWAYS|_|) sym =
-    if sym.Value = "&" then Some(CondAlways sym) else None
+    if sym = Symbol("&") then Some(CondAlways sym) else None
 
 let (|LREDIRECT|_|) sym =
-    if sym.Value = "<" then Some(LeftRedirect sym) else None
+    if sym = Symbol("<") then Some(LeftRedirect sym) else None
 
 let (|RREDIRECT|_|) sym =
-    if sym.Value = ">" then Some(RightRedirect sym) else None
+    if sym = Symbol(">") then Some(RightRedirect sym) else None
 
 let (|ESCAPE|_|) sym =
-    if sym.Value = "^" then Some(Escape sym) else None
+    if sym = Symbol("^") then Some(Escape sym) else None
 
 let (|QUOTE|_|) sym =
-    if sym.Value = "^" then Some(Quote sym) else None
+    if sym = Symbol("^") then Some(Quote sym) else None
 
 let (|AMPERSAND|_|) sym =
-    if sym.Value = "&" then Some(CondAlways sym) else None
+    if sym = Symbol("&") then Some(CondAlways sym) else None
 
 let (|DELIMITER|_|) sym =
-    match sym.Value with
-    | ","
-    | "="
-    | " "
-    | ";" -> Some(Delimiter sym)
+    match sym with
+    | Symbol(",")
+    | Symbol("=")
+    | Symbol(" ")
+    | Symbol(";") -> Some(Delimiter sym)
     | _   -> None
 
 let pushToken pstate tok rest =
@@ -113,10 +110,9 @@ let escapeOn pState =
 
 
 let concatSymbols symA symB =
-    {
-        Value    = symA.Value + symB.Value
-        Location = symA.Location
-    }
+    let (Symbol a) = symA
+    let (Symbol b) = symB
+    Symbol(a + b)
 
 
 let concatTokens tokA tokB =
@@ -211,19 +207,9 @@ let tokenise symbols =
     symbolsToTokens pstate
 
 
-let toSymbol ch loc =
-    {
-        Value = ch.ToString()
-        Location = Location (Column loc, Length 1)
-    }
-
-
 let toSymbolList (str: string) =
-    let chars = List.ofSeq str
-    let locs  = [0..str.Length]
-    (Seq.map2 toSymbol chars locs) |> Seq.toList
+    List.ofSeq str |> List.map (fun chr -> Symbol(chr.ToString()))
 
 
-
-let tokens = (toSymbolList "foo" |> tokenise)
+let tokens = (toSymbolList "foo && bar" |> tokenise)
 printfn "TOKS > %A" tokens
