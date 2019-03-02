@@ -1,10 +1,8 @@
 namespace Deobfuscator
 
-open System.Text.RegularExpressions
-
-type Column = Column of int
-type Length = Length of int
-type Location = Location of Column * Length
+type private Column = Column of int
+type private Length = Length of int
+type private Location = Location of Column * Length
 
 type Symbol = Symbol of string
 
@@ -30,22 +28,22 @@ type Token =
         | _ -> false
 
 
-type Concat =
+type private Concat =
     | ConcatSuccess of Token
     | ConcatFailure
 
 
-type LookaheadToken =
+type private LookaheadToken =
     | Lookahead of Token * Token list
     | NoMoreTokens
 
 
-type TokenReadMode =
+type private TokenReadMode =
     | MatchSpecial
     | IgnoreSpecial
 
 
-type ParserState = {
+type private ParserState = {
     ReadMode: TokenReadMode
     Escape: bool
     Tokens: Token list
