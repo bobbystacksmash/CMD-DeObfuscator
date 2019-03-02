@@ -14,47 +14,18 @@ exception ExBadShorthandInputException of string
 type TestClass () =
 
     [<Test>]
-    member this.TokeniserFailures() =
-
-        let tests = [
-            ("&",  "Syntax Error: Lone operators are not allowed.")
-            ("&&", "Syntax Error: Lone operators are not allowed.")
-            ("|", "Syntax Error: Lone operators are not allowed.")
-            ("||", "Syntax Error: Lone operators are not allowed.")
-            (">", "Syntax Error: Lone operators are not allowed.")
-            (">>", "Syntax Error: Lone operators are not allowed.")
-            ("<", "Syntax Error: Lone operators are not allowed.")
-            ("<<", "Syntax Error: Lone operators are not allowed.")
-
-            // Unmatched operators
-            ( "a &", "Syntax Error: Unbalanced operators.")
-            ( "& a", "Syntax Error: Unbalanced operators.")
-            ( "a &&", "Syntax Error: Unbalanced operators.")
-            ( "&& a", "Syntax Error: Unbalanced operators.")
-        ]
-
-        tests |> List.iter (fun (input, msg) -> Assert.That(tokenise input, Is.EqualTo(SyntaxError), msg))
-
-
-    [<Test>]
-    member this.Tokenise() =
-        // Work In Progress
-        let actual = tokenise "&"
-        printfn "AST OUTPUT -> %A" actual
-        Assert.IsTrue(false)
-
-
-    (*[<Test>]
     member this.OldTokenise() =
 
-        let LP = LeftParen "("
-        let RP = RightParen ")"
-        let CA = CondAlways "&"
-        let CS = CondSuccess "&&"
-        let PI = Pipe        "|"
-        let CO = CondOr      "||"
-        let QT = Quote       "\""
-        let SP = Delimiter " "
+        let LP = LeftParen(Symbol "(")
+        let RP = RightParen(Symbol ")")
+        let CA = CondAlways(Symbol "&")
+        let CS = CondSuccess(Symbol "&&")
+        let PI = Pipe(Symbol "|")
+        let CO = CondOr(Symbol "||")
+        let QT = Quote(Symbol "\"")
+        let SP = Delimiter(Symbol " ")
+
+        let str2lit str = Literal(Symbol str)
 
         let tests = [
             // Special char identification
@@ -67,23 +38,23 @@ type TestClass () =
             ("||", [CO], "Identify CondOr")
 
             // Literals
-            ("calc", [Literal "calc"], "Read literals.")
+            ("calc", [str2lit "calc"], "Read literals.")
 
             // Quotes & Escapes
-            ("c^alc", [Literal "calc"], "Read escaped literals as literals.")
-            ("^c^a^l^c", [Literal "calc"], "Read escaped literals as literals.")
-            ("\"&^()!\"", [QT; Literal "&^()!"; QT], "Special chars within quotes are ignored.")
-            ("^&", [Literal "&"], "Escape a special char.")
-            ("^\"&", [Literal "\""; CA], "Can escape double quotes.")
+            ("c^alc", [str2lit "calc"], "Read escaped literals as literals.")
+            ("^c^a^l^c", [str2lit "calc"], "Read escaped literals as literals.")
+            ("\"&^()!\"", [QT; str2lit "&^()!"; QT], "Special chars within quotes are ignored.")
+            ("^&", [str2lit "&"], "Escape a special char.")
+            ("^\"&", [str2lit "\""; CA], "Can escape double quotes.")
 
             // Conditionals & Redirections
-            ("a|b", [Literal "a"; PI; Literal "b"], "Identify pipes without delimiters.")
-            ("a && b", [Literal "a"; SP; CondSuccess "&&"; SP; Literal "b"], "& become &&")
+            ("a|b", [str2lit "a"; PI; str2lit "b"], "Identify pipes without delimiters.")
+            ("a && b", [str2lit "a"; SP; CondSuccess(Symbol "&&"); SP; str2lit "b"], "& become &&")
 
             // Commands
             (
                 "cmd /C \"echo hello\"",
-                [Literal "cmd"; SP; Literal "/C"; SP; QT; Literal "echo hello"; QT],
+                [str2lit "cmd"; SP; str2lit "/C"; SP; QT; str2lit "echo hello"; QT],
                 "Tokenise a command."
             )
         ]
@@ -92,11 +63,12 @@ type TestClass () =
             let input, expected, msg = test
             let actual = tokenise input
             printfn "========================="
+            printfn "Input    -> %A" input
             printfn "Actual   -> %A" actual
             printfn "Expected -> %A" expected
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
-        )*)
+        )
 
     (*[<Test>]
     member this.BuildAST() =
