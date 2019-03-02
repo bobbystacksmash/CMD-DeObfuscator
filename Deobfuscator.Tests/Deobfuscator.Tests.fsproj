@@ -14,8 +14,7 @@
 
   <ItemGroup>
     <Compile Include="ExpanderWithCommandExtensionsTest.fs" />
-    <Compile Include="TokeniserTest.fs" />
-    <!--<Compile Include="CommandLineParserTest.fs" />-->
+    <Compile Include="ParserTest.fs" />
   </ItemGroup>
 
   <ItemGroup>
