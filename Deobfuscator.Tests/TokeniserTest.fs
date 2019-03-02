@@ -14,7 +14,7 @@ exception ExBadShorthandInputException of string
 type TestClass () =
 
     [<Test>]
-    member this.OldTokenise() =
+    member this.Tokenise() =
 
         let LP = LeftParen(Symbol "(")
         let RP = RightParen(Symbol ")")
