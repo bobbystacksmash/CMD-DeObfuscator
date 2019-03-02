@@ -186,14 +186,14 @@ module Tokeniser =
                     // We're ignoring special chars
                     symbolsToTokens (pushToken pState (Literal head) rest)
 
-                | LPAREN    x
-                | RPAREN    x
-                | LREDIRECT x
-                | RREDIRECT x
-                | DELIMITER x
-                | AMPERSAND x
-                | PIPE      x ->
-                    symbolsToTokens (pushToken pState x rest)
+                | LPAREN    sym
+                | RPAREN    sym
+                | LREDIRECT sym
+                | RREDIRECT sym
+                | DELIMITER sym
+                | AMPERSAND sym
+                | PIPE      sym ->
+                    symbolsToTokens (pushToken pState sym rest)
 
                 | _ ->
                     symbolsToTokens (pushToken pState (Literal head) rest)
