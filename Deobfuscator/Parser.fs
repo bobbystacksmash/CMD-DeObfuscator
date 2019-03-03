@@ -206,3 +206,86 @@ module Tokeniser =
             Input    = symbols
         }
         symbolsToTokens pstate
+
+
+module AbstractSyntaxTree =
+
+    type private NodeType =
+        | OperatorNode of Token
+        | OperandNode  of Token list
+
+
+    type private Tree =
+        | Empty
+        | Node of value: NodeType * left: Tree * right: Tree
+
+
+    type private LastModifiedStack =
+        | OperatorStack
+        | OperandStack
+        | Neither
+
+
+    type private ASTState = {
+        Tokens: Token list
+        LastModifiedStack: LastModifiedStack
+        Operators: Token list
+        Operands: Token list list
+    }
+
+
+    let private (|OPERATOR|OPERAND|) token =
+        match token with
+        | CondAlways tok
+        | CondSuccess tok
+        | CondOr tok
+        | Pipe tok
+        | LeftRedirect tok
+        | RightRedirect tok -> OPERATOR(token)
+        | _ -> OPERAND(token)
+
+
+    let private updateRemaining ctx =
+        {ctx with Tokens = ctx.Tokens.Tail}
+
+
+    let private pushOperator ctx token =
+        {ctx with Operators = (token :: ctx.Operators); LastModifiedStack = OperatorStack}
+
+
+    let private pushOperand ctx token =
+        match ctx.LastModifiedStack with
+        | OperatorStack
+        | OperandStack when ctx.Operands.Length = 0 ->
+            {ctx with Operands = [token] :: ctx.Operands; LastModifiedStack = OperandStack }
+
+        | OperatorStack ->
+            // We need to push this token on to the current list at the top of the stack.
+            let head = token :: ctx.Operands.Head
+            {ctx with Operands = (head :: ctx.Operands.Tail); LastModifiedStack = OperandStack}
+
+        | Neither ->
+
+
+    let toAST tokens =
+
+        let rec buildAST state =
+            match state.Tokens with
+            | head :: rest ->
+                match head with
+                | OPERATOR op -> buildAST ((pushOperator state op) |> updateRemaining)
+                | OPERAND  op -> buildAST ((pushOperand  state op) |> updateRemaining)
+
+            | [] -> (state.Operands, state.Operators)
+
+        let state = {
+            Tokens = tokens
+            Operators = []
+            Operands = []
+            LastModifiedStack = Neither
+        }
+        buildAST state
+
+
+
+

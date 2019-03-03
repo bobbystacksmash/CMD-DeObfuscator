@@ -69,3 +69,8 @@ type TestClass () =
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
         )
+
+    [<Test>]
+    member this.ToAST() =
+        let ast = tokenise "foo|bar" |> toAST
+        Assert.That(ast, Is.EqualTo("foo"))
