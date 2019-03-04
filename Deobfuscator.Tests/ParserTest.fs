@@ -73,8 +73,3 @@ type TestClass () =
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
         )
-
-    [<Test>]
-    member this.ToAST() =
-        let ast = tokenise "FOR /L \%\%G IN (1,1,5) DO echo \%\%G & echo yes" |> toAST
-        Assert.That(ast, Is.EqualTo("foo"))
