@@ -210,31 +210,29 @@ module Tokeniser =
 
 module AbstractSyntaxTree =
 
-    type private NodeType =
-        | OperatorNode of Token
-        | OperandNode  of Token list
-
-
-    type private Tree =
-        | Empty
-        | Node of value: NodeType * left: Tree * right: Tree
+    type private Tree<'a> =
+        | Br of 'a * 'a Tree * 'a Tree
+        | Lf
 
 
     type private LastModifiedStack =
         | OperatorStack
-        | OperandStack
+        | CommandStack
         | Neither
+
+
+    type Command = Command of Token list
 
 
     type private ASTState = {
         Tokens: Token list
         LastModifiedStack: LastModifiedStack
         Operators: Token list
-        Operands: Token list list
+        Commands: Command list
     }
 
 
-    let private (|OPERATOR|OPERAND|) token =
+    let private (|OPERATOR|COMMAND|DELIMITER|) token =
         match token with
         | CondAlways tok
         | CondSuccess tok
@@ -242,10 +240,16 @@ module AbstractSyntaxTree =
         | Pipe tok
         | LeftRedirect tok
         | RightRedirect tok -> OPERATOR(token)
-        | _ -> OPERAND(token)
+        | Delimiter delim -> DELIMITER(delim)
+        | _ -> COMMAND(token)
 
 
-    let private updateRemaining ctx =
+    type ASTResult<'TSuccess, 'TFailure> =
+        | Success of 'TSuccess
+        | Failure of 'TFailure
+
+
+    let private updateRemaining (ctx: ASTState) =
         {ctx with Tokens = ctx.Tokens.Tail}
 
 
@@ -253,39 +257,55 @@ module AbstractSyntaxTree =
         {ctx with Operators = (token :: ctx.Operators); LastModifiedStack = OperatorStack}
 
 
-    let private pushOperand ctx token =
+    let private addTokenToCommand (cmd: Command list) (token: Token) =
+        let (Command headCmdBlock) = cmd.Head
+        Command (List.append headCmdBlock [token]) :: cmd.Tail
+
+
+    let private addTokenAsNewCommand cmd token =
+        Command ([token]) :: cmd
+
+
+    let private pushCommand ctx token =
         match ctx.LastModifiedStack with
-        | OperatorStack
-        | OperandStack when ctx.Operands.Length = 0 ->
-            {ctx with Operands = [token] :: ctx.Operands; LastModifiedStack = OperandStack }
-
+        | Neither
         | OperatorStack ->
-            // We need to push this token on to the current list at the top of the stack.
-            let head = token :: ctx.Operands.Head
-            {ctx with Operands = (head :: ctx.Operands.Tail); LastModifiedStack = OperandStack}
+            {ctx with Commands = (addTokenAsNewCommand ctx.Commands token); LastModifiedStack = CommandStack}
 
-        | Neither ->
+        | CommandStack ->
+            {ctx with Commands = (addTokenToCommand ctx.Commands token); LastModifiedStack = CommandStack}
+
+
+    let rec private buildStacks state =
+        match state.Tokens with
+        | head :: rest ->
+            match head with
+            | DELIMITER delim ->
+                buildStacks (state |> updateRemaining)
+
+            | OPERATOR op ->
+                buildStacks ((pushOperator state op) |> updateRemaining)
+
+            | COMMAND  cmd ->
+                buildStacks ((pushCommand  state cmd) |> updateRemaining)
+
+        | [] ->
+            printfn "--- COMMAND STACK ---"
+            printfn "%A" state.Commands
+            printfn "--- OPERATOR STACK ---"
+            printfn "%A" state.Operators
+
+            (state.Commands, state.Operators)
 
 
     let toAST tokens =
 
-        let rec buildAST state =
-            match state.Tokens with
-            | head :: rest ->
-                match head with
-                | OPERATOR op -> buildAST ((pushOperator state op) |> updateRemaining)
-                | OPERAND  op -> buildAST ((pushOperand  state op) |> updateRemaining)
-
-            | [] -> (state.Operands, state.Operators)
-
         let state = {
             Tokens = tokens
             Operators = []
-            Operands = []
+            Commands = []
             LastModifiedStack = Neither
         }
-        buildAST state
-
-
+        buildStacks state
 
 

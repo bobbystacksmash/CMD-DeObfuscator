@@ -5,6 +5,7 @@ open System.Text.RegularExpressions
 open NUnit.Framework
 open Deobfuscator
 open Deobfuscator.Tokeniser
+open Deobfuscator.AbstractSyntaxTree
 open NUnit.Framework
 
 exception ExBadShorthandInputException of string
@@ -51,6 +52,9 @@ type TestClass () =
             ("a|b", [str2lit "a"; PI; str2lit "b"], "Identify pipes without delimiters.")
             ("a && b", [str2lit "a"; SP; CondSuccess(Symbol "&&"); SP; str2lit "b"], "& become &&")
 
+            // Keyword Detection
+            // ...
+
             // Commands
             (
                 "cmd /C \"echo hello\"",
@@ -72,5 +76,5 @@ type TestClass () =
 
     [<Test>]
     member this.ToAST() =
-        let ast = tokenise "foo|bar" |> toAST
+        let ast = tokenise "FOR /L \%\%G IN (1,1,5) DO echo \%\%G & echo yes" |> toAST
         Assert.That(ast, Is.EqualTo("foo"))
