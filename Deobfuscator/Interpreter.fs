@@ -55,6 +55,12 @@ type Command = {
     Arguments: Token list
 }
 
+//
+// TODO: See "Phase 7) Execute" from the following SO question for details
+//       about command identidication.
+//
+//       https://stackoverflow.com/questions/4094699/how-does-the-windows-command-interpreter-cmd-exe-parse-scripts/7970912#7970912
+//
 
 type CommandBlock = {
     currentCommand: Command
