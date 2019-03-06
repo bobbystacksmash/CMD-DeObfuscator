@@ -1,5 +1,10 @@
 * CMD De-Obfuscator
 
+** Integration Tests
+*** No Spaces Necessary
+Command identification should be able to take the input ~cmd/ccalc~
+and successfully launch ~calc.exe~.
+
 ** ABOUT
 
 /Currently under active development/
