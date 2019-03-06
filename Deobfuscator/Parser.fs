@@ -50,6 +50,7 @@ type private ParserState = {
     Input: Symbol list
 }
 
+
 module Tokeniser =
 
     let (|LPAREN|_|) sym =
@@ -206,5 +207,3 @@ module Tokeniser =
             Input    = symbols
         }
         symbolsToTokens pstate
-
-        // TODO: Split the tokenised command in to a series of Command blocks.
