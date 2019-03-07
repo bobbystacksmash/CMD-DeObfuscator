@@ -2,49 +2,60 @@ namespace Deobfuscator
 
 open Deobfuscator.Expander
 
-// Built-in list, found at:
-//  - https://ss64.com/nt/commands.html
+// Internal commands, found at:
+// - https://ss64.com/nt/syntax-internal.html
 //
-// Will only implement a subset of these commands.
 type CommandToken =
-    | CALL
-    | CLS
-    | COLOR
-    | ECHO
-    | ENDLOCAL
-    | EXIT
-    | FOR
-    | IF
-    | PROMPT
-    | PAUSE
-    | REM
-    | SET
-    | SETLOCAL
-    | SHIFT
-    | START
-    | TITLE
-    | VOL
-    | ASSOC
-    | CD
-    | COPY
-    | DIR
-    | DEL
-    | ERASE
-    | FTYPE
-    | MOVE
-    | POPD
-    | REN
-    | RD
-    | TYPE
-    | DATE
-    | TIME
-    | VER
-    | VERIFY
-    | OTHER of Token
+    | Assoc
+    | Break
+    | Call
+    | Cd
+    | Chdir
+    | Cls
+    | Color
+    | Copy
+    | Date
+    | Del
+    | Dir
+    | Dpath
+    | Echo
+    | EndLocal
+    | Erase
+    | Exit
+    | For
+    | Ftype
+    | Goto
+    | If
+    | Keys
+    | Md
+    | Mkdir
+    | Mklink
+    | Move
+    | Path
+    | Pause
+    | Popd
+    | Prompt
+    | Pushd
+    | Rem
+    | Ren
+    | Rename
+    | Rd
+    | Rmdir
+    | Set
+    | SetLocal
+    | Shift
+    | Start
+    | Time
+    | Title
+    | Type
+    | Ver
+    | Verify
+    | Vol
+    | ExternalCommand of Token
 
-// Given a sequence of Tokens, such as:
+// Given a list of Tokens, such as:
 //
-//   [echo; foo; bar]
+//   [echo, foo, bar]
 //
 // `echo'    = Instruction
 // `foo bar' = Arguments
@@ -63,8 +74,8 @@ type Command = {
 //
 
 type CommandBlock = {
-    currentCommand: Command
-    remainingTokens: Token list
+    CurrentCommand: Command
+    RemainingTokens: Token list
 }
 
 
@@ -80,38 +91,74 @@ type InterpreterError =
 
 module Interpreter =
 
-    let private (|DELIMITER|CMDTOKEN|) token =
+    let private (|CMDDELIMITER|CMDTOKEN|) token =
         match token with
         | CondAlways tok
         | CondSuccess tok
         | CondOr tok
-        | Pipe tok -> DELIMITER
+        | Pipe tok -> CMDDELIMITER
         | _ -> CMDTOKEN
 
 
-    let rec private findNextCommandBlock (tokens: Token list) (accum: Token list) readMode =
+    let rec private findNextCommandTokens (tokens: Token list) (accum: Token list) readMode =
         match tokens with
         | [] when accum.Length = 0 -> Error TokenListIsEmpty
+        | [] when accum.Length > 0 -> Ok ((accum |> List.rev), [])
         | head :: rest ->
             match head with
             | CMDTOKEN when readMode = LookingForInstruction ->
-                findNextCommandBlock rest (head :: accum) LookingForArguments
+                findNextCommandTokens rest (head :: accum) LookingForArguments
 
             | CMDTOKEN when readMode = LookingForArguments ->
-                findNextCommandBlock rest (head :: accum) LookingForArguments
+                findNextCommandTokens rest (head :: accum) LookingForArguments
 
-            | DELIMITER when readMode = LookingForInstruction ->
+            | CMDDELIMITER when readMode = LookingForInstruction ->
                 Error UnexpectedCommandDelimiter
 
-            | DELIMITER ->
+            | CMDDELIMITER ->
                 // This is the point that we break the recursive loop and return
                 // the CommandBlock.
+                Ok ((accum |> List.rev), rest)
 
 
-
-
-
+    let private skipToken token =
+        match token with
+        | Quote tok
+        | Delimiter tok -> false
+        | _ -> true
 
 
     let execute (tokens: Token list) =
+
+        let filtered = List.filter skipToken tokens
+
         // TODO: filter tokens such as 'Quote' and 'Delimiter' from token stream.
+        match (findNextCommandTokens tokens [] LookingForInstruction) with
+        | Ok (cmdTokens, remaining) ->
+            printfn "CMD TOKENS -> %A" cmdTokens
+            printfn "Remaining  -> %A" remaining
+            cmdTokens
+
+        | Error msg ->
+            printfn "Error... %A" msg
+            tokens
+
+//
+// TEST CASES
+//
+//   cmd/ccalc                    [launches calc]
+//   "cmd"/ccalc                  [launches calc]
+//   "cmd /ccalc                  [launches calc]
+//   "cmd/ccalc                   [crashes: cannot find path specified]
+//   "echo foo                    [crashes: not a recognised command]
+//   echo "foo                    [prints: "foo]
+//   echo foo (echo bar)          [prints: foo (echo bar)]
+//   echo/a                       [prints: a]
+//   echo/c                       [prints: c]
+//   echo /c                      [prints: /c]
+//   echo foo (bar & baz)         [prints: foo (bar] ; [crashes: 'baz' is unknown command]
+//   "echo foo"                   [crashes: "echo foo" is not recognised as a command]
+//   "echo" foo                   [prints: foo]
+//
+//   if "a" == "a" echo "nice"                 [prints: "nice"]
+//   if "a" == "b" echo "nice" & echo "foo"    [prints: "" (NOTHING)]
