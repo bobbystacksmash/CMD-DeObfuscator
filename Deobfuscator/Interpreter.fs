@@ -84,9 +84,10 @@ type BuildingCommand =
     | LookingForArguments
 
 
-type InterpreterError =
+type InterpreterState =
     | TokenListIsEmpty
     | UnexpectedCommandDelimiter
+
 
 
 module Interpreter =
@@ -143,22 +144,57 @@ module Interpreter =
             printfn "Error... %A" msg
             tokens
 
+
 //
 // TEST CASES
 //
 //   cmd/ccalc                    [launches calc]
+//   [Literal (Sym "cmd/ccalc")]
+//
 //   "cmd"/ccalc                  [launches calc]
+//   [Quote (Sym """); Literal (Sym "cmd"); Quote (Sym """); Literal (Sym "/ccalc")]
+//
 //   "cmd /ccalc                  [launches calc]
+//   [Quote (Sym """); Literal (Sym "cmd/ccalc")]
+//
+//   cmd;/c;calc                  [launches calc]
+//   [Literal (Sym "cmd"); Delimiter (Sym ";"); Literal (Sym "/c"); Delimiter (Sym ";"); Literal (Sym "calc")]
+//
+//   cmd,/c,calc                  [launched calc]
+//   [Literal (Sym "cmd"); Delimiter (Sym ","); Literal (Sym ","); Delimiter (Sym ","); Literal (Sym "calc")]
+//
 //   "cmd/ccalc                   [crashes: cannot find path specified]
+//   [Quote (Symbol """); Literal (Symbol "cmd/ccalc")]
+//
+//
+//
 //   "echo foo                    [crashes: not a recognised command]
-//   echo "foo                    [prints: "foo]
-//   echo foo (echo bar)          [prints: foo (echo bar)]
-//   echo/a                       [prints: a]
-//   echo/c                       [prints: c]
-//   echo /c                      [prints: /c]
-//   echo foo (bar & baz)         [prints: foo (bar] ; [crashes: 'baz' is unknown command]
+//   Quote (Symbol """); Literal (Symbol "echo foo")
+//
 //   "echo foo"                   [crashes: "echo foo" is not recognised as a command]
-//   "echo" foo                   [prints: foo]
+//
+//
+//   "echo" foo                   [crashes: "echo" not regognised command]
+//
+//   echofoo                      [crashes: unknown program "echofoo"]
+//
+//
+//   echo "foo                    [prints: "foo]
+//
+//
+//   echo foo (echo bar)          [prints: foo (echo bar)]
+//
+//   echo/a                       [prints: a]
+//
+//   echo/c                       [prints: c]
+//
+//   echo /c                      [prints: /c]
+//
+//   echo foo (bar & baz)         [prints: foo (bar] ; [crashes: 'baz' is unknown command]
+//
+//
+//   "" calc                      [crashes: unregocnised command ""]
+//
 //
 //   if "a" == "a" echo "nice"                 [prints: "nice"]
 //   if "a" == "b" echo "nice" & echo "foo"    [prints: "" (NOTHING)]
