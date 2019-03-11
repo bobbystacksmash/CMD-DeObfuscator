@@ -5,11 +5,7 @@ open System.Text.RegularExpressions
 open NUnit.Framework
 open Deobfuscator
 open Deobfuscator.Tokeniser
-open Deobfuscator.AbstractSyntaxTree
 open NUnit.Framework
-
-exception ExBadShorthandInputException of string
-
 
 [<TestFixture>]
 type TestClass () =
