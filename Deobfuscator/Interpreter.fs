@@ -1,6 +1,7 @@
 namespace Deobfuscator
 
-open Deobfuscator.Expander
+open Deobfuscator.Expander.ExpanderWithCommandExtensions
+open Deobfuscator.Tokeniser
 
 // Internal commands, found at:
 // - https://ss64.com/nt/syntax-internal.html
@@ -81,68 +82,104 @@ type CommandBlock = {
 
 type BuildingCommand =
     | LookingForInstruction
+    | LookingForInternalInstruction
+    | LookingForExternalInstruction
+    | LookingForQuotedExternalInstruction
     | LookingForArguments
 
 
-type InterpreterState =
-    | TokenListIsEmpty
-    | UnexpectedCommandDelimiter
+type ExecutionContext = {
+    Variables: Map<string,string>
+    Tokens: Token list
+    Commands: Command list
+    ReadMode: BuildingCommand
+}
 
 
+type InterpreterStatus =
+    | Complete
+    | NoInputTokens
+    | NoFurtherInputTokens
+    | CannotFindClosingQuote
+    | FoundClosingQuote
+    | UnrecognisedInternalCommand
 
 module Interpreter =
 
-    let private (|CMDDELIMITER|CMDTOKEN|) token =
+    let private (|DELIMITER|QUOTE|TOKEN|) token =
         match token with
-        | CondAlways tok
-        | CondSuccess tok
-        | CondOr tok
-        | Pipe tok -> CMDDELIMITER
-        | _ -> CMDTOKEN
+        | Delimiter x -> DELIMITER
+        | Quote x -> QUOTE
+        | _ -> TOKEN
 
 
-    let rec private findNextCommandTokens (tokens: Token list) (accum: Token list) readMode =
+    let private ignoreDelimiter readMode =
+        match readMode with
+        | LookingForInstruction
+        | LookingForExternalInstruction
+        | LookingForInternalInstruction
+        | LookingForQuotedExternalInstruction -> true
+        | _ -> false
+
+
+    let rec private findQuotedPart tokens accum =
         match tokens with
-        | [] when accum.Length = 0 -> Error TokenListIsEmpty
-        | [] when accum.Length > 0 -> Ok ((accum |> List.rev), [])
+        | [] -> Error (CannotFindClosingQuote, [], [])
         | head :: rest ->
             match head with
-            | CMDTOKEN when readMode = LookingForInstruction ->
-                findNextCommandTokens rest (head :: accum) LookingForArguments
-
-            | CMDTOKEN when readMode = LookingForArguments ->
-                findNextCommandTokens rest (head :: accum) LookingForArguments
-
-            | CMDDELIMITER when readMode = LookingForInstruction ->
-                Error UnexpectedCommandDelimiter
-
-            | CMDDELIMITER ->
-                // This is the point that we break the recursive loop and return
-                // the CommandBlock.
-                Ok ((accum |> List.rev), rest)
+            | Quote qt ->
+                Ok (FoundClosingQuote, (accum |> List.rev), rest)
+            | _ ->
+                findQuotedPart rest (head :: accum)
 
 
-    let private skipToken token =
-        match token with
-        | Quote tok
-        | Delimiter tok -> false
-        | _ -> true
+    let rec private runCMD ctx =
+        match ctx.Tokens with
+        | [] when ctx.Commands.Length > 0 ->
+            Ok (NoFurtherInputTokens, ctx)
+
+        | [] ->
+            Error (NoInputTokens, ctx)
+
+        | head :: rest ->
+            match head with
+            | DELIMITER when ignoreDelimiter ctx.ReadMode ->
+                runCMD {ctx with Tokens = rest}
+
+            | QUOTE when ctx.ReadMode = LookingForInstruction ->
+                runCMD {ctx with Tokens = rest; ReadMode = LookingForQuotedExternalInstruction}
+
+            | TOKEN when ctx.ReadMode = LookingForInstruction ->
+                runCMD {ctx with Tokens = rest; ReadMode = LookingForInternalInstruction}
+
+            | _ when ctx.ReadMode = LookingForQuotedExternalInstruction ->
+                match findQuotedPart ctx.Tokens [] with
+                | Ok (_, quotedPart, remaining) ->
+                    printfn "Got quoted part -> %A" quotedPart
+                    printfn "Remaining       -> %A" remaining
+                    Ok (NoFurtherInputTokens, ctx)
+
+                | Error (reason, _, _) ->
+                    Error (reason, ctx)
 
 
-    let execute (tokens: Token list) =
 
-        let filtered = List.filter skipToken tokens
 
-        // TODO: filter tokens such as 'Quote' and 'Delimiter' from token stream.
-        match (findNextCommandTokens tokens [] LookingForInstruction) with
-        | Ok (cmdTokens, remaining) ->
-            printfn "CMD TOKENS -> %A" cmdTokens
-            printfn "Remaining  -> %A" remaining
-            cmdTokens
 
-        | Error msg ->
-            printfn "Error... %A" msg
-            tokens
+    let execute vars cmdstr =
+        let ctx = {
+            Variables = vars
+            Tokens    = tokenise (expand cmdstr vars)
+            Commands  = []
+            ReadMode  = LookingForInstruction
+        }
+
+        printfn "==================="
+        printfn "> %A" cmdstr
+        printfn "%A" (tokenise (expand cmdstr vars))
+        printfn "==================="
+        runCMD ctx
+
 
 
 //
@@ -161,7 +198,7 @@ module Interpreter =
 //   [Literal (Sym "cmd"); Delimiter (Sym ";"); Literal (Sym "/c"); Delimiter (Sym ";"); Literal (Sym "calc")]
 //
 //   cmd,/c,calc                  [launched calc]
-//   [Literal (Sym "cmd"); Delimiter (Sym ","); Literal (Sym ","); Delimiter (Sym ","); Literal (Sym "calc")]
+//   [Literal (Symbol "cmd"); Delimiter (Symbol ","); Literal (Symbol "/c"); Delimiter (Symbol ","); Literal (Symbol "calc")]
 //
 //   "cmd/ccalc                   [crashes: cannot find path specified]
 //   [Quote (Symbol """); Literal (Symbol "cmd/ccalc")]

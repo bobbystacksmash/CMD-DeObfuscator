@@ -11,6 +11,9 @@ type TestClass () =
 
     [<Test>]
     member this.Interpret() =
-        let tokens = tokenise "foo blah l0l|bar"
-        let firstCmd = execute tokens
+        let vars   = Map.empty.Add("COMSPEC", "C:\\Windows\\System32\\cmd.exe")
+        let result = execute vars "\"%COMSPEC%\"/ccalc & echo foo"
+
+        printfn "RES -> %A" result
+
         Assert.IsTrue(false)
