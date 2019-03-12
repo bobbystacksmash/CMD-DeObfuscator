@@ -162,7 +162,77 @@ module Interpreter =
                 | Error (reason, _, _) ->
                     Error (reason, ctx)
 
-
+//
+// PARENTHESIS
+//
+//   (echo foo)                       [prints "foo"]
+//   echo foo (calc)                  [prints "foo (calc)"]
+//   (echo foo & calc)                [prints "foo" ; launches calc]
+//   echo foo (notepad & calc         [prints "foo (notepad" ; launches calc]
+//
+//
+// CONDITIONALS
+//
+//   if defined comspec echo foo & echo bar
+//   [prints "foo"; prints "bar"]
+//   IF (defined comspec) THEN
+//     echo foo
+//     echo bar
+//   ENDIF
+//
+//   if defined xxxspec echo foo & echo bar
+//   [no output]
+//   IF (defined xxxspec) THEN
+//     echo foo
+//     echo bar
+//   ENDIF
+//
+//   (if defined comspec) echo foo & echo bar
+//   [Syntax error: ')' is unexpected]
+//
+//   (if defined comspec echo) foo & echo bar
+//   [Syntax error: 'foo' was unexpected]
+//
+//   (if defined comspec echo foo) & echo bar
+//   [prints "foo" ; prints "bar"]
+//   IF (defined comspec) THEN
+//     echo foo
+//   ENDIF
+//   echo bar
+//
+//   (if defined XXXspec echo foo) & echo bar
+//   [prints "bar"]
+//   IF (defined XXXspec) THEN
+//     echo foo
+//   ENDIF
+//   echo bar
+//
+//   if defined comspec (echo foo) & echo bar
+//   [prints "foo" ; prints "bar"]
+//   IF (defined comspec) THEN
+//     (echo foo)
+//   ENDIF
+//   echo bar
+//
+//   if defined comspec (echo foo) else (echo bar)
+//   [prints "foo"]
+//   IF (defined comspec) THEN
+//     (echo foo)
+//   ELSE
+//     (echo bar)
+//   ENDIF
+//
+//   if defined XXXspec (echo foo) else (echo bar)
+//   [prints "bar"]
+//   IF (defined XXXspec) THEN
+//     (echo foo)
+//   ELSE
+//     (echo bar)
+//   ENDIF
+//
+//   * For loops?
+//   * Conditionals?
+//
 
 
 
