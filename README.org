@@ -1,5 +1,4 @@
 * CMD De-Obfuscator
-
 ** Integration Tests
 *** No Spaces Necessary
 Command identification should be able to take the input ~cmd/ccalc~
@@ -147,3 +146,4 @@ we transform this:
  - [[http://www.daviddeley.com/autohotkey/parameters/parameters.htm][Command line delimiters write-up]]
  - [[https://doxygen.reactos.org/db/d4f/base_2shell_2cmd_2cmd_8c_source.html][ReactOS: cmd.c]]
  - [[https://docs.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments?view=vs-2017][C Command Line Parsing (Microsoft)]]
+ - [[https://superuser.com/a/1198747][How does CMD handle parenthesis?]]
