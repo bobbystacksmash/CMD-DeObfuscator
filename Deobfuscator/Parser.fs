@@ -207,3 +207,104 @@ module Tokeniser =
             Input    = symbols
         }
         symbolsToTokens pstate
+
+
+module Translator =
+
+    let reverseTokens tokens =
+        tokens |> List.rev |> List.map (fun token ->
+            match token with
+            | LeftParen  _ -> RightParen (Symbol ")")
+            | RightParen _ -> LeftParen  (Symbol "(")
+            | _ -> token)
+
+
+    let private getPrecedence token =
+        match token with
+        | CondOr _
+        | CondAlways _
+        | CondSuccess _ -> 3
+        | Pipe _
+        | LeftRedirect _
+        | RightRedirect _ -> 2
+        | _ -> 0
+
+
+    let (|HIGHER|LOWER|EQUAL|) (tokA, tokB) =
+        let pA = getPrecedence tokA
+        let pB = getPrecedence tokB
+        if pA > pB then HIGHER
+        elif pB < pB then LOWER
+        else EQUAL
+
+
+    let (|LPAREN|RPAREN|OPERATOR|OPERAND|) token =
+        match token with
+        | LeftParen _ -> LPAREN
+        | RightParen _ -> RPAREN
+        | Pipe _
+        | CondOr _
+        | CondAlways _
+        | CondSuccess _ -> OPERATOR
+        | _ -> OPERAND
+
+
+    let findClosingParen stack =
+        let rec find lst accum =
+            match lst with
+            | [] -> None
+            | head :: rest ->
+                match head with
+                | LeftParen _ -> Some (accum |> List.rev, rest)
+                | _ -> find rest (head :: accum)
+        find stack []
+
+    type ConversionStatus =
+        | UnbalancedParenthesis
+
+    let rec private infixToPostFix tokens (opstack: Token list) (outstack: Token list) =
+        match tokens with
+        | [] -> Ok (opstack @ outstack)
+        | head :: rest ->
+            match head with
+            | OPERAND  ->
+                infixToPostFix rest opstack (head :: outstack)
+
+            | LPAREN ->
+                infixToPostFix rest (head :: opstack) outstack
+
+            | RPAREN ->
+                match findClosingParen opstack with
+                | Some (opers, remainingOpers) ->
+                    infixToPostFix rest remainingOpers (opers @ outstack)
+                | None ->
+                    Error UnbalancedParenthesis
+
+            | OPERATOR when opstack.Length = 0 ->
+                infixToPostFix rest (head :: opstack) outstack
+
+            | OPERATOR ->
+                match (head, opstack.Head) with
+                | LOWER
+                | EQUAL ->
+                    infixToPostFix rest opstack.Tail (opstack.Head :: outstack)
+
+                | HIGHER ->
+                    infixToPostFix rest (head :: opstack) outstack
+
+
+    let translate tokens =
+
+        let isNotDelim tok =
+            match tok with
+            | Delimiter _ -> false
+            | _ -> true
+
+        let filtered = List.filter isNotDelim tokens
+
+        match (infixToPostFix (reverseTokens filtered) [] []) with
+        | Ok outstack ->
+            printfn "Success! ->>>> %A" outstack
+
+        | Error _ ->
+            printfn "Failed."
