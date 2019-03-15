@@ -293,6 +293,38 @@ module Translator =
                     infixToPostFix rest (head :: opstack) outstack
 
 
+    type CommandExpression =
+        | Operator of Token // TODO: type system can help here!
+        | Expr of Token list
+        | LeftParen of Token // TODO: type system can help here!
+        | RightParen of Token // TODO: type system can help here!
+
+
+    let rec private group tokens (accum: CommandExpression list) =
+        match tokens with
+        | [] -> accum
+        | head :: rest ->
+            match head with
+            | OPERATOR ->
+                group rest ((Operator head) :: accum)
+
+            | LPAREN ->
+                group rest ((LeftParen head) :: accum)
+
+            | RPAREN ->
+                group rest ((RightParen head) :: accum)
+
+            | _ ->
+                match accum with
+                | [] -> group rest ((Expr [head]) :: accum)
+                | tos :: restofaccum ->
+                    match tos with
+                    | Expr currExp ->
+                        group rest ((Expr (head :: currExp)) :: restofaccum)
+                    | _ ->
+                        group rest ((Expr [head]) :: accum)
+
+
     let translate tokens =
 
         let isNotDelim tok =
@@ -302,9 +334,12 @@ module Translator =
 
         let filtered = List.filter isNotDelim tokens
 
-        match (infixToPostFix (reverseTokens filtered) [] []) with
+        printfn "---- Grouping ----"
+        printfn "%A" (group filtered)
+
+        (*match (infixToPostFix (reverseTokens filtered) [] []) with
         | Ok outstack ->
             printfn "Success! ->>>> %A" outstack
 
         | Error _ ->
-            printfn "Failed."
+            printfn "Failed."*)
