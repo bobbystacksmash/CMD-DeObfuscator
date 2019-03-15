@@ -54,113 +54,87 @@ type CommandToken =
     | Vol
     | ExternalCommand of Token
 
-// Given a list of Tokens, such as:
-//
-//   [echo, foo, bar]
-//
-// `echo'    = Instruction
-// `foo bar' = Arguments
-//
+
 type Instruction = Instruction of CommandToken
 type Command = {
     Instruction: Instruction
     Arguments: Token list
 }
 
-//
-// TODO: See "Phase 7) Execute" from the following SO question for details
-//       about command identidication.
-//
-//       https://stackoverflow.com/questions/4094699/how-does-the-windows-command-interpreter-cmd-exe-parse-scripts/7970912#7970912
-//
 
 type CommandBlock = {
-    CurrentCommand: Command
-    RemainingTokens: Token list
+    CurrentCommand: Command option
+    RemainingTokens: Token list option
 }
 
 
-type BuildingCommand =
-    | LookingForInstruction
-    | LookingForInternalInstruction
-    | LookingForExternalInstruction
-    | LookingForQuotedExternalInstruction
-    | LookingForArguments
+type IdentifyCommandMode =
+    | LookingForCommandToken
+    | LookingForGroupTerminal
+    | LookingForCommandTerminator
 
 
-type ExecutionContext = {
-    Variables: Map<string,string>
-    Tokens: Token list
-    Commands: Command list
-    ReadMode: BuildingCommand
+type IdentifyCommandResult =
+    | NoMoreTokens
+
+
+type CommandIdentifier = {
+    ReadMode: IdentifyCommandMode
+    ParenCounter: int
+}
+
+type EnvironmentFlags =
+    | EnableCommandExtensions
+    | DisableCommandExtensions
+    | EnableDelayedExpansion
+    | DisableDelayedExpansion
+
+
+type CommandEnvironment = {
+    Flags: EnvironmentFlags list
+    Vars: Map<string,string>
+    Cmdstr: string
+    Commands: Command list // holds each of the commands that were run
 }
 
 
-type InterpreterStatus =
-    | Complete
-    | NoInputTokens
-    | NoFurtherInputTokens
-    | CannotFindClosingQuote
-    | FoundClosingQuote
-    | UnrecognisedInternalCommand
+// Represents CMD.EXE running in command-line mode
+// ===============================================
+//
+//
+module CommandInterpreter =
 
-module Interpreter =
-
-    let private (|DELIMITER|QUOTE|TOKEN|) token =
-        match token with
-        | Delimiter x -> DELIMITER
-        | Quote x -> QUOTE
-        | _ -> TOKEN
+    let toLookingForGTerm ctx =
+        {ctx with ReadMode = LookingForGroupTerminal}
 
 
-    let private ignoreDelimiter readMode =
-        match readMode with
-        | LookingForInstruction
-        | LookingForExternalInstruction
-        | LookingForInternalInstruction
-        | LookingForQuotedExternalInstruction -> true
-        | _ -> false
 
-
-    let rec private findQuotedPart tokens accum =
+    let rec exec ctx tokens =
         match tokens with
-        | [] -> Error (CannotFindClosingQuote, [], [])
         | head :: rest ->
             match head with
-            | Quote qt ->
-                Ok (FoundClosingQuote, (accum |> List.rev), rest)
-            | _ ->
-                findQuotedPart rest (head :: accum)
+            | LeftParen _ when ctx.ReadMode = LookingForCommandToken ->
+                
 
 
-    let rec private runCMD ctx =
-        match ctx.Tokens with
-        | [] when ctx.Commands.Length > 0 ->
-            Ok (NoFurtherInputTokens, ctx)
 
-        | [] ->
-            Error (NoInputTokens, ctx)
+    let identifyCommand (tokens: Token list) =
 
-        | head :: rest ->
-            match head with
-            | DELIMITER when ignoreDelimiter ctx.ReadMode ->
-                runCMD {ctx with Tokens = rest}
+        let ctx = {
+            ReadMode = LookingForCommandToken
+            ParenCounter = 0
+        }
 
-            | QUOTE when ctx.ReadMode = LookingForInstruction ->
-                runCMD {ctx with Tokens = rest; ReadMode = LookingForQuotedExternalInstruction}
+        exec ctx tokens
 
-            | TOKEN when ctx.ReadMode = LookingForInstruction ->
-                runCMD {ctx with Tokens = rest; ReadMode = LookingForInternalInstruction}
+// C:\Windows\System32\cmd.exe /V /c set %foo%=bar&&set %abc%=def...
 
-            | _ when ctx.ReadMode = LookingForQuotedExternalInstruction ->
-                match findQuotedPart ctx.Tokens [] with
-                | Ok (_, quotedPart, remaining) ->
-                    printfn "Got quoted part -> %A" quotedPart
-                    printfn "Remaining       -> %A" remaining
-                    Ok (NoFurtherInputTokens, ctx)
 
-                | Error (reason, _, _) ->
-                    Error (reason, ctx)
+
+
+
+
+
 
 //
 // PARENTHESIS
@@ -169,6 +143,12 @@ module Interpreter =
 //   echo foo (calc)                  [prints "foo (calc)"]
 //   (echo foo & calc)                [prints "foo" ; launches calc]
 //   echo foo (notepad & calc         [prints "foo (notepad" ; launches calc]
+//   )echo foo                        [Syntax error: ')echo' is not recognised]
+//   ) echo foo                       [prints "" - everything after ')' is ignored]
+//   )&echo foo                       [prints "" - everything after ')' is ignored]
+//   ),echo foo                       [prints "" - everything after ')' is ignored]
+//   );echo foo                       [prints "" - everything after ')' is ignored]
+//   )/echo foo                       [Syntax error: ')' is not a recognised command]
 //
 //
 // CONDITIONALS
@@ -233,23 +213,6 @@ module Interpreter =
 //   * For loops?
 //   * Conditionals?
 //
-
-
-
-    let execute vars cmdstr =
-        let ctx = {
-            Variables = vars
-            Tokens    = tokenise (expand cmdstr vars)
-            Commands  = []
-            ReadMode  = LookingForInstruction
-        }
-
-        printfn "==================="
-        printfn "> %A" cmdstr
-        printfn "%A" (tokenise (expand cmdstr vars))
-        printfn "==================="
-        runCMD ctx
-
 
 
 //
