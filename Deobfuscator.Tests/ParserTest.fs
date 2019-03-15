@@ -5,6 +5,7 @@ open System.Text.RegularExpressions
 open NUnit.Framework
 open Deobfuscator
 open Deobfuscator.Tokeniser
+//open Deobfuscator.Translator
 open NUnit.Framework
 
 [<TestFixture>]
@@ -13,16 +14,16 @@ type TestClass () =
     [<Test>]
     member this.Tokenise() =
 
-        let LP = LeftParen(Symbol "(")
-        let RP = RightParen(Symbol ")")
-        let CA = CondAlways(Symbol "&")
-        let CS = CondSuccess(Symbol "&&")
-        let PI = Pipe(Symbol "|")
-        let CO = CondOr(Symbol "||")
-        let QT = Quote(Symbol "\"")
-        let SP = Delimiter(Symbol " ")
+        let LP = LeftParen
+        let RP = RightParen
+        let CA = CondAlways
+        let CS = CondSuccess
+        let PI = Pipe
+        let CO = CondOr
+        let QT = Quote
+        let SP = Delimiter
 
-        let str2lit str = Literal(Symbol str)
+        let str2lit str = Literal str
 
         let tests = [
             // Special char identification
@@ -46,10 +47,7 @@ type TestClass () =
 
             // Conditionals & Redirections
             ("a|b", [str2lit "a"; PI; str2lit "b"], "Identify pipes without delimiters.")
-            ("a && b", [str2lit "a"; SP; CondSuccess(Symbol "&&"); SP; str2lit "b"], "& become &&")
-
-            // Keyword Detection
-            // ...
+            ("a && b", [str2lit "a"; SP; CondSuccess; SP; str2lit "b"], "& become &&")
 
             // Commands
             (
@@ -69,3 +67,10 @@ type TestClass () =
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
         )
+
+
+    (*[<Test>]
+    member this.Translation() =
+        let tokens = tokenise "FOR \%G IN (MyFile.txt foo.bar) DO (echo foo && copy \%G d:\\backups\\)"
+        let translated = translate tokens
+        Assert.IsTrue(false);*)

@@ -1,24 +1,18 @@
 namespace Deobfuscator
 
-type private Column = Column of int
-type private Length = Length of int
-type private Location = Location of Column * Length
-
-type Symbol = Symbol of string
-
 type Token =
-    | Literal       of Symbol
-    | Quote         of Symbol
-    | LeftParen     of Symbol
-    | RightParen    of Symbol
-    | Delimiter     of Symbol
-    | CondAlways    of Symbol
-    | CondSuccess   of Symbol
-    | CondOr        of Symbol
-    | Pipe          of Symbol
-    | LeftRedirect  of Symbol
-    | RightRedirect of Symbol
-    | Escape        of Symbol
+    | Literal of string
+    | Quote
+    | LeftParen
+    | RightParen
+    | Delimiter
+    | CondAlways
+    | CondSuccess
+    | CondOr
+    | Pipe
+    | LeftRedirect
+    | RightRedirect
+    | Escape
     static member CanConcat =
         function
         | Pipe _
@@ -47,45 +41,45 @@ type private ParserState = {
     ReadMode: TokenReadMode
     Escape: bool
     Tokens: Token list
-    Input: Symbol list
+    Input: char list
 }
 
 
 module Tokeniser =
 
     let (|LPAREN|_|) sym =
-        if sym = Symbol("(") then Some(LeftParen sym) else None
+        if sym = '(' then Some(LeftParen) else None
 
     let (|RPAREN|_|) sym =
-        if sym = Symbol(")") then Some(RightParen sym) else None
+        if sym = ')' then Some(RightParen) else None
 
     let (|PIPE|_|) sym =
-        if sym = Symbol("|") then Some(Pipe sym) else None
+        if sym = '|' then Some(Pipe) else None
 
     let (|CONDALWAYS|_|) sym =
-        if sym = Symbol("&") then Some(CondAlways sym) else None
+        if sym = '&' then Some(CondAlways) else None
 
     let (|LREDIRECT|_|) sym =
-        if sym = Symbol("<") then Some(LeftRedirect sym) else None
+        if sym = '<' then Some(LeftRedirect) else None
 
     let (|RREDIRECT|_|) sym =
-        if sym = Symbol(">") then Some(RightRedirect sym) else None
+        if sym = '>' then Some(RightRedirect) else None
 
     let (|ESCAPE|_|) sym =
-        if sym = Symbol("^") then Some(Escape sym) else None
+        if sym = '^' then Some(Escape) else None
 
     let (|QUOTE|_|) sym =
-        if sym = Symbol("\"") then Some(Quote sym) else None
+        if sym = '"' then Some(Quote) else None
 
     let (|AMPERSAND|_|) sym =
-        if sym = Symbol("&") then Some(CondAlways sym) else None
+        if sym = '&' then Some(CondAlways) else None
 
     let (|DELIMITER|_|) sym =
         match sym with
-        | Symbol(",")
-        | Symbol("=")
-        | Symbol(" ")
-        | Symbol(";") -> Some(Delimiter sym)
+        | ','
+        | '='
+        | ' '
+        | ';' -> Some(Delimiter)
         | _   -> None
 
     let private pushToken pstate tok rest =
@@ -111,28 +105,22 @@ module Tokeniser =
         {pState with Escape = true}
 
 
-    let private concatSymbols symA symB =
-        let (Symbol a) = symA
-        let (Symbol b) = symB
-        Symbol(a + b)
-
-
     let private concatTokens tokA tokB =
         if tokA.GetType() <> tokB.GetType() then
             ConcatFailure
         else
             match (tokA, tokB) with
             | Literal l0, Literal l1 ->
-                ConcatSuccess (Literal(concatSymbols l0 l1))
+                ConcatSuccess (Literal (l0 + l1))
 
-            | Delimiter d0, Delimiter d1 ->
-                ConcatSuccess (Delimiter(concatSymbols d0 d1))
+            | Delimiter, Delimiter ->
+                ConcatSuccess Delimiter
 
-            | CondAlways c0, CondAlways c1 ->
-                ConcatSuccess (CondSuccess(concatSymbols c0 c1))
+            | CondAlways, CondAlways ->
+                ConcatSuccess CondSuccess
 
-            | Pipe p0, Pipe p1 ->
-                ConcatSuccess (CondOr(concatSymbols p0 p1))
+            | Pipe, Pipe ->
+                ConcatSuccess CondOr
 
             | _ ->
                 ConcatFailure
@@ -158,7 +146,7 @@ module Tokeniser =
 
     let tokenise (cmdstr: string) =
 
-        let rec symbolsToTokens (pState: ParserState) =
+        let rec tokeniseInput (pState: ParserState) =
 
             match pState.Input with
             | head :: rest ->
@@ -166,24 +154,24 @@ module Tokeniser =
                 | _ when pState.Escape ->
                     // The 'escape' flag is set -- ignore any special meaning associated with
                     // the current char, and save as a literal, resetting the escape flag.
-                    symbolsToTokens ((pushToken pState (Literal head) rest) |> escapeOff)
+                    tokeniseInput ((pushToken pState (Literal (head.ToString())) rest) |> escapeOff)
 
                 | ESCAPE esc when pState.ReadMode = MatchSpecial ->
                     // We don't push on the '^' (escape) symbol.
-                    symbolsToTokens {pState with Input = rest; Escape = true}
+                    tokeniseInput {pState with Input = rest; Escape = true}
 
                 | QUOTE qt when pState.ReadMode = MatchSpecial ->
                     // A quote toggles the matching of special chars.  The default state is to
                     // MATCH special chars.  After the first QUOTE we IGNORE special chars.  This
                     // mode flips each time a QUOTE is seen.
-                    symbolsToTokens ((pushToken pState qt rest) |> escapeOff |> readModeIgnore)
+                    tokeniseInput ((pushToken pState qt rest) |> escapeOff |> readModeIgnore)
 
                 | QUOTE qt ->
-                    symbolsToTokens ((pushToken pState qt rest) |> readModeMatch)
+                    tokeniseInput ((pushToken pState qt rest) |> readModeMatch)
 
                 | _ when pState.ReadMode = IgnoreSpecial ->
                     // We're ignoring special chars
-                    symbolsToTokens (pushToken pState (Literal head) rest)
+                    tokeniseInput (pushToken pState (Literal (head.ToString())) rest)
 
                 | LPAREN    sym
                 | RPAREN    sym
@@ -192,30 +180,27 @@ module Tokeniser =
                 | DELIMITER sym
                 | AMPERSAND sym
                 | PIPE      sym ->
-                    symbolsToTokens (pushToken pState sym rest)
-
+                    tokeniseInput (pushToken pState sym rest)
                 | _ ->
-                    symbolsToTokens (pushToken pState (Literal head) rest)
-
+                    tokeniseInput (pushToken pState (Literal (head.ToString())) rest)
             | _ -> pState.Tokens |> List.rev |> catTokens
 
-        let symbols = cmdstr |> List.ofSeq  |> List.map (fun chr -> Symbol(chr.ToString()))
         let pstate = {
             ReadMode = MatchSpecial
             Escape   = false
             Tokens   = []
-            Input    = symbols
+            Input    = (cmdstr |> List.ofSeq)
         }
-        symbolsToTokens pstate
+        tokeniseInput pstate
 
 
-module Translator =
+(*module Translator =
 
     let reverseTokens tokens =
         tokens |> List.rev |> List.map (fun token ->
             match token with
-            | LeftParen  _ -> RightParen (Symbol ")")
-            | RightParen _ -> LeftParen  (Symbol "(")
+            | LeftParen  _ -> RightParen
+            | RightParen _ -> LeftParen
             | _ -> token)
 
 
@@ -336,10 +321,11 @@ module Translator =
 
         printfn "---- Grouping ----"
         printfn "%A" (group filtered)
+        *)
+        //match (infixToPostFix (reverseTokens filtered) [] []) with
+        //| Ok outstack ->
+        //    printfn "Success! ->>>> %A" outstack
+        //
+        //| Error _ ->
+        //    printfn "Failed."*)
 
-        (*match (infixToPostFix (reverseTokens filtered) [] []) with
-        | Ok outstack ->
-            printfn "Success! ->>>> %A" outstack
-
-        | Error _ ->
-            printfn "Failed."*)
