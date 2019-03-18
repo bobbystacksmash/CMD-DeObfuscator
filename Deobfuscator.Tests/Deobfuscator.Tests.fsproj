@@ -15,7 +15,7 @@
   <ItemGroup>
     <Compile Include="ExpanderWithCommandExtensionsTest.fs" />
     <Compile Include="ParserTest.fs" />
-    <Compile Include="InterpreterTest.fs" />
+    <!--<Compile Include="InterpreterTest.fs" />-->
   </ItemGroup>
 
   <ItemGroup>

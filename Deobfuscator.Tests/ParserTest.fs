@@ -12,14 +12,25 @@ open NUnit.Framework
 type TestClass () =
 
     [<Test>]
+    member this.Parse() =
+
+        let foo = tokenise "calc&calc"
+        printfn "======================"
+        printfn "%A" foo
+        printfn "======================"
+
+        Assert.IsTrue(false)
+
+
+    (*[<Test>]
     member this.Tokenise() =
 
-        let LP = LeftParen
-        let RP = RightParen
-        let CA = CondAlways
-        let CS = CondSuccess
-        let PI = Pipe
-        let CO = CondOr
+        let LP = Parenthesis(LeftParen)
+        let RP = Parenthesis(RightParen)
+        let CA = Operator(CondAlways)
+        let CS = Operator(CondSuccess)
+        let PI = Operator(Pipe)
+        let CO = Operator(CondOr)
         let QT = Quote
         let SP = Delimiter
 
@@ -57,6 +68,8 @@ type TestClass () =
             )
         ]
 
+        Assert.IsTrue(true)
+
         tests |> List.iter (fun test ->
             let input, expected, msg = test
             let actual = tokenise input
@@ -66,7 +79,7 @@ type TestClass () =
             printfn "Expected -> %A" expected
             printfn "========================="
             Assert.That(actual, Is.EqualTo(expected))
-        )
+        )*)
 
 
     (*[<Test>]

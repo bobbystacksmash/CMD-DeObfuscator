@@ -1,331 +1,346 @@
 namespace Deobfuscator
 
-type Token =
-    | Literal of string
-    | Quote
-    | LeftParen
-    | RightParen
-    | Delimiter
-    | CondAlways
-    | CondSuccess
-    | CondOr
+type Operator =
     | Pipe
     | LeftRedirect
     | RightRedirect
-    | Escape
-    static member CanConcat =
-        function
-        | Pipe _
-        | Literal _
-        | Delimiter _
-        | CondAlways _ -> true
-        | _ -> false
+    | CondOr
+    | CondAlways
+    | CondSuccess
+    | LeftParen
+    | RightParen
 
+type Literal =
+    | Literal of string
+    static member (+) (a: Literal, b: Literal) =
+        let (Literal strA) = a
+        let (Literal strB) = b
+        Literal(strA + strB)
 
-type private Concat =
-    | ConcatSuccess of Token
-    | ConcatFailure
+type CommandAppendMode =
+    | AppendToExisting
+    | StartNew
 
+type Command = {
+    Commands: Literal list
+    AppendMode: CommandAppendMode
+}
 
-type private LookaheadToken =
-    | Lookahead of Token * Token list
-    | NoMoreTokens
+type Ast =
+    | Cmd of Command
+    | Op of Operator
 
+type CommandExpr =
+    | Command of Literal list
+    | Oper of Operator
 
-type private TokenReadMode =
+type ReadMode =
     | MatchSpecial
     | IgnoreSpecial
 
-
-type private ParserState = {
-    ReadMode: TokenReadMode
+type ParseState = {
+    Mode: ReadMode
     Escape: bool
-    Tokens: Token list
     Input: char list
+    AstStack: Ast list
 }
 
+type ParseStatus =
+    | UnbalancedParenthesis
 
 module Tokeniser =
 
-    let (|LPAREN|_|) sym =
-        if sym = '(' then Some(LeftParen) else None
+    let (|PIPE|_|) ch =
+        if ch = '|' then Some PIPE
+        else None
 
-    let (|RPAREN|_|) sym =
-        if sym = ')' then Some(RightParen) else None
+    let (|LREDIRECT|_|) ch =
+        if ch = '<' then Some LREDIRECT
+        else None
 
-    let (|PIPE|_|) sym =
-        if sym = '|' then Some(Pipe) else None
+    let (|RREDIRECT|_|) ch =
+        if ch = '>' then Some RREDIRECT
+        else None
 
-    let (|CONDALWAYS|_|) sym =
-        if sym = '&' then Some(CondAlways) else None
+    let (|AMPERSAND|_|) ch =
+        if ch = '&' then Some AMPERSAND
+        else None
 
-    let (|LREDIRECT|_|) sym =
-        if sym = '<' then Some(LeftRedirect) else None
+    let (|LPAREN|_|) ch =
+        if ch = '(' then Some LPAREN
+        else None
 
-    let (|RREDIRECT|_|) sym =
-        if sym = '>' then Some(RightRedirect) else None
+    let (|RPAREN|_|) ch =
+        if ch = ')' then Some RPAREN
+        else None
 
-    let (|ESCAPE|_|) sym =
-        if sym = '^' then Some(Escape) else None
+    let (|ESCAPE|_|) ch =
+        if ch = '^' then Some ESCAPE
+        else None
 
-    let (|QUOTE|_|) sym =
-        if sym = '"' then Some(Quote) else None
-
-    let (|AMPERSAND|_|) sym =
-        if sym = '&' then Some(CondAlways) else None
+    let (|QUOTE|_|) ch =
+        if ch = '"' then Some QUOTE
+        else None
 
     let (|DELIMITER|_|) sym =
         match sym with
         | ','
         | '='
         | ' '
-        | ';' -> Some(Delimiter)
+        | ';' -> Some(DELIMITER)
         | _   -> None
 
-    let private pushToken pstate tok rest =
-        {
-            pstate with
-                Tokens = (tok :: pstate.Tokens);
-                Input  = rest
-        }
+    let (|CMDEMPTY|CMDLIT|CMDDELIM|) cmd =
+        match cmd with
+        | [] -> CMDEMPTY
+        | head :: rest ->
+            match head with
+            | Lit l -> CMDLIT l
+            | Delim d -> CMDDELIM d
 
-    let private readModeMatch pstate =
-        {pstate with ReadMode = MatchSpecial}
-
-
-    let private readModeIgnore pstate =
-        {pstate with ReadMode = IgnoreSpecial}
-
-
-    let private escapeOff pState =
-        {pState with Escape = false}
-
-
-    let private escapeOn pState =
-        {pState with Escape = true}
+    let (|ASTCOMMAND|ASTPIPE|ASTALWAYS|IGNORE|) (ast: Ast) =
+        match ast with
+        | Cmd cmd -> ASTCOMMAND cmd
+        | Op operator ->
+            match operator with
+            | Pipe -> ASTPIPE
+            | CondAlways -> ASTALWAYS
+            | _ -> IGNORE
 
 
-    let private concatTokens tokA tokB =
-        if tokA.GetType() <> tokB.GetType() then
-            ConcatFailure
-        else
-            match (tokA, tokB) with
-            | Literal l0, Literal l1 ->
-                ConcatSuccess (Literal (l0 + l1))
+    let pushAst x rest state =
+        {state with Input = rest; AstStack = [x]}
 
-            | Delimiter, Delimiter ->
-                ConcatSuccess Delimiter
 
-            | CondAlways, CondAlways ->
-                ConcatSuccess CondSuccess
+    let pushParen p rest state =
+        match state.AstStack with
+        | [] ->
+            pushAst p rest state
 
-            | Pipe, Pipe ->
-                ConcatSuccess CondOr
+         | _ ->
+            {state with Input = rest; AstStack = p :: state.AstStack}
+
+
+    let pushLParen rest state =
+        pushParen (Op LeftParen) rest state
+
+
+    let pushRParen rest state =
+        pushParen (Op RightParen) rest state
+
+
+    let pushPipe rest state =
+        match state.AstStack with
+        | [] ->
+            pushAst (Op Pipe) rest state
+
+        | topOfStack :: restOfStack ->
+            match topOfStack with
+            | ASTPIPE ->
+                {state with Input = rest; AstStack = (Op CondOr) :: restOfStack}
 
             | _ ->
-                ConcatFailure
+                {state with Input = rest; AstStack = (Op Pipe) :: state.AstStack}
 
 
-    let private lookahead (tokens: Token list) =
-        if tokens.Length = 0 then NoMoreTokens
-        else Lookahead(tokens.Head, tokens.Tail)
+    let pushAmpersand rest state =
+        match state.AstStack with
+        | [] ->
+            pushAst (Op CondAlways) rest state
+
+        | topOfStack :: restOfStack ->
+            match topOfStack with
+            | ASTALWAYS ->
+                {state with Input = rest; AstStack = (Op CondSuccess) :: restOfStack}
+
+            | _ ->
+                {state with Input = rest; AstStack = (Op CondAlways) :: state.AstStack}
 
 
-    let private catTokens (tokens: Token list) =
-        let rec doJoin (todo: Token list) (accum: Token list) =
-            if todo.Length > 0 && accum.Length > 0 then
-                match concatTokens accum.Head todo.Head with
-                | ConcatSuccess newTok -> doJoin todo.Tail (newTok :: accum.Tail)
-                | ConcatFailure -> doJoin todo.Tail (todo.Head :: accum)
-            elif accum.Length = 0 then
-                doJoin todo.Tail (todo.Head :: accum)
-            else
-                accum |> List.rev
-        doJoin tokens []
+    let pushLRedirect rest state =
+        match state.AstStack with
+        | [] ->
+            pushAst (Op LeftRedirect) rest state
+
+        | _ ->
+            {state with Input = rest; AstStack = (Op LeftRedirect) :: state.AstStack}
 
 
-    let tokenise (cmdstr: string) =
+    let pushRRedirect rest state =
+        match state.AstStack with
+        | [] ->
+            pushAst (Op RightRedirect) rest state
 
-        let rec tokeniseInput (pState: ParserState) =
-
-            match pState.Input with
-            | head :: rest ->
-                match head with
-                | _ when pState.Escape ->
-                    // The 'escape' flag is set -- ignore any special meaning associated with
-                    // the current char, and save as a literal, resetting the escape flag.
-                    tokeniseInput ((pushToken pState (Literal (head.ToString())) rest) |> escapeOff)
-
-                | ESCAPE esc when pState.ReadMode = MatchSpecial ->
-                    // We don't push on the '^' (escape) symbol.
-                    tokeniseInput {pState with Input = rest; Escape = true}
-
-                | QUOTE qt when pState.ReadMode = MatchSpecial ->
-                    // A quote toggles the matching of special chars.  The default state is to
-                    // MATCH special chars.  After the first QUOTE we IGNORE special chars.  This
-                    // mode flips each time a QUOTE is seen.
-                    tokeniseInput ((pushToken pState qt rest) |> escapeOff |> readModeIgnore)
-
-                | QUOTE qt ->
-                    tokeniseInput ((pushToken pState qt rest) |> readModeMatch)
-
-                | _ when pState.ReadMode = IgnoreSpecial ->
-                    // We're ignoring special chars
-                    tokeniseInput (pushToken pState (Literal (head.ToString())) rest)
-
-                | LPAREN    sym
-                | RPAREN    sym
-                | LREDIRECT sym
-                | RREDIRECT sym
-                | DELIMITER sym
-                | AMPERSAND sym
-                | PIPE      sym ->
-                    tokeniseInput (pushToken pState sym rest)
-                | _ ->
-                    tokeniseInput (pushToken pState (Literal (head.ToString())) rest)
-            | _ -> pState.Tokens |> List.rev |> catTokens
-
-        let pstate = {
-            ReadMode = MatchSpecial
-            Escape   = false
-            Tokens   = []
-            Input    = (cmdstr |> List.ofSeq)
-        }
-        tokeniseInput pstate
+        | _ ->
+            {state with Input = rest; AstStack = (Op RightRedirect) :: state.AstStack}
 
 
-(*module Translator =
+    let pushLiteral ch rest state =
+        let newCmd = {Commands = [Literal (ch.ToString())]; AppendMode = AppendToExisting}
+        match state.AstStack with
+        | [] ->
+            pushAst (Cmd newCmd) rest state
 
-    let reverseTokens tokens =
-        tokens |> List.rev |> List.map (fun token ->
-            match token with
-            | LeftParen  _ -> RightParen
-            | RightParen _ -> LeftParen
-            | _ -> token)
+        | topOfStack :: restOfStack ->
+            match topOfStack with
+            | Op _ ->
+                {state with Input = rest; AstStack = (Cmd newCmd) :: state.AstStack }
+
+            | Cmd cmd ->
+                match cmd.AppendMode with
+                | AppendToExisting ->
+                    (* TODO! *)
 
 
-    let private getPrecedence token =
-        match token with
+    let flipCommandAppendMode state =
+        match state.AstStack with
+        | [] -> state
+        | head :: rest ->
+            match head with
+            | Op _ -> state
+            | Cmd cmd ->
+                match cmd.AppendMode with
+                | AppendToExisting ->
+                    let flipped = {cmd with AppendMode = StartNew}
+                    {state with AstStack = (Cmd flipped) :: rest }
+
+                | StartNew ->
+                    let flipped = {cmd with AppendMode = AppendToExisting}
+                    {state with AstStack = (Cmd flipped) :: rest}
+
+
+
+    let rec makeAst (state: ParseState) =
+        match state.Input with
+        | [] -> state.AstStack
+        | head :: rest ->
+            match head with
+            | _ when state.Escape ->
+                // The escape flag was set, so this char loses any special
+                // meaning.
+                makeAst {(pushLiteral head rest state) with Escape = false}
+
+            | ESCAPE when state.Mode = MatchSpecial ->
+                // Do not push '^', just set escape flag.
+                makeAst {state with Input = rest; Escape = true}
+
+            | QUOTE when state.Mode = MatchSpecial ->
+                // A quote toggles the matching of special chars.  The default state is to
+                // MATCH special chars.  After the first QUOTE we IGNORE special chars.  This
+                // mode flips each time a QUOTE is seen.
+                makeAst {state with Input = rest; Escape = false; Mode = IgnoreSpecial}
+
+            | QUOTE ->
+                makeAst {state with Input = rest; Mode = MatchSpecial}
+
+            | _ when state.Mode = IgnoreSpecial ->
+                makeAst (pushLiteral head rest state)
+
+            | DELIMITER ->
+                makeAst {state with Input = rest; CmdReader = BuildNewCommand}
+
+            | LPAREN ->
+                makeAst (pushLParen rest state)
+
+            | RPAREN ->
+                makeAst (pushRParen rest state)
+
+            | AMPERSAND ->
+                makeAst (pushAmpersand rest state)
+
+            | PIPE ->
+                makeAst (pushPipe rest state)
+
+            | LREDIRECT ->
+                makeAst (pushLRedirect rest state)
+
+            | RREDIRECT ->
+                makeAst (pushRRedirect rest state)
+
+            | _ ->
+                makeAst (pushLiteral head rest state)
+
+
+
+    (* AST Translation, from INFIX to PREFIX *)
+    let private getPrecedence op =
+        match op with
         | CondOr _
         | CondAlways _
         | CondSuccess _ -> 3
         | Pipe _
         | LeftRedirect _
         | RightRedirect _ -> 2
-        | _ -> 0
+        | _ -> 1
 
 
-    let (|HIGHER|LOWER|EQUAL|) (tokA, tokB) =
-        let pA = getPrecedence tokA
-        let pB = getPrecedence tokB
+    let (|HIGHER|LOWER|EQUAL|) (a, b) =
+        let pA = getPrecedence a
+        let pB = getPrecedence b
         if pA > pB then HIGHER
         elif pB < pB then LOWER
         else EQUAL
 
 
-    let (|LPAREN|RPAREN|OPERATOR|OPERAND|) token =
-        match token with
-        | LeftParen _ -> LPAREN
-        | RightParen _ -> RPAREN
-        | Pipe _
-        | CondOr _
-        | CondAlways _
-        | CondSuccess _ -> OPERATOR
-        | _ -> OPERAND
-
-
-    let findClosingParen stack =
+    let findClosingParen (stack: Operator list) =
         let rec find lst accum =
             match lst with
             | [] -> None
             | head :: rest ->
                 match head with
-                | LeftParen _ -> Some (accum |> List.rev, rest)
+                | LeftParen -> Some(accum |> List.rev |> List.map (fun x -> (Op x)), rest)
                 | _ -> find rest (head :: accum)
         find stack []
 
-    type ConversionStatus =
-        | UnbalancedParenthesis
 
-    let rec private infixToPostFix tokens (opstack: Token list) (outstack: Token list) =
-        match tokens with
-        | [] -> Ok (opstack @ outstack)
+    let rec infixToPrefix (ast: Ast list) (opstack: Operator list) (outstack: Ast list) =
+        match ast with
+        | [] ->
+            let opers = List.map (fun op -> Op(op)) opstack
+            Ok (opers @ outstack)
+
         | head :: rest ->
             match head with
-            | OPERAND  ->
-                infixToPostFix rest opstack (head :: outstack)
+            | Cmd cmd ->
+                infixToPrefix rest opstack (head :: outstack)
 
-            | LPAREN ->
-                infixToPostFix rest (head :: opstack) outstack
+            | Op LeftParen ->
+                infixToPrefix rest (LeftParen :: opstack) outstack
 
-            | RPAREN ->
+            | Op RightParen ->
                 match findClosingParen opstack with
-                | Some (opers, remainingOpers) ->
-                    infixToPostFix rest remainingOpers (opers @ outstack)
+                | Some (ops, remaining) ->
+                    infixToPrefix rest remaining (ops @ outstack)
                 | None ->
                     Error UnbalancedParenthesis
 
-            | OPERATOR when opstack.Length = 0 ->
-                infixToPostFix rest (head :: opstack) outstack
+            | Op oper when opstack.Length = 0 ->
+                infixToPrefix rest (oper :: opstack) outstack
 
-            | OPERATOR ->
-                match (head, opstack.Head) with
+            | Op oper ->
+                match (oper, opstack.Head) with
                 | LOWER
                 | EQUAL ->
-                    infixToPostFix rest opstack.Tail (opstack.Head :: outstack)
+                    infixToPrefix rest opstack.Tail (head :: outstack)
 
                 | HIGHER ->
-                    infixToPostFix rest (head :: opstack) outstack
+                    infixToPrefix rest (oper :: opstack) outstack
 
 
-    type CommandExpression =
-        | Operator of Token // TODO: type system can help here!
-        | Expr of Token list
-        | LeftParen of Token // TODO: type system can help here!
-        | RightParen of Token // TODO: type system can help here!
+    let convertAstToPrefix ast =
+        match (infixToPrefix ast [] []) with
+        | Ok newAst -> newAst
+        | Error reason ->
+            printfn "Error!"
+            ast
 
 
-    let rec private group tokens (accum: CommandExpression list) =
-        match tokens with
-        | [] -> accum
-        | head :: rest ->
-            match head with
-            | OPERATOR ->
-                group rest ((Operator head) :: accum)
-
-            | LPAREN ->
-                group rest ((LeftParen head) :: accum)
-
-            | RPAREN ->
-                group rest ((RightParen head) :: accum)
-
-            | _ ->
-                match accum with
-                | [] -> group rest ((Expr [head]) :: accum)
-                | tos :: restofaccum ->
-                    match tos with
-                    | Expr currExp ->
-                        group rest ((Expr (head :: currExp)) :: restofaccum)
-                    | _ ->
-                        group rest ((Expr [head]) :: accum)
-
-
-    let translate tokens =
-
-        let isNotDelim tok =
-            match tok with
-            | Delimiter _ -> false
-            | _ -> true
-
-        let filtered = List.filter isNotDelim tokens
-
-        printfn "---- Grouping ----"
-        printfn "%A" (group filtered)
-        *)
-        //match (infixToPostFix (reverseTokens filtered) [] []) with
-        //| Ok outstack ->
-        //    printfn "Success! ->>>> %A" outstack
-        //
-        //| Error _ ->
-        //    printfn "Failed."*)
-
+    let tokenise (cmdstr: string) =
+        let reader = {
+            Mode = MatchSpecial
+            Escape = false
+            Input = (cmdstr |> List.ofSeq)
+            AstStack = []
+            CmdReader = BuildNewCommand
+        }
+        makeAst reader
