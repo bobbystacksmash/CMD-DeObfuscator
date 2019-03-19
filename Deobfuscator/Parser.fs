@@ -21,13 +21,8 @@ type CommandAppendMode =
     | AppendToExisting
     | StartNew
 
-type Command = {
-    Commands: Literal list
-    AppendMode: CommandAppendMode
-}
-
 type Ast =
-    | Cmd of Command
+    | Cmd of Literal list
     | Op of Operator
 
 type CommandExpr =
@@ -43,6 +38,7 @@ type ParseState = {
     Escape: bool
     Input: char list
     AstStack: Ast list
+    CmdAppendMode: CommandAppendMode
 }
 
 type ParseStatus =
@@ -90,13 +86,6 @@ module Tokeniser =
         | ';' -> Some(DELIMITER)
         | _   -> None
 
-    let (|CMDEMPTY|CMDLIT|CMDDELIM|) cmd =
-        match cmd with
-        | [] -> CMDEMPTY
-        | head :: rest ->
-            match head with
-            | Lit l -> CMDLIT l
-            | Delim d -> CMDDELIM d
 
     let (|ASTCOMMAND|ASTPIPE|ASTALWAYS|IGNORE|) (ast: Ast) =
         match ast with
@@ -175,50 +164,49 @@ module Tokeniser =
             {state with Input = rest; AstStack = (Op RightRedirect) :: state.AstStack}
 
 
-    let pushLiteral ch rest state =
-        let newCmd = {Commands = [Literal (ch.ToString())]; AppendMode = AppendToExisting}
+    let addCharToCmd (ch: char) (cmdlst: Literal list) =
+        let lit = Literal (ch.ToString())
+        match cmdlst with
+        | [] ->
+            [lit]
+        | head :: rest ->
+            (head + lit) :: rest
+
+
+    let pushCommand ch rest state =
         match state.AstStack with
         | [] ->
-            pushAst (Cmd newCmd) rest state
+            pushAst (Cmd [Literal (ch.ToString())]) rest state
 
         | topOfStack :: restOfStack ->
             match topOfStack with
             | Op _ ->
-                {state with Input = rest; AstStack = (Cmd newCmd) :: state.AstStack }
+                {state with Input = rest; CmdAppendMode = AppendToExisting; AstStack = (Cmd [Literal (ch.ToString())]) :: state.AstStack}
+
+            | Cmd cmd when state.CmdAppendMode = AppendToExisting ->
+                let updatedCmd = Cmd (addCharToCmd ch cmd)
+                {state with Input = rest; AstStack = updatedCmd :: restOfStack}
 
             | Cmd cmd ->
-                match cmd.AppendMode with
-                | AppendToExisting ->
-                    (* TODO! *)
-
-
-    let flipCommandAppendMode state =
-        match state.AstStack with
-        | [] -> state
-        | head :: rest ->
-            match head with
-            | Op _ -> state
-            | Cmd cmd ->
-                match cmd.AppendMode with
-                | AppendToExisting ->
-                    let flipped = {cmd with AppendMode = StartNew}
-                    {state with AstStack = (Cmd flipped) :: rest }
-
-                | StartNew ->
-                    let flipped = {cmd with AppendMode = AppendToExisting}
-                    {state with AstStack = (Cmd flipped) :: rest}
-
+                let newCmd = (Literal (ch.ToString())) :: cmd
+                {state with Input = rest; CmdAppendMode = AppendToExisting; AstStack = (Cmd newCmd) :: restOfStack}
 
 
     let rec makeAst (state: ParseState) =
+        //printfn "AST > %A" state.AstStack
         match state.Input with
-        | [] -> state.AstStack
+        | [] ->
+            List.map (fun mem ->
+                match mem with
+                | Cmd cmd -> Cmd (cmd |> List.rev)
+                | _ -> mem) state.AstStack
+
         | head :: rest ->
             match head with
             | _ when state.Escape ->
                 // The escape flag was set, so this char loses any special
                 // meaning.
-                makeAst {(pushLiteral head rest state) with Escape = false}
+                makeAst {(pushCommand head rest state) with Escape = false}
 
             | ESCAPE when state.Mode = MatchSpecial ->
                 // Do not push '^', just set escape flag.
@@ -234,10 +222,10 @@ module Tokeniser =
                 makeAst {state with Input = rest; Mode = MatchSpecial}
 
             | _ when state.Mode = IgnoreSpecial ->
-                makeAst (pushLiteral head rest state)
+                makeAst (pushCommand head rest state)
 
             | DELIMITER ->
-                makeAst {state with Input = rest; CmdReader = BuildNewCommand}
+                makeAst {state with Input = rest; CmdAppendMode = StartNew}
 
             | LPAREN ->
                 makeAst (pushLParen rest state)
@@ -258,7 +246,7 @@ module Tokeniser =
                 makeAst (pushRRedirect rest state)
 
             | _ ->
-                makeAst (pushLiteral head rest state)
+                makeAst (pushCommand head rest state)
 
 
 
@@ -293,7 +281,26 @@ module Tokeniser =
         find stack []
 
 
+    let rec popGtEqOperators oper (opstack: Operator list) (accum: Ast list) =
+        if opstack.Length = 0 then
+            (accum, [])
+        else
+            match (oper, opstack.Head) with
+            | HIGHER
+            | EQUAL ->
+                popGtEqOperators oper opstack.Tail (Op opstack.Head :: accum)
+
+            | LOWER ->
+                (accum, opstack)
+
     let rec infixToPrefix (ast: Ast list) (opstack: Operator list) (outstack: Ast list) =
+
+        //printfn "---- infixToPrefix ----"
+        //printfn "AST>%A" ast
+        //printfn "XXXX OPS>%A" opstack
+        //printfn "OUT>%A" outstack
+        //printfn "########################"
+
         match ast with
         | [] ->
             let opers = List.map (fun op -> Op(op)) opstack
@@ -318,20 +325,24 @@ module Tokeniser =
                 infixToPrefix rest (oper :: opstack) outstack
 
             | Op oper ->
-                match (oper, opstack.Head) with
-                | LOWER
-                | EQUAL ->
-                    infixToPrefix rest opstack.Tail (head :: outstack)
-
-                | HIGHER ->
-                    infixToPrefix rest (oper :: opstack) outstack
+                let (outOpers, restOpers) = (popGtEqOperators oper opstack [])
+                infixToPrefix rest (oper :: restOpers) (outOpers @ outstack)
 
 
     let convertAstToPrefix ast =
-        match (infixToPrefix ast [] []) with
+
+        let swapParens astMember =
+            match astMember with
+            | Op LeftParen  -> Op RightParen
+            | Op RightParen -> Op LeftParen
+            | _ -> astMember
+
+        let swappedAst = List.map swapParens ast
+
+        match (infixToPrefix swappedAst [] []) with
         | Ok newAst -> newAst
         | Error reason ->
-            printfn "Error!"
+            printfn "Error! --> %A" reason
             ast
 
 
@@ -341,6 +352,6 @@ module Tokeniser =
             Escape = false
             Input = (cmdstr |> List.ofSeq)
             AstStack = []
-            CmdReader = BuildNewCommand
+            CmdAppendMode = AppendToExisting
         }
-        makeAst reader
+        makeAst reader |> convertAstToPrefix

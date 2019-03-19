@@ -14,7 +14,10 @@ type TestClass () =
     [<Test>]
     member this.Parse() =
 
-        let foo = tokenise "calc&calc"
+        let foo = tokenise "a & b && c"
+
+
+
         printfn "======================"
         printfn "%A" foo
         printfn "======================"
