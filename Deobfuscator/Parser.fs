@@ -7,8 +7,8 @@ type Operator =
     | CondOr
     | CondAlways
     | CondSuccess
-    | LeftParen
-    | RightParen
+    | OpenParen
+    | CloseParen
 
 type Literal =
     | Literal of string
@@ -111,11 +111,11 @@ module Tokeniser =
 
 
     let pushLParen rest state =
-        pushParen (Op LeftParen) rest state
+        pushParen (Op OpenParen) rest state
 
 
     let pushRParen rest state =
-        pushParen (Op RightParen) rest state
+        pushParen (Op CloseParen) rest state
 
 
     let pushPipe rest state =
@@ -253,13 +253,14 @@ module Tokeniser =
     (* AST Translation, from INFIX to PREFIX *)
     let private getPrecedence op =
         match op with
+        | OpenParen _ -> 0
+        | CloseParen _ -> 0
         | CondOr _
         | CondAlways _
         | CondSuccess _ -> 3
         | Pipe _
         | LeftRedirect _
         | RightRedirect _ -> 2
-        | _ -> 1
 
 
     let (|HIGHER|LOWER|EQUAL|) (a, b) =
@@ -270,28 +271,37 @@ module Tokeniser =
         else EQUAL
 
 
-    let findClosingParen (stack: Operator list) =
+    let findOpsUntilOpeningParen (stack: Operator list) =
         let rec find lst accum =
             match lst with
             | [] -> None
             | head :: rest ->
                 match head with
-                | LeftParen -> Some(accum |> List.rev |> List.map (fun x -> (Op x)), rest)
+                | OpenParen -> Some(accum |> List.rev |> List.map (fun x -> (Op x)), rest)
                 | _ -> find rest (head :: accum)
-        find stack []
+
+        match find stack [] with
+        | Some operators -> Ok operators
+        | None -> Error UnbalancedParenthesis
 
 
-    let rec popGtEqOperators oper (opstack: Operator list) (accum: Ast list) =
-        if opstack.Length = 0 then
-            (accum, [])
-        else
-            match (oper, opstack.Head) with
-            | HIGHER
-            | EQUAL ->
-                popGtEqOperators oper opstack.Tail (Op opstack.Head :: accum)
-
-            | LOWER ->
+    let rec popGtEqOperators (oper: Operator) (opstack: Operator list) (accum: Ast list) =
+        match opstack with
+        | [] -> (accum, [])
+        | head :: rest ->
+            match head with
+            | OpenParen ->
                 (accum, opstack)
+
+            | _ ->
+                match (oper, opstack.Head) with
+                | HIGHER
+                | EQUAL ->
+                    // These go in to the accumulator, destined for the outstack.
+                    popGtEqOperators oper opstack.Tail (Op opstack.Head :: accum)
+                | LOWER ->
+                    (accum, opstack)
+
 
     let rec infixToPrefix (ast: Ast list) (opstack: Operator list) (outstack: Ast list) =
 
@@ -311,30 +321,30 @@ module Tokeniser =
             | Cmd cmd ->
                 infixToPrefix rest opstack (head :: outstack)
 
-            | Op LeftParen ->
-                infixToPrefix rest (LeftParen :: opstack) outstack
+            | Op OpenParen ->
+                infixToPrefix rest (OpenParen :: opstack) outstack
 
-            | Op RightParen ->
-                match findClosingParen opstack with
-                | Some (ops, remaining) ->
-                    infixToPrefix rest remaining (ops @ outstack)
-                | None ->
-                    Error UnbalancedParenthesis
+            | Op CloseParen ->
+                match findOpsUntilOpeningParen opstack with
+                | Ok (outstackOpers, remainingOpers) ->
+                    infixToPrefix rest remainingOpers (outstackOpers @ outstack)
+                | Error reason ->
+                    Error reason
 
             | Op oper when opstack.Length = 0 ->
                 infixToPrefix rest (oper :: opstack) outstack
 
             | Op oper ->
-                let (outOpers, restOpers) = (popGtEqOperators oper opstack [])
-                infixToPrefix rest (oper :: restOpers) (outOpers @ outstack)
+                let (higherPrecedenceOpers, remainingOpstack) = popGtEqOperators oper opstack []
+                infixToPrefix rest (oper :: remainingOpstack) (higherPrecedenceOpers @ outstack)
 
 
     let convertAstToPrefix ast =
 
         let swapParens astMember =
             match astMember with
-            | Op LeftParen  -> Op RightParen
-            | Op RightParen -> Op LeftParen
+            | Op OpenParen  -> Op CloseParen
+            | Op CloseParen -> Op OpenParen
             | _ -> astMember
 
         let swappedAst = List.map swapParens ast

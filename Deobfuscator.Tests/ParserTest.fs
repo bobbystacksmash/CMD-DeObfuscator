@@ -14,12 +14,11 @@ type TestClass () =
     [<Test>]
     member this.Parse() =
 
-        let foo = tokenise "a & b && c"
-
-
+        //let foo = tokenise "(A & B) | C && D"
+        let bar = tokenise "FOR /F \%\%G IN ('\"C:\program Files\command.exe\"') DO ECHO \%\%G"
 
         printfn "======================"
-        printfn "%A" foo
+        printfn "%A" bar
         printfn "======================"
 
         Assert.IsTrue(false)
