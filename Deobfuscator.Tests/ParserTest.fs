@@ -14,78 +14,98 @@ type TestClass () =
     [<Test>]
     member this.Parse() =
 
-        //let foo = tokenise "(A & B) | C && D"
-        let bar = tokenise "FOR /F \%\%G IN ('\"C:\program Files\command.exe\"') DO ECHO \%\%G"
-
+        let foo = tokenise "x=y"
         printfn "======================"
-        printfn "%A" bar
+        printfn "%A" foo
         printfn "======================"
-
         Assert.IsTrue(false)
 
 
-    (*[<Test>]
-    member this.Tokenise() =
+    [<Test>]
+    member this.AstVerify() =
 
-        let LP = Parenthesis(LeftParen)
-        let RP = Parenthesis(RightParen)
-        let CA = Operator(CondAlways)
-        let CS = Operator(CondSuccess)
-        let PI = Operator(Pipe)
-        let CO = Operator(CondOr)
-        let QT = Quote
-        let SP = Delimiter
+        let LP = Op OpenParen
+        let RP = Op CloseParen
+        let CA = Op CondAlways
+        let CS = Op CondSuccess
+        let PI = Op Pipe
+        let CO = Op CondOr
 
         let str2lit str = Literal str
 
         let tests = [
             // Special char identification
-            ("(", [LP], "Identify left paren")
-            (")", [RP], "Identify right paren")
-            ("()", [LP; RP], "Identify left and right parens")
             ("&",  [CA], "Identify CondAlways")
             ("&&", [CS], "Identify CondSuccess")
             ("|",  [PI], "Identify Pipe")
             ("||", [CO], "Identify CondOr")
 
             // Literals
-            ("calc", [str2lit "calc"], "Read literals.")
+            ("calc", [(Cmd [Literal "calc"])], "Read literals.")
+            ("echo=foo", [Cmd [Literal "echo" ; Literal "=" ; Literal "foo";]], "Handle delimiters")
 
             // Quotes & Escapes
-            ("c^alc", [str2lit "calc"], "Read escaped literals as literals.")
-            ("^c^a^l^c", [str2lit "calc"], "Read escaped literals as literals.")
-            ("\"&^()!\"", [QT; str2lit "&^()!"; QT], "Special chars within quotes are ignored.")
-            ("^&", [str2lit "&"], "Escape a special char.")
-            ("^\"&", [str2lit "\""; CA], "Can escape double quotes.")
+            ("c^alc", [Cmd [Literal "calc"]], "Read escaped literals as literals.")
+            ("^c^a^l^c", [Cmd [Literal "calc"]], "Read escaped literals as literals.")
+            ("\"calc\"", [Cmd [Literal "\"calc\""]], "Identify quotes around literals.")
+            ("\"&^()!\"", [Cmd [Literal "\"&^()!\""]], "Special chars within quotes are literals.")
+            ("^&", [Cmd [Literal "&"]], "Escape a special char.")
+            ("^\"&", [Op CondAlways ; Cmd [Literal "\""]], "Can escape double quotes.")
 
             // Conditionals & Redirections
-            ("a|b", [str2lit "a"; PI; str2lit "b"], "Identify pipes without delimiters.")
-            ("a && b", [str2lit "a"; SP; CondSuccess; SP; str2lit "b"], "& become &&")
+            ("a|b", [Op Pipe ; Cmd [Literal "a"] ; Cmd [Literal "b"]], "Identify pipes without delimiters.")
+            ("a && b", [Op CondSuccess ; Cmd [Literal "a" ; Literal " "] ; Cmd [Literal " " ; Literal "b"]], "Identify cond-success with delims.")
 
             // Commands
             (
                 "cmd /C \"echo hello\"",
-                [str2lit "cmd"; SP; str2lit "/C"; SP; QT; str2lit "echo hello"; QT],
+                [Cmd [Literal "cmd" ; Literal " " ; Literal "/C" ; Literal " " ; Literal "\"echo hello\""]],
                 "Tokenise a command."
+            )
+            (
+                "echo hello,world",
+                [Cmd [Literal "echo" ; Literal " " ; Literal "hello"; Literal "," ; Literal "world"]],
+                "Handle delimiters correctly."
+            )
+
+            // Conditionals
+            (
+                "if 1 == 1 echo test",
+                [Cmd
+                    [
+                        Literal "if"
+                        Literal " "
+                        Literal "1"
+                        Literal " "
+                        Literal "="
+                        Literal "="
+                        Literal " "
+                        Literal "1"
+                        Literal " "
+                        Literal "echo"
+                        Literal " "
+                        Literal "test"
+                    ]
+                ],
+                "Parse a conditional."
             )
         ]
 
-        Assert.IsTrue(true)
-
+        // TODO: Add checking for parser errors.
         tests |> List.iter (fun test ->
             let input, expected, msg = test
             let actual = tokenise input
-            printfn "========================="
-            printfn "Input    -> %A" input
-            printfn "Actual   -> %A" actual
-            printfn "Expected -> %A" expected
-            printfn "========================="
-            Assert.That(actual, Is.EqualTo(expected))
-        )*)
-
-
-    (*[<Test>]
-    member this.Translation() =
-        let tokens = tokenise "FOR \%G IN (MyFile.txt foo.bar) DO (echo foo && copy \%G d:\\backups\\)"
-        let translated = translate tokens
-        Assert.IsTrue(false);*)
+            match tokenise input with
+            | Ok actual ->
+                printfn "========================="
+                printfn "Input    -> %A" input
+                printfn "Actual   -> %A" actual
+                printfn "Expected -> %A" expected
+                printfn "========================="
+                Assert.That(actual, Is.EqualTo(expected))
+            | Error reason ->
+                printfn "FAILED WHILE PARSING INPUT:"
+                printfn "%A" input
+                printfn "EXPECTED: %A" expected
+                Assert.Fail(sprintf "Error while parsing expression -> %A" reason)
+        )

@@ -192,8 +192,23 @@ module Tokeniser =
                 {state with Input = rest; CmdAppendMode = AppendToExisting; AstStack = (Cmd newCmd) :: restOfStack}
 
 
+    let pushDelimiter ch rest state =
+        let litcmd = Literal (ch.ToString())
+        match state.AstStack with
+        | [] ->
+            pushAst (Cmd [litcmd]) rest state
+
+        | topOfStack :: restOfStack ->
+            match topOfStack with
+            | Op _ ->
+                {state with Input = rest; CmdAppendMode = StartNew; AstStack = (Cmd [litcmd]) :: state.AstStack }
+
+            | Cmd cmd ->
+                let newCmd = litcmd :: cmd
+                {state with Input = rest; CmdAppendMode = StartNew; AstStack = (Cmd newCmd) :: restOfStack}
+
+
     let rec makeAst (state: ParseState) =
-        //printfn "AST > %A" state.AstStack
         match state.Input with
         | [] ->
             List.map (fun mem ->
@@ -216,16 +231,16 @@ module Tokeniser =
                 // A quote toggles the matching of special chars.  The default state is to
                 // MATCH special chars.  After the first QUOTE we IGNORE special chars.  This
                 // mode flips each time a QUOTE is seen.
-                makeAst {state with Input = rest; Escape = false; Mode = IgnoreSpecial}
+                makeAst (pushCommand head rest {state with Input = rest; Escape = false; Mode = IgnoreSpecial})
 
             | QUOTE ->
-                makeAst {state with Input = rest; Mode = MatchSpecial}
+                makeAst (pushCommand head rest {state with Input = rest; Mode = MatchSpecial})
 
             | _ when state.Mode = IgnoreSpecial ->
                 makeAst (pushCommand head rest state)
 
             | DELIMITER ->
-                makeAst {state with Input = rest; CmdAppendMode = StartNew}
+                makeAst (pushDelimiter head rest state)
 
             | LPAREN ->
                 makeAst (pushLParen rest state)
@@ -350,10 +365,11 @@ module Tokeniser =
         let swappedAst = List.map swapParens ast
 
         match (infixToPrefix swappedAst [] []) with
-        | Ok newAst -> newAst
+        | Ok newAst -> Ok newAst
         | Error reason ->
             printfn "Error! --> %A" reason
-            ast
+            Error reason
+
 
 
     let tokenise (cmdstr: string) =
