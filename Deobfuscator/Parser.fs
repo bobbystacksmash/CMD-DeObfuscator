@@ -10,9 +10,10 @@ type Operator =
     | OpenParen
     | CloseParen
 
-type Literal =
+type Token =
     | Literal of string
-    static member (+) (a: Literal, b: Literal) =
+    | Delimiter of string
+    static member (+) (a: Token, b: Token) =
         let (Literal strA) = a
         let (Literal strB) = b
         Literal(strA + strB)
@@ -22,11 +23,11 @@ type CommandAppendMode =
     | StartNew
 
 type Ast =
-    | Cmd of Literal list
+    | Cmd of Token list
     | Op of Operator
 
 type CommandExpr =
-    | Command of Literal list
+    | Command of Token list
     | Oper of Operator
 
 type ReadMode =
@@ -164,7 +165,7 @@ module Tokeniser =
             {state with Input = rest; AstStack = (Op RightRedirect) :: state.AstStack}
 
 
-    let addCharToCmd (ch: char) (cmdlst: Literal list) =
+    let addCharToCmd (ch: char) (cmdlst: Token list) =
         let lit = Literal (ch.ToString())
         match cmdlst with
         | [] ->
@@ -193,7 +194,7 @@ module Tokeniser =
 
 
     let pushDelimiter ch rest state =
-        let litcmd = Literal (ch.ToString())
+        let litcmd = Delimiter (ch.ToString())
         match state.AstStack with
         | [] ->
             pushAst (Cmd [litcmd]) rest state
@@ -354,7 +355,7 @@ module Tokeniser =
                 infixToPrefix rest (oper :: remainingOpstack) (higherPrecedenceOpers @ outstack)
 
 
-    let convertAstToPrefix ast =
+    let toPrefix ast =
 
         let swapParens astMember =
             match astMember with
@@ -371,8 +372,7 @@ module Tokeniser =
             Error reason
 
 
-
-    let tokenise (cmdstr: string) =
+    let parse (cmdstr: string) =
         let reader = {
             Mode = MatchSpecial
             Escape = false
@@ -380,4 +380,4 @@ module Tokeniser =
             AstStack = []
             CmdAppendMode = AppendToExisting
         }
-        makeAst reader |> convertAstToPrefix
+        makeAst reader |> toPrefix
