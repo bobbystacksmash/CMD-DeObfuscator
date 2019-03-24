@@ -81,6 +81,7 @@ type InstructionExpression = {
 type InterpreterStatus =
     | Halted
     | CommandError
+    | CannotIdentifyInstruction
     | CommandBlockIsEmpty
 
 type InterpreterResult =
@@ -111,22 +112,47 @@ module Interpreter =
         | Delimiter d -> d
         | Literal   l -> l
 
+    let argsToString args =
+        args |> List.map tokenToString |> List.fold (+) ""
+
 
     let private cmdExternal ctx args =
         Error (Failure, ctx)
 
 
+    let private cmdCmd ctx args =
+        printfn "@CMD %s" (argsToString args)
+        Ok (Success, ctx)
+
+
     let private cmdEcho ctx args =
-        let output  = (trimDelimiters args) |> List.map tokenToString |> List.fold (+) ""
+        let output  = argsToString args
         printfn "@ECHO %s" output
         Ok (Success, {ctx with StdOut = output; Log = (sprintf "echo %s" output :: ctx.Log)})
 
 
-    let private identifyCommand cmd args =
-        let (Literal strval) = cmd
-        match strval.ToUpper() with
-        | "ECHO" -> (fun (ctx) -> cmdEcho ctx args)
-        | _ -> (fun (ctx) -> cmdExternal ctx args)
+    let private cmdSet ctx args =
+        printfn "@SET %A" args
+        Ok (Success, ctx)
+
+
+    let private wrapCmd fn args =
+        fun ctx -> (fn ctx args)
+
+
+    let private identifyCommand instr args =
+        let trimmedArgs = trimDelimiters args
+        match instr with
+        | Literal strcmd ->
+            match strcmd.ToUpper() with
+            | "CMD"  -> Ok (wrapCmd cmdCmd  trimmedArgs)
+            | "ECHO" -> Ok (wrapCmd cmdEcho trimmedArgs)
+            | "SET"  -> Ok (wrapCmd cmdSet  trimmedArgs)
+            | _      -> Ok (fun ctx -> (cmdExternal ctx trimmedArgs))
+
+        | Delimiter _ ->
+            Error CannotIdentifyInstruction
+
 
 
 
@@ -136,7 +162,7 @@ module Interpreter =
             Error CommandBlockIsEmpty
 
         | head :: rest ->
-            Ok (identifyCommand head rest)
+            identifyCommand head rest
 
 
     let rec private dispatchCommand ctx cmd =
