@@ -132,7 +132,7 @@ module Interpreter =
 
 
     let private cmdSet ctx args =
-        printfn "@SET %A" args
+        printfn "@SET %A" (argsToString args)
         Ok (Success, ctx)
 
 
@@ -193,8 +193,12 @@ module Interpreter =
                 astWalk ctx rest
 
             | Cmd cmd ->
-                dispatchCommand ctx cmd
-                astWalk ctx rest
+                match (dispatchCommand ctx cmd) with
+                | (Halted, newCtx) ->
+                    astWalk newCtx rest
+
+                | (_, errCtx) ->
+                    (CommandError, errCtx)
 
 
     let evaluate cmdctx =
