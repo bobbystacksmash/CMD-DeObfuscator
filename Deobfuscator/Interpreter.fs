@@ -6,7 +6,7 @@ open Deobfuscator.Tokeniser
 // Internal commands, found at:
 // - https://ss64.com/nt/syntax-internal.html
 //
-type CommandToken =
+type InternalCommand =
     | Assoc
     | Break
     | Call
@@ -52,89 +52,133 @@ type CommandToken =
     | Ver
     | Verify
     | Vol
-    | ExternalCommand of Token
+
+type ExternalCommand =
+    | ExternalCommand of string
 
 
-type Instruction = Instruction of CommandToken
-type Command = {
-    Instruction: Instruction
-    Arguments: Token list
+type CommandContext = {
+    EnvVars: Map<string,string>
+    StdOut: string
+    InputCmd: string
 }
 
+type CommandStatus =
+    | Success
+    | Failure
 
-type CommandBlock = {
-    CurrentCommand: Command option
-    RemainingTokens: Token list option
+type Command =
+    | ICmd of InternalCommand
+    | ECmd of ExternalCommand
+
+type InstructionExpression = {
+    Instruction: Command
+    Args: Token list
 }
 
+type InterpreterStatus =
+    | Halted
+    | CommandError
+    | CommandBlockIsEmpty
 
-type IdentifyCommandMode =
-    | LookingForCommandToken
-    | LookingForGroupTerminal
-    | LookingForCommandTerminator
-
-
-type IdentifyCommandResult =
-    | NoMoreTokens
+type InterpreterResult =
+    | Status of InterpreterStatus * CommandContext
 
 
-type CommandIdentifier = {
-    ReadMode: IdentifyCommandMode
-    ParenCounter: int
-}
+module Interpreter =
 
-type EnvironmentFlags =
-    | EnableCommandExtensions
-    | DisableCommandExtensions
-    | EnableDelayedExpansion
-    | DisableDelayedExpansion
-
-
-type CommandEnvironment = {
-    Flags: EnvironmentFlags list
-    Vars: Map<string,string>
-    Cmdstr: string
-    Commands: Command list // holds each of the commands that were run
-}
-
-
-// Represents CMD.EXE running in command-line mode
-// ===============================================
-//
-//
-module CommandInterpreter =
-
-    let toLookingForGTerm ctx =
-        {ctx with ReadMode = LookingForGroupTerminal}
-
-
-
-    let rec exec ctx tokens =
-        match tokens with
+    let rec trimLeadingDelims lst =
+        match lst with
+        | [] -> lst
         | head :: rest ->
             match head with
-            | LeftParen _ when ctx.ReadMode = LookingForCommandToken ->
-                
+            | Delimiter _ -> trimLeadingDelims rest
+            | _ -> lst
+
+
+    let trimTrailingDelims lst =
+        lst |> List.rev |> trimLeadingDelims |> List.rev
+
+
+    let trimDelimiters lst =
+        trimLeadingDelims lst |> trimTrailingDelims
+
+
+    let tokenToString tok =
+        match tok with
+        | Delimiter d -> d
+        | Literal   l -> l
+
+
+    let private cmdExternal ctx args =
+        Error (Failure, ctx)
+
+
+    let private cmdEcho ctx args =
+
+        let output = (trimDelimiters args) |> List.map tokenToString |> List.fold (+) ""
+        printfn "@ECHO %s" output
+        Ok (Success, {ctx with StdOut = output})
+
+
+    let private identifyCommand cmd args =
+        let (Literal strval) = cmd
+        match strval.ToUpper() with
+        | "ECHO" -> (fun (ctx) -> cmdEcho ctx args)
+        | _ -> (fun (ctx) -> cmdExternal ctx args)
 
 
 
-    let identifyCommand (tokens: Token list) =
+    let tryIdentifyCommand cmd =
+        match (cmd |> trimDelimiters) with
+        | [] ->
+            Error CommandBlockIsEmpty
 
-        let ctx = {
-            ReadMode = LookingForCommandToken
-            ParenCounter = 0
-        }
-
-        exec ctx tokens
-
-// C:\Windows\System32\cmd.exe /V /c set %foo%=bar&&set %abc%=def...
+        | head :: rest ->
+            Ok (identifyCommand head rest)
 
 
+    let rec private dispatchCommand ctx cmd =
+
+        let cmdfunc = (tryIdentifyCommand cmd)
+
+        match (tryIdentifyCommand cmd) with
+        | Ok cmdfunc ->
+            (* Run the command! *)
+            match (cmdfunc ctx) with
+            | Ok (_, newctx) ->
+                (Halted, newctx)
+
+            | Error (reason, errctx) ->
+                (CommandError, errctx)
+
+        | Error reason ->
+            (CommandError, ctx)
 
 
 
+    let rec private astWalk (ctx: CommandContext) ast =
+        match ast with
+        | [] -> (Halted, ctx)
+        | head :: rest ->
+            match head with
+            | Op CondAlways ->
+                astWalk ctx rest
+
+            | Cmd cmd ->
+                dispatchCommand ctx cmd
 
 
+
+    let evaluate cmdctx =
+        let expanded = expand (cmdctx.InputCmd.Trim()) cmdctx.EnvVars
+        match parse expanded with
+        | Ok ast ->
+            printfn "-- start interpreting AST --"
+            Ok (astWalk cmdctx ast)
+        | Error reason ->
+            printfn "Error parsing input command -> %A" reason
+            Error reason
 
 //
 // PARENTHESIS

@@ -2,7 +2,7 @@ namespace Deobfuscator.Tests.Interpreter
 
 open System
 open NUnit.Framework
-open Deobfuscator.Tokeniser
+open Deobfuscator
 open Deobfuscator.Interpreter
 open NUnit.Framework
 
@@ -12,8 +12,16 @@ type TestClass () =
     [<Test>]
     member this.Interpret() =
         let vars   = Map.empty.Add("COMSPEC", "C:\\Windows\\System32\\cmd.exe")
-        let result = execute vars "\"%COMSPEC%\"/ccalc & echo foo"
+        let cmdctx = {
+            EnvVars = vars
+            StdOut = String.Empty
+            // TODO: Configure the default CMD environment.
+            InputCmd = "echo x & echo y"
+        }
 
-        printfn "RES -> %A" result
+        let result = evaluate cmdctx
+        printfn "===================="
+        printfn "%A" result
+        printfn "===================="
 
         Assert.IsTrue(false)
