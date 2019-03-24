@@ -12,28 +12,30 @@ type TestClass () =
     [<Test>]
     member this.SimpleSet() =
 
-        let tests = [
-            ("set foo=bar", "Assign unquoted and without args key/val.")
-        ]
-
         let expectedEnvVars = Map.empty.Add("foo", "bar")
 
-        tests |> List.iter (fun test ->
+        let tests = [
+            ("set foo=bar", "Assign unquoted and without args key/val.", expectedEnvVars)
+            ("set \"foo=bar\"", "Assignment is between double quotes.", expectedEnvVars)
+        ]
 
-            let input, desc = test
+
+        tests |> List.iter (fun t ->
+
+            let (cmd, msg, expectedVars) = t
 
             let cmdctx = {
                 EnvVars = Map.empty
                 StdOut = String.Empty
                 StdIn  = String.Empty
                 Log = []
-                InputCmd = input
+                InputCmd = cmd
             }
 
             match (evaluate cmdctx) with
             | Ok (status, resctx) ->
                 printfn "========================="
-                printfn "EXPECTED > %A" expectedEnvVars
+                printfn "EXPECTED > %A" expectedVars
                 printfn "GOT      > %A" resctx.EnvVars
                 printfn "========================="
                 Assert.That(resctx.EnvVars, Is.EqualTo(expectedEnvVars))
