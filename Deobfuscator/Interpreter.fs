@@ -60,6 +60,8 @@ type ExternalCommand =
 type CommandContext = {
     EnvVars: Map<string,string>
     StdOut: string
+    StdIn: string
+    Log: string list
     InputCmd: string
 }
 
@@ -115,10 +117,9 @@ module Interpreter =
 
 
     let private cmdEcho ctx args =
-
-        let output = (trimDelimiters args) |> List.map tokenToString |> List.fold (+) ""
+        let output  = (trimDelimiters args) |> List.map tokenToString |> List.fold (+) ""
         printfn "@ECHO %s" output
-        Ok (Success, {ctx with StdOut = output})
+        Ok (Success, {ctx with StdOut = output; Log = (sprintf "echo %s" output :: ctx.Log)})
 
 
     let private identifyCommand cmd args =
@@ -167,7 +168,7 @@ module Interpreter =
 
             | Cmd cmd ->
                 dispatchCommand ctx cmd
-
+                astWalk ctx rest
 
 
     let evaluate cmdctx =

@@ -15,6 +15,8 @@ type TestClass () =
         let cmdctx = {
             EnvVars = vars
             StdOut = String.Empty
+            StdIn  = String.Empty
+            Log = []
             // TODO: Configure the default CMD environment.
             InputCmd = "echo x & echo y"
         }
