@@ -12,14 +12,14 @@ open NUnit.Framework
 [<TestFixture>]
 type TestClass () =
 
-    [<Test>]
+    (*[<Test>]
     member this.Parse() =
 
         let foo = parse "x=y"
         printfn "======================"
         printfn "%A" foo
         printfn "======================"
-        Assert.IsTrue(false)
+        Assert.IsTrue(false)*)
 
 
     [<Test>]
@@ -43,7 +43,7 @@ type TestClass () =
 
             // Literals
             ("calc", [(Cmd [Literal "calc"])], "Read literals.")
-            ("echo=foo", [Cmd [Literal "echo" ; Literal "=" ; Literal "foo";]], "Handle delimiters")
+            ("echo=foo", [Cmd [Literal "echo" ; Delimiter "=" ; Literal "foo";]], "Handle delimiters")
 
             // Quotes & Escapes
             ("c^alc", [Cmd [Literal "calc"]], "Read escaped literals as literals.")
@@ -55,17 +55,17 @@ type TestClass () =
 
             // Conditionals & Redirections
             ("a|b", [Op Pipe ; Cmd [Literal "a"] ; Cmd [Literal "b"]], "Identify pipes without delimiters.")
-            ("a && b", [Op CondSuccess ; Cmd [Literal "a" ; Literal " "] ; Cmd [Literal " " ; Literal "b"]], "Identify cond-success with delims.")
+            ("a && b", [Op CondSuccess ; Cmd [Literal "a" ; Delimiter " "] ; Cmd [Delimiter " " ; Literal "b"]], "Identify cond-success with delims.")
 
             // Commands
             (
                 "cmd /C \"echo hello\"",
-                [Cmd [Literal "cmd" ; Literal " " ; Literal "/C" ; Literal " " ; Literal "\"echo hello\""]],
+                [Cmd [Literal "cmd" ; Delimiter " " ; Literal "/C" ; Delimiter " " ; Literal "\"echo hello\""]],
                 "Tokenise a command."
             )
             (
                 "echo hello,world",
-                [Cmd [Literal "echo" ; Literal " " ; Literal "hello"; Literal "," ; Literal "world"]],
+                [Cmd [Literal "echo" ; Delimiter " " ; Literal "hello"; Delimiter "," ; Literal "world"]],
                 "Handle delimiters correctly."
             )
 
@@ -75,16 +75,16 @@ type TestClass () =
                 [Cmd
                     [
                         Literal "if"
-                        Literal " "
+                        Delimiter " "
                         Literal "1"
-                        Literal " "
-                        Literal "="
-                        Literal "="
-                        Literal " "
+                        Delimiter " "
+                        Delimiter "="
+                        Delimiter "="
+                        Delimiter " "
                         Literal "1"
-                        Literal " "
+                        Delimiter " "
                         Literal "echo"
-                        Literal " "
+                        Delimiter " "
                         Literal "test"
                     ]
                 ],
@@ -99,6 +99,7 @@ type TestClass () =
             match parse input with
             | Ok actual ->
                 printfn "========================="
+                printfn "Name     -> %A" msg
                 printfn "Input    -> %A" input
                 printfn "Actual   -> %A" actual
                 printfn "Expected -> %A" expected
