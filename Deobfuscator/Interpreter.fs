@@ -122,6 +122,12 @@ module Interpreter =
         fun ctx -> (fn ctx args)
 
 
+    let private handleExternalCommand strCmd args =
+        let argstr = argsToString args
+        printfn "@%s %s" strCmd argstr
+        Ok (fun ctx -> cmdExternal ctx args)
+
+
     let private identifyCommand instr args =
         let trimmedArgs = trimDelimiters args
         match instr with
@@ -130,7 +136,7 @@ module Interpreter =
             | "CMD"  -> Ok (wrapCmd cmdCmd  trimmedArgs)
             | "ECHO" -> Ok (wrapCmd cmdEcho trimmedArgs)
             | "SET"  -> Ok (wrapCmd cmdSet  trimmedArgs)
-            | _      -> Ok (fun ctx -> (cmdExternal ctx trimmedArgs))
+            | _      -> handleExternalCommand strcmd args
 
         | Delimiter _ ->
             Error CannotIdentifyInstruction

@@ -17,6 +17,8 @@
     <Compile Include="ParserTest.fs" />
     <Compile Include="InterpreterTest.fs" />
     <Compile Include="Commands/SetTest.fs" />
+    <Compile Include="DOSfuscation/WhitepaperTests.fs" />
+    <Compile Include="ArgParserTest.fs" />
   </ItemGroup>
 
   <ItemGroup>
