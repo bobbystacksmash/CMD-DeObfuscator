@@ -13,7 +13,7 @@ type TestClass () =
     [<Test>]
     member this.SimpleSet() =
 
-        let expectedEnvVars = Map.empty.Add("foo", "bar")
+        let expectedEnvVars = Map.empty.Add("FOO", "bar")
 
         let tests = [
             ("set foo=bar", "Assign unquoted and without args key/val.", expectedEnvVars)
