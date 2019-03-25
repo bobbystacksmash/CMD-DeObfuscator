@@ -1,4 +1,4 @@
-namespace Deobfuscator
+namespace Deobfuscator.Preprocessor
 
 open System.Text.RegularExpressions
 

@@ -25,7 +25,7 @@ type ParseState = {
 type ParseStatus =
     | UnbalancedParenthesis
 
-module Tokeniser =
+module Parser =
 
     let (|PIPE|_|) ch =
         if ch = '|' then Some PIPE

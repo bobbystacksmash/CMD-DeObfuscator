@@ -4,6 +4,7 @@ open System
 open NUnit.Framework
 open Deobfuscator
 open Deobfuscator.Interpreter
+open Deobfuscator.DomainTypes
 open NUnit.Framework
 
 [<TestFixture>]

@@ -1,9 +1,9 @@
 namespace Deobfuscator
 
 open Deobfuscator.DomainTypes
-open Deobfuscator.Tokeniser
-open Deobfuscator.Commands
-open Deobfuscator.ExpanderWithCommandExtensions
+open Deobfuscator.Parser
+open Deobfuscator.Instruction
+open Deobfuscator.Preprocessor.ExpanderWithCommandExtensions
 
 
 // Internal commands, found at:

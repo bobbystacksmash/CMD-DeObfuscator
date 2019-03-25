@@ -1,10 +1,11 @@
-namespace Deobfuscator.Tests.Tokeniser
+namespace Deobfuscator.Tests.ParserTest
 
 open System
 open System.Text.RegularExpressions
 open NUnit.Framework
 open Deobfuscator
-open Deobfuscator.Tokeniser
+open Deobfuscator.DomainTypes
+open Deobfuscator.Parser
 //open Deobfuscator.Translator
 open NUnit.Framework
 
@@ -14,7 +15,7 @@ type TestClass () =
     [<Test>]
     member this.Parse() =
 
-        let foo = tokenise "x=y"
+        let foo = parse "x=y"
         printfn "======================"
         printfn "%A" foo
         printfn "======================"
@@ -94,8 +95,8 @@ type TestClass () =
         // TODO: Add checking for parser errors.
         tests |> List.iter (fun test ->
             let input, expected, msg = test
-            let actual = tokenise input
-            match tokenise input with
+            let actual = parse input
+            match parse input with
             | Ok actual ->
                 printfn "========================="
                 printfn "Input    -> %A" input

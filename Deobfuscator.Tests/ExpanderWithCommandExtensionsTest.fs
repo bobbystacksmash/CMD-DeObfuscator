@@ -2,8 +2,8 @@ namespace Deobfuscator.Tests.Expander
 
 open System
 open NUnit.Framework
-open Deobfuscator.Expander
-open Deobfuscator.Expander.ExpanderWithCommandExtensions
+open Deobfuscator.Preprocessor
+open Deobfuscator.Preprocessor.ExpanderWithCommandExtensions
 
 [<TestFixture>]
 type TestClass () =

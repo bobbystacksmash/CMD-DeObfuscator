@@ -3,6 +3,7 @@ namespace Deobfuscator.Tests.Interpreter.Commands.Set
 open System
 open NUnit.Framework
 open Deobfuscator
+open Deobfuscator.DomainTypes
 open Deobfuscator.Interpreter
 open NUnit.Framework
 

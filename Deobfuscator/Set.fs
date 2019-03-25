@@ -1,4 +1,4 @@
-namespace Deobfuscator.Commands
+namespace Deobfuscator.Instruction
 
 open Deobfuscator.DomainTypes
 
