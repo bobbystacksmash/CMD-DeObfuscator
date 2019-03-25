@@ -15,7 +15,10 @@ module CommandSet =
             else
                 expr
 
-        trimQuotes expr
+        let trimLeadingQuote expr =
+            Regex.Replace(expr, "^\"", "")
+
+        trimQuotes expr |> trimLeadingQuote
 
 
     let private (|SetExpr|_|) expr =

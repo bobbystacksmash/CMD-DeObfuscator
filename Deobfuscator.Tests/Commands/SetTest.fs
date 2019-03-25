@@ -18,8 +18,9 @@ type TestClass () =
         let tests = [
             ("set foo=bar", "Assign unquoted and without args key/val.", expectedEnvVars)
             ("set \"foo=bar\"", "Assignment is between double quotes.", expectedEnvVars)
+            ("set \"foo=bar", "Assignment has leading double quote.", expectedEnvVars)
+            ("set foo=bar\"", "Leave trailing double quote.", Map.empty.Add("FOO", "bar\""))
         ]
-
 
         tests |> List.iter (fun t ->
 
@@ -39,7 +40,7 @@ type TestClass () =
                 printfn "EXPECTED > %A" expectedVars
                 printfn "GOT      > %A" resctx.EnvVars
                 printfn "========================="
-                Assert.That(resctx.EnvVars, Is.EqualTo(expectedEnvVars))
+                Assert.That(resctx.EnvVars, Is.EqualTo(expectedVars))
 
             | Error reason ->
                 Assert.Fail("Failed!")
