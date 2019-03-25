@@ -1,30 +1,10 @@
 namespace Deobfuscator
 
-type Operator =
-    | Pipe
-    | LeftRedirect
-    | RightRedirect
-    | CondOr
-    | CondAlways
-    | CondSuccess
-    | OpenParen
-    | CloseParen
-
-type Token =
-    | Literal of string
-    | Delimiter of string
-    static member (+) (a: Token, b: Token) =
-        let (Literal strA) = a
-        let (Literal strB) = b
-        Literal(strA + strB)
+open Deobfuscator.DomainTypes
 
 type CommandAppendMode =
     | AppendToExisting
     | StartNew
-
-type Ast =
-    | Cmd of Token list
-    | Op of Operator
 
 type CommandExpr =
     | Command of Token list

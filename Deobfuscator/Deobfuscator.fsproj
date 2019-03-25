@@ -5,7 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="ExpanderWithCommandExtensions.fs" />
+    <Compile Include="DomainTypes.fs" />
+    <Compile Include="Expander.fs" />
+    <Compile Include="Set.fs" />
+    <Compile Include="Echo.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="Interpreter.fs" />
   </ItemGroup>

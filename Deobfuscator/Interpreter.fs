@@ -1,7 +1,10 @@
 namespace Deobfuscator
 
-open Deobfuscator.Expander.ExpanderWithCommandExtensions
+open Deobfuscator.DomainTypes
 open Deobfuscator.Tokeniser
+open Deobfuscator.Commands
+open Deobfuscator.ExpanderWithCommandExtensions
+
 
 // Internal commands, found at:
 // - https://ss64.com/nt/syntax-internal.html
@@ -57,18 +60,6 @@ type ExternalCommand =
     | ExternalCommand of string
 
 
-type CommandContext = {
-    EnvVars: Map<string,string>
-    StdOut: string
-    StdIn: string
-    Log: string list
-    InputCmd: string
-}
-
-type CommandStatus =
-    | Success
-    | Failure
-
 type Command =
     | ICmd of InternalCommand
     | ECmd of ExternalCommand
@@ -77,16 +68,6 @@ type InstructionExpression = {
     Instruction: Command
     Args: Token list
 }
-
-type InterpreterStatus =
-    | Halted
-    | CommandError
-    | CannotIdentifyInstruction
-    | CommandBlockIsEmpty
-
-type InterpreterResult =
-    | Status of InterpreterStatus * CommandContext
-
 
 module Interpreter =
 
@@ -117,23 +98,24 @@ module Interpreter =
 
 
     let private cmdExternal ctx args =
-        Error (Failure, ctx)
+        Ok (CommandSuccess, ctx)
 
 
     let private cmdCmd ctx args =
         printfn "@CMD %s" (argsToString args)
-        Ok (Success, ctx)
+        Ok (CommandSuccess, ctx)
 
 
     let private cmdEcho ctx args =
         let output  = argsToString args
         printfn "@ECHO %s" output
-        Ok (Success, {ctx with StdOut = output; Log = (sprintf "echo %s" output :: ctx.Log)})
+        Ok (CommandSuccess, {ctx with StdOut = output; Log = (sprintf "echo %s" output :: ctx.Log)})
 
 
-    let private cmdSet ctx args =
-        printfn "@SET %A" (argsToString args)
-        Ok (Success, ctx)
+    let private cmdSet (ctx: CommandContext) args =
+        let argstr = argsToString args
+        printfn "@SET %A" argstr
+        CommandSet.CmdSet ctx args argstr
 
 
     let private wrapCmd fn args =
