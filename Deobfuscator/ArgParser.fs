@@ -7,6 +7,7 @@ type private ArgParseState = {
     Escape: bool
     Input: char list
     Output: string list
+    StartNew: bool
 }
 
 module ArgumentParser =
@@ -16,15 +17,12 @@ module ArgumentParser =
         match ctx.Output with
         | [] -> {ctx with Output = [str]}
         | head :: _ ->
-            {ctx with Output = (ctx.Output.Head + str) :: ctx.Output.Tail}
+            match head with
+            | _ when ctx.StartNew ->
+                {ctx with Output = str :: ctx.Output ; StartNew = false}
 
-
-    let private pushStrSep ctx ch =
-        let str = ch.ToString()
-        match ctx.Output with
-        | [] -> {ctx with Output = [str]}
-        | head :: _ ->
-            {ctx with Output = str :: ctx.Output}
+            | _ ->
+                {ctx with Output = (ctx.Output.Head + str) :: ctx.Output.Tail}
 
 
     let rec private parseArgstr (ctx: ArgParseState) =
@@ -35,6 +33,9 @@ module ArgumentParser =
             | _ when ctx.Escape ->
                 parseArgstr {(pushStr ctx head) with Escape = false; Input = rest}
 
+            | '\\' when ctx.Mode = MatchSpecial ->
+                parseArgstr {ctx with Escape = true}
+
             | '"' when ctx.Mode = IgnoreSpecial ->
                 parseArgstr {ctx with Mode = MatchSpecial; Input = rest}
 
@@ -42,7 +43,7 @@ module ArgumentParser =
                 parseArgstr {ctx with Mode = IgnoreSpecial; Input = rest}
 
             | ' ' when ctx.Mode = MatchSpecial ->
-                parseArgstr {(pushStrSep ctx head) with Input = rest}
+                parseArgstr {ctx with StartNew = true ; Input = rest}
 
             | _ ->
                 parseArgstr {(pushStr ctx head) with Input = rest}
@@ -53,6 +54,7 @@ module ArgumentParser =
 
         let ctx = {
             Mode   = MatchSpecial
+            StartNew  = false
             Escape = false
             Input  = List.ofSeq argstr
             Output = []

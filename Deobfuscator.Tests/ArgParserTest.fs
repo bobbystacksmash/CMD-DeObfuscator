@@ -9,22 +9,27 @@ open NUnit.Framework
 type TestClass () =
 
     [<Test>]
-    member this.ArgParserTest() =
+    member this.FiftyWaysToSayHello() =
+        //
+        // All credit to:
+        //  http://www.windowsinspired.com/50-ways-to-say-hello/
+        //
+        let hello = ["Hello"]
 
         let tests = [
-            ("foo bar", ["foo" ; "bar"], "Split on whitespace.")
+            "\"\"\"Hello\"\""
+            "\"\"\"Hello\"\"\""
+            "\"\"\"Hello\"\""
         ]
 
         tests |> List.iter (fun test ->
-            let input, expected, msg = test
 
-            let actual = argparse input
+            let actual = argparse test
 
             printfn "========================="
-            printfn "Message  -> %A" msg
-            printfn "Input    -> %A" input
+            printfn "Input    -> %A" test
             printfn "Actual   -> %A" actual
-            printfn "Expected -> %A" expected
+            printfn "Expected -> %A" hello
             printfn "========================="
-            Assert.That(actual, Is.EqualTo(expected))
+            Assert.That(actual, Is.EqualTo(hello))
         )
