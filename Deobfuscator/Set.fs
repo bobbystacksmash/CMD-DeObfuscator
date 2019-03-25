@@ -9,8 +9,9 @@ module CommandSet =
     let private cleanSetExpr expr =
 
         let trimQuotes expr =
-            if Regex.IsMatch("^\".+\"$", expr) then
-                Regex.Replace(expr, "^\"|\"$", "")
+            let m = Regex.Match(expr, "^\"(.+)\"$")
+            if m.Success then
+                m.Groups.[1].ToString()
             else
                 expr
 
@@ -18,9 +19,7 @@ module CommandSet =
 
 
     let private (|SetExpr|_|) expr =
-        let cleaned = cleanSetExpr expr
-        let matched = Regex.Match(cleaned, "^([^=]+)=(.+)$")
-
+        let matched = Regex.Match((cleanSetExpr expr), "^([^=]+)=(.+)$")
         if matched.Success then
             printfn "SET EXPR -> %A / %A" matched.Groups.[1] matched.Groups.[2]
             Some (matched.Groups.[1].ToString().ToUpper(), matched.Groups.[2].ToString())
