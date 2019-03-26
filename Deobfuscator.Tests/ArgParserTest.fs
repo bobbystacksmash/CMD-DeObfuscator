@@ -19,7 +19,7 @@ type TestClass () =
         let tests = [
             "\"\"\"Hello\"\""
             "\"\"\"Hello\"\"\""
-            "\"\"\"Hello\"\""
+            "\"\"\"Hello\\\"\""
         ]
 
         tests |> List.iter (fun test ->
@@ -28,8 +28,35 @@ type TestClass () =
 
             printfn "========================="
             printfn "Input    -> %A" test
-            printfn "Actual   -> %A" actual
             printfn "Expected -> %A" hello
+            printfn "Actual   -> %A" actual
             printfn "========================="
             Assert.That(actual, Is.EqualTo(hello))
+        )
+
+    [<Test>]
+    member this.ArgumentParsing() =
+        //
+        // All credit to:
+        //  http://www.windowsinspired.com/how-a-windows-programs-splits-its-command-line-into-individual-arguments/
+        //
+        let tests =[
+            (
+                "\"She said \"you can't do this!\", didn't she?\"",
+                ["She said you"; "can't"; "do"; "this!, didn't she?"],
+                "Correct groupings of an input argstr."
+            )
+            ("First Second Third", ["First"; "Second"; "Third"], "Split on whitespace")
+        ]
+
+        tests |> List.iter (fun test ->
+            let input, expected, msg = test
+
+            let actual = argparse input
+
+            printfn "========================="
+            printfn "Input   -> %A" input
+            printfn "Expected -> %A" expected
+            printfn "Actual   -> %A" actual
+            printfn "========================="
         )
