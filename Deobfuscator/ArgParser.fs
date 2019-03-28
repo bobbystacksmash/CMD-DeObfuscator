@@ -1,63 +1,76 @@
-namespace Deobfuscator
+namespace Deobfuscator.Argv
 
-open Deobfuscator.Parser
+type private ReadMode =
+    | InterpretSpecialChars
+    | IgnoreSpecialChars
 
-type private ArgParseState = {
-    Mode: ReadMode
+type private ArgvParser = {
     Escape: bool
-    Input: char list
-    Output: string list
-    StartNew: bool
+    Argv: string list
+    Mode: ReadMode
+}
+
+type private Argv = {
+    Arguments: string list
+    CurrentArg: string
 }
 
 module ArgumentParser =
 
-    let private pushStr ctx ch =
-        let str = ch.ToString()
-        match ctx.Output with
-        | [] -> {ctx with Output = [str]}
-        | head :: _ ->
-            match head with
-            | _ when ctx.StartNew ->
-                {ctx with Output = str :: ctx.Output ; StartNew = false}
-
-            | _ ->
-                {ctx with Output = (ctx.Output.Head + str) :: ctx.Output.Tail}
-
-
-    let rec private parseArgstr (ctx: ArgParseState) =
-        match ctx.Input with
-        | [] -> ctx.Output |> List.rev
+    let private (|EQUOTE|_|) lst =
+        match lst with
         | head :: rest ->
             match head with
-            | _ when ctx.Escape ->
-                parseArgstr {(pushStr ctx head) with Escape = false; Input = rest}
+            | '"' -> Some (head, rest)
+            | _ -> None
+        | _ -> None
 
-            | '\\' when ctx.Mode = MatchSpecial ->
-                parseArgstr {ctx with Escape = true}
 
-            | '"' when ctx.Mode = IgnoreSpecial ->
-                parseArgstr {ctx with Mode = MatchSpecial; Input = rest}
+let rec buildArgv chars ctx argv =
+    match chars with
+    | [] -> (argv.CurrentArg :: argv.Arguments) |> List.rev
+    | head :: rest ->
+        match head with
+        | _ when ctx.Escape ->
+            buildArgv rest ctx {argv with CurrentArg = argv.CurrentArg + (head.ToString())}
 
-            | '"' when ctx.Mode = MatchSpecial ->
-                parseArgstr {ctx with Mode = IgnoreSpecial; Input = rest}
-
-            | ' ' when ctx.Mode = MatchSpecial ->
-                parseArgstr {ctx with StartNew = true ; Input = rest}
+        | '\\' ->
+            match rest with
+            | EQUOTE (lookahead, lookaheadRest) ->
+                buildArgv lookaheadRest ctx {argv with CurrentArg = argv.CurrentArg + "\""}
 
             | _ ->
-                parseArgstr {(pushStr ctx head) with Input = rest}
+                buildArgv rest ctx {argv with CurrentArg = argv.CurrentArg + (head.ToString())}
+
+        | '"' when ctx.Mode = InterpretSpecialChars ->
+            buildArgv rest {ctx with Mode = IgnoreSpecialChars} argv
+
+        | '"' when ctx.Mode = IgnoreSpecialChars ->
+            buildArgv rest {ctx with Mode = InterpretSpecialChars} argv
+
+        | ' ' when ctx.Mode = InterpretSpecialChars ->
+            let newArgv = {
+                Arguments = (argv.CurrentArg :: argv.Arguments)
+                CurrentArg = ""
+            }
+            buildArgv rest ctx newArgv
+
+        | _ ->
+            buildArgv rest ctx {argv with CurrentArg = argv.CurrentArg + (head.ToString())}
 
 
+let parseArgs argstr =
+    let ctx = {
+        Mode = InterpretSpecialChars
+        Escape = false
+        Argv = []
+    }
 
-    let argparse (argstr: string) =
+    let args = {
+        Arguments = []
+        CurrentArg = ""
+    }
+    buildArgv (List.ofSeq argstr) ctx args
 
-        let ctx = {
-            Mode   = MatchSpecial
-            StartNew  = false
-            Escape = false
-            Input  = List.ofSeq argstr
-            Output = []
-        }
-        parseArgstr ctx
 
+parseArgs "test.exe \"c:\\path with spaces\\ending in backslash\\\" arg1 arg2"
