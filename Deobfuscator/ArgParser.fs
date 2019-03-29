@@ -7,7 +7,6 @@ module ArgumentParser =
         | IgnoreSpecialChars
 
     type private ArgvParser = {
-        Escape: bool
         Argv: string list
         Mode: ReadMode
     }
@@ -31,8 +30,6 @@ module ArgumentParser =
         | [] -> (argv.CurrentArg :: argv.Arguments) |> List.rev
         | head :: rest ->
             match head with
-            | _ when ctx.Escape ->
-                buildArgv rest ctx {argv with CurrentArg = argv.CurrentArg + (head.ToString())}
 
             | '\\' ->
                 match rest with
@@ -40,7 +37,7 @@ module ArgumentParser =
                     buildArgv lookaheadRest ctx {argv with CurrentArg = argv.CurrentArg + "\""}
 
                 | _ ->
-                    buildArgv rest ctx {argv with CurrentArg = argv.CurrentArg + (head.ToString())}
+                    buildArgv rest ctx {argv with CurrentArg = "\\" + (head.ToString())}
 
             | '"' when ctx.Mode = InterpretSpecialChars ->
                 buildArgv rest {ctx with Mode = IgnoreSpecialChars} argv
@@ -62,7 +59,6 @@ module ArgumentParser =
     let parseArgs argstr =
         let ctx = {
             Mode = InterpretSpecialChars
-            Escape = false
             Argv = []
         }
 

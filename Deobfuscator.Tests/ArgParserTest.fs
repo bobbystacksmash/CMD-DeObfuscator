@@ -28,11 +28,46 @@ type TestClass () =
             let actual = parseArgs test
 
             printfn "========================="
-            printfn "Input    -> %A" test
-            printfn "Expected -> %A" hello
+            printfn "Input    -> %s" test
+            printfn "Expected -> %s" hello.[0]
             printfn "Actual   -> %A" actual
             printfn "========================="
             Assert.That(actual, Is.EqualTo(hello))
+        )
+
+    [<Test>]
+    member this.ArgumentWithSpaces() =
+        //
+        // All credit to:
+        //  http://www.windowsinspired.com/how-the-argument-with-spaces-examples-are-parsed/
+        //
+        let expected = ["Argument with spaces"]
+
+        let tests = [
+            "\"Argument with spaces\""
+            "Argument\" \"with\" \"spaces"
+            "\"Argument \"with\" spaces\""
+            "Argument\" with sp\"aces"
+            "\"Argument with spaces"
+            "\"Ar\"g\"um\"e\"n\"t\" w\"it\"h sp\"aces\"\""
+        ]
+
+        tests |> List.iter (fun test ->
+
+            let actual = parseArgs test
+
+            printfn "========================="
+            printfn "Input    [%s]" test
+            printfn "Expected:"
+            for exp in expected do
+                printfn "  [%s]" exp
+
+            printfn "Actual:"
+            for act in actual do
+                printfn "  [%s]" act
+
+            printfn "========================="
+            Assert.That(actual, Is.EqualTo(expected))
         )
 
     [<Test>]
