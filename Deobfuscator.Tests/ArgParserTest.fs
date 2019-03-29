@@ -19,12 +19,11 @@ type TestClass () =
         let tests = [
             "\"\"\"Hello\"\""
             "\"\"\"Hello\"\"\""
-            "\"\"\"Hello\\\"\""
         ]
 
         tests |> List.iter (fun test ->
 
-            let actual = argparse test
+            let actual = parseArgs test
 
             printfn "========================="
             printfn "Input    -> %A" test
@@ -52,7 +51,7 @@ type TestClass () =
         tests |> List.iter (fun test ->
             let input, expected, msg = test
 
-            let actual = argparse input
+            let actual = parseArgs input
 
             printfn "========================="
             printfn "Input   -> %A" input
