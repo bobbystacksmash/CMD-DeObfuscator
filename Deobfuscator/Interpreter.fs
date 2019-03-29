@@ -3,6 +3,7 @@ namespace Deobfuscator
 open Deobfuscator.DomainTypes
 open Deobfuscator.Parser
 open Deobfuscator.Instruction
+open Deobfuscator.ArgumentParser
 open Deobfuscator.Preprocessor.ExpanderWithCommandExtensions
 
 
@@ -93,8 +94,13 @@ module Interpreter =
         | Delimiter d -> d
         | Literal   l -> l
 
+
     let argsToString args =
         args |> List.map tokenToString |> List.fold (+) ""
+
+
+    let getArgv args =
+        argsToString args |> parseArgs
 
 
     let private cmdExternal ctx args =
@@ -113,9 +119,8 @@ module Interpreter =
 
 
     let private cmdSet (ctx: CommandContext) args =
-        let argstr = argsToString args
-        printfn "@SET %A" argstr
-        CommandSet.CmdSet ctx args argstr
+        printfn "@SET %A" (argsToString args)
+        CommandSet.CmdSet ctx (getArgv args)
 
 
     let private wrapCmd fn args =

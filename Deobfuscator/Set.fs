@@ -30,8 +30,13 @@ module CommandSet =
             None
 
 
-    let CmdSet (ctx: CommandContext) args argstr =
-        match argstr with
+    let CmdSet (ctx: CommandContext) argv =
+        // TODO:
+        //  - what about /A?
+        printfn "CmdSet argv -> %A" argv
+        Ok (CommandSuccess, ctx)
+
+        (*match argstr with
         | SetExpr (varName, varValue) ->
             let log  = sprintf "SET %s=%s" varName varValue
             let vars = ctx.EnvVars.Add(varName, varValue)
@@ -39,4 +44,4 @@ module CommandSet =
 
         | _ ->
             let errReason = MalformedArgumentExpression (sprintf "Cannot parse assignment expression: %A" argstr)
-            Error (errReason, ctx)
+            Error (errReason, ctx)*)

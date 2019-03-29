@@ -19,6 +19,8 @@ type TestClass () =
         let tests = [
             "\"\"\"Hello\"\""
             "\"\"\"Hello\"\"\""
+            "\"\"\"Hello\\\"\""
+
         ]
 
         tests |> List.iter (fun test ->
@@ -41,11 +43,25 @@ type TestClass () =
         //
         let tests =[
             (
+                "Test.exe \"First Argument\" Second",
+                ["Test.exe"; "First Argument"; "Second"],
+                "Correctly generate command line."
+            )
+            (
                 "\"She said \"you can't do this!\", didn't she?\"",
                 ["She said you"; "can't"; "do"; "this!, didn't she?"],
                 "Correct groupings of an input argstr."
             )
-            ("First Second Third", ["First"; "Second"; "Third"], "Split on whitespace")
+            (
+                "First Second Third",
+                ["First"; "Second"; "Third"],
+                "Split on whitespace"
+            )
+            (
+                "w\"\"script",
+                ["wscript"],
+                "Handle empty dquotes used to obfuscate command."
+            )
         ]
 
         tests |> List.iter (fun test ->

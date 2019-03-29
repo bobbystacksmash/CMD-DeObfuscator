@@ -16,10 +16,11 @@ type TestClass () =
         let expectedEnvVars = Map.empty.Add("FOO", "bar")
 
         let tests = [
-            ("set foo=bar", "Assign unquoted and without args key/val.", expectedEnvVars)
-            ("set \"foo=bar\"", "Assignment is between double quotes.", expectedEnvVars)
-            ("set \"foo=bar", "Assignment has leading double quote.", expectedEnvVars)
-            ("set foo=bar\"", "Leave trailing double quote.", Map.empty.Add("FOO", "bar\""))
+            //("set foo=bar", "Assign unquoted and without args key/val.", expectedEnvVars)
+            //("set \"foo=bar\"", "Assignment is between double quotes.", expectedEnvVars)
+            //("set \"foo=bar", "Assignment has leading double quote.", expectedEnvVars)
+            //("set foo=bar\"", "Leave trailing double quote.", Map.empty.Add("FOO", "bar\""))
+            ("set /Abc=xy", "Identify num expr flag '/A' without whitespace", Map.empty.Add("bc", "0"))
         ]
 
         tests |> List.iter (fun t ->
