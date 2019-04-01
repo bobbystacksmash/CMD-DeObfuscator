@@ -25,6 +25,69 @@ type ParseState = {
 type ParseStatus =
     | UnbalancedParenthesis
 
+
+(* AST Enrichment *)
+type ForLoopType =
+    | ForFiles
+    | ForFolders
+    | ForNumberList
+    | ForFilesAtPath
+    | ForFileContents
+    | ForCommandResults
+
+type Statement =
+    | OperatorStmt of Operator
+    | ForLoopStmt of ForLoopType
+
+
+module StatementMatcher =
+
+    let rec walk ast =
+        match ast with
+        | [] -> true
+        | head :: rest ->
+            match head with
+            // We have four `Statement' types:
+            //
+            //   1. OperatorStmt
+            //   2. ForLoopStmt
+            //   3. IfStmt
+            //   4. RemStmt
+            //
+            // While walking the AST, we identify the different elements
+            // and determine what Statement type they should be converted
+            // to.  Statements: IF, FOR, and REM receive special handling
+            // and cannot be generated later in the interpretation process.
+            // For example, using Delayed Expansion to expand a var which
+            // contains a valid IF statement will always cause a syntax
+            // error.
+            //
+            // For more details on this behaviour, see:
+            //
+            //   > https://www.dostips.com/forum/viewtopic.php?t=5416
+            //
+            | Op _ ->
+                printfn "OPERATOR"
+                walk rest
+
+            | Cmd cmd ->
+                printfn "COMMAND %A" cmd
+                printfn "REST %A" rest
+                true
+
+
+    let rec enhanceAst ast =
+        walk ast
+        Ok ast
+
+
+    let identifyStatements maybeAst =
+        match maybeAst with
+        | Ok ast -> enhanceAst ast
+        | Error reason ->
+            Error reason
+
+
 module Parser =
 
     let (|PIPE|_|) ch =
@@ -301,12 +364,6 @@ module Parser =
 
     let rec infixToPrefix (ast: Ast list) (opstack: Operator list) (outstack: Ast list) =
 
-        //printfn "---- infixToPrefix ----"
-        //printfn "AST>%A" ast
-        //printfn "XXXX OPS>%A" opstack
-        //printfn "OUT>%A" outstack
-        //printfn "########################"
-
         match ast with
         | [] ->
             let opers = List.map (fun op -> Op(op)) opstack
@@ -335,7 +392,7 @@ module Parser =
                 infixToPrefix rest (oper :: remainingOpstack) (higherPrecedenceOpers @ outstack)
 
 
-    let toPrefix ast =
+    let private toPrefix ast =
 
         let swapParens astMember =
             match astMember with
@@ -348,8 +405,9 @@ module Parser =
         match (infixToPrefix swappedAst [] []) with
         | Ok newAst -> Ok newAst
         | Error reason ->
-            printfn "Error! --> %A" reason
+            printfn "[AST, toPrefix error!] --> %A" reason
             Error reason
+
 
 
     let parse (cmdstr: string) =
@@ -360,4 +418,4 @@ module Parser =
             AstStack = []
             CmdAppendMode = AppendToExisting
         }
-        makeAst reader |> toPrefix
+        makeAst reader |> toPrefix |> StatementMatcher.identifyStatements

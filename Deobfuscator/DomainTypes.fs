@@ -35,10 +35,18 @@ type Token =
     | Literal of string
     | Delimiter of string
     static member (+) (a: Token, b: Token) =
-        // TODO: this is raising a warning. FIX!
-        let (Literal strA) = a
-        let (Literal strB) = b
+        let strA =
+            match a with
+            | Literal lit -> lit
+            | Delimiter delim -> delim
+
+        let strB =
+            match b with
+            | Literal lit -> lit
+            | Delimiter delim -> delim
+
         Literal(strA + strB)
+
 
 type Ast =
     | Cmd of Token list

@@ -23,6 +23,16 @@ type TestClass () =
 
 
     [<Test>]
+    member this.GenerateAst() =
+
+        printfn "========================="
+        printfn "%A" (parse @"FOR %A IN (1 2 3) DO echo %A")
+        printfn "========================="
+
+        Assert.IsTrue(false)
+
+
+    [<Test>]
     member this.AstVerify() =
 
         let LP = Op OpenParen
