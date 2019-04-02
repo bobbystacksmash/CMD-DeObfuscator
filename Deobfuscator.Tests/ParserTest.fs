@@ -26,7 +26,7 @@ type TestClass () =
     member this.GenerateAst() =
 
         printfn "========================="
-        printfn "%A" (parse @"FOR %A IN (1 2 3) DO echo %A")
+        printfn "%A" (parse @"FOR %A IN (1 2 3) DO (echo %A) & calc")
         printfn "========================="
 
         Assert.IsTrue(false)

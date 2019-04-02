@@ -1,6 +1,7 @@
 namespace Deobfuscator
 
 open Deobfuscator.DomainTypes
+open System.Text.RegularExpressions
 
 type CommandAppendMode =
     | AppendToExisting
@@ -24,16 +25,25 @@ type ParseState = {
 
 type ParseStatus =
     | UnbalancedParenthesis
+    | ErrorEmptyCommandBlock
 
 
 (* AST Enrichment *)
+
+
+
 type ForLoopType =
-    | ForFiles
+    | ForFiles // TODO: Add comments about types of loop.
     | ForFolders
     | ForNumberList
     | ForFilesAtPath
     | ForFileContents
     | ForCommandResults
+
+type ForLoopHeader = {
+    LoopType: ForLoopType
+    Var: string
+}
 
 type Statement =
     | OperatorStmt of Operator
@@ -41,6 +51,113 @@ type Statement =
 
 
 module StatementMatcher =
+
+    (* UTILITIES *)
+    let private stripDelimiters lst =
+        lst |> List.filter (function | Delimiter _ -> true | _ -> false)
+
+
+    let private listEndsWith (lst: Token list) ending =
+        if lst.Length = 0
+        then false
+        else
+            let last = lst |> List.rev |> List.head
+            last.ToString().ToUpper() = ending
+
+
+    (*
+        FOR loop identification
+    *)
+
+    let private (|ForInstruction|_|) (instr: Token) =
+        match instr with
+        | Literal strcmd ->
+            match strcmd.ToUpper() with
+            | "FOR" -> Some ForInstruction
+            | _ -> None
+        | _ -> None
+
+
+    // Typically, the `args' seen here are the following part
+    // of a FOR loop:
+    //
+    //   FOR %A in (1 2 3) DO echo %A
+    //      ^^^^^^^
+    //
+
+
+    let private (|ForHeaderVar|Error|) loopVar =
+        let m = Regex.Match(loopVar, @"^(%[A-Z])$", RegexOptions.IgnoreCase)
+        if m.Success
+        then ForHeaderVar m.Groups.[0].Value
+        else Error
+
+
+    let private (|ForHeaderFlag|Error|) flag =
+        match flag with
+        | "/R" -> ForHeaderFlag ForFilesAtPath
+        | "/D" -> ForHeaderFlag ForFolders
+        | "/L" -> ForHeaderFlag ForNumberList
+        | "/F" -> ForHeaderFlag ForFileContents
+        | _ -> Error
+
+
+    let private (|ForHeader|Error|) args =
+        let strippedDelims = stripDelimiters args
+
+        if not (listEndsWith args "IN")
+        then Error
+        else
+            match strippedDelims with
+            | [] -> Error
+
+            | [Literal lvar ; _] ->
+                match lvar with
+                | ForHeaderVar hvar -> ForHeader { LoopType = ForFiles ; Var = hvar }
+                | _ -> Error
+
+            | [Literal flag ; Literal lvar ; _] ->
+                match flag with
+                | ForHeaderFlag loopType ->
+                    match lvar with
+                    | ForHeaderVar hvar -> ForHeader { LoopType = loopType ; Var = hvar }
+                    | _ -> Error
+                | _ -> Error
+            | _ -> Error
+
+
+    let private (|GotForLoop|Error|) (cmd: Token list, rest: Ast list) =
+        match cmd with
+        | [] -> Error
+        | instruction :: args ->
+            match instruction with
+            | ForInstruction ->
+                // At this stage, we have identified the following part
+                // of a FOR loop:
+                //
+                //   FOR %A in (1 2 3) DO echo %A
+                //   ^^^
+                // We now begin matching the remainder, which can come
+                // in one of two forms, either:
+                //
+                //   1. FOR %A in (1 2 3) DO ...
+                //   2. FOR /F %A in ( 1 2 3) DO ...
+                //
+                // When no flag (/F) is identified, we use the default.
+                // See the `ForLoopType' for details.
+                //
+                match args with
+                | ForHeader header ->
+                    printfn "GOT HEADER -> %A" header
+                    GotForLoop
+
+                | _ -> Error
+            | _ -> Error
+
+
+    let private identifyCommand cmd
+        // TODO
+
 
     let rec walk ast =
         match ast with
@@ -71,21 +188,24 @@ module StatementMatcher =
                 walk rest
 
             | Cmd cmd ->
-                printfn "COMMAND %A" cmd
-                printfn "REST %A" rest
-                true
+                match identifyCommand cmd with
+                | 
+
+
+
+            | _ -> false
 
 
     let rec enhanceAst ast =
-        walk ast
+        let result = walk ast
         Ok ast
 
 
     let identifyStatements maybeAst =
         match maybeAst with
         | Ok ast -> enhanceAst ast
-        | Error reason ->
-            Error reason
+        //| Error reason ->
+        //    Error reason
 
 
 module Parser =
