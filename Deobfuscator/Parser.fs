@@ -40,6 +40,11 @@ type ForLoopType =
     | ForFileContents
     | ForCommandResults
 
+
+type InvalidForLoopHeaderReasons =
+    | HeaderListIsEmpty
+    | MissingInKeyword
+
 type ForLoopHeader = {
     LoopType: ForLoopType
     Var: string
@@ -54,7 +59,24 @@ module StatementMatcher =
 
     (* UTILITIES *)
     let private stripDelimiters lst =
-        lst |> List.filter (function | Delimiter _ -> true | _ -> false)
+        lst |> List.filter (function | Delimiter _ -> false | _ -> true)
+
+    let rec ltrimDelimiters lst =
+        match lst with
+        | [] -> lst
+        | head :: rest ->
+            match head with
+            | Delimiter _ -> ltrimDelimiters rest
+            | _ -> lst
+
+
+    let rtrimDelimiters lst =
+        lst |> List.rev |> ltrimDelimiters |> List.rev
+
+
+    let trimDelims lst =
+        lst |> rtrimDelimiters |> ltrimDelimiters
+
 
 
     let private listEndsWith (lst: Token list) ending =
@@ -84,79 +106,62 @@ module StatementMatcher =
     //   FOR %A in (1 2 3) DO echo %A
     //      ^^^^^^^
     //
+    let (|ForLoopHeader|InvalidForLoopHeader|) hdr =
+
+        let (|ForLoopVar|InvalidLoopVar|) lvar =
+            let m = Regex.Match(lvar, @"^%[A-Z]$", RegexOptions.IgnoreCase)
+            if m.Success
+            then ForLoopVar m.Groups.[0].Value.ToString
+            else InvalidLoopVar
+
+        // We should have been passed either a two or three element list,
+        // looking something like either one of:
+        //
+        //   1. ["%A" ; "IN"]
+        //   2. ["/F" ; "%A" ; "IN"]
+        //
+        // In case #1 the default loop type is a `ForFiles' loop.
+        match (stripDelimiters hdr) |> List.rev with
+        | [] -> InvalidForLoopHeader HeaderListIsEmpty
+        | head :: rest ->
+            match head with
+            | Literal inkwd ->
+                match inkwd.ToUpper() with
+                | "IN" ->
+                    // All of this should be replaced with a function which either
+                    // returns a valid FOR Loop Header object, or fails with an error
+                    // message that accurately describes WHY it failed.
 
 
-    let private (|ForHeaderVar|Error|) loopVar =
-        let m = Regex.Match(loopVar, @"^(%[A-Z])$", RegexOptions.IgnoreCase)
-        if m.Success
-        then ForHeaderVar m.Groups.[0].Value
-        else Error
+    (* FOR loop validation *)
+    let private validForLoop loopHeaderTokens astPart =
+        match loopHeaderTokens with
+        |
 
 
-    let private (|ForHeaderFlag|Error|) flag =
-        match flag with
-        | "/R" -> ForHeaderFlag ForFilesAtPath
-        | "/D" -> ForHeaderFlag ForFolders
-        | "/L" -> ForHeaderFlag ForNumberList
-        | "/F" -> ForHeaderFlag ForFileContents
-        | _ -> Error
+    let (|MaybeForLoop|MaybeConditional|MaybeRemark|Other|Invalid|) (command: Token list) =
+        let trimmed = trimDelims command
+        match trimmed with
+        | [] -> Invalid
+        | head :: rest ->
+            match head with
+            | Literal instruction ->
+                let trimmedRest = ltrimDelimiters rest
+                match instruction.ToUpper() with
+                (* FOR %A IN...   *)
+                | "FOR" -> 
+                    MaybeForLoop (stripDelimiters rest)
 
+                (* IF "a"=="b"... *)
+                | "IF"  -> 
+                    MaybeConditional trimmedRest
 
-    let private (|ForHeader|Error|) args =
-        let strippedDelims = stripDelimiters args
+                (* REM ...        *)
+                | "REM" -> 
+                    MaybeRemark trimmedRest
 
-        if not (listEndsWith args "IN")
-        then Error
-        else
-            match strippedDelims with
-            | [] -> Error
-
-            | [Literal lvar ; _] ->
-                match lvar with
-                | ForHeaderVar hvar -> ForHeader { LoopType = ForFiles ; Var = hvar }
-                | _ -> Error
-
-            | [Literal flag ; Literal lvar ; _] ->
-                match flag with
-                | ForHeaderFlag loopType ->
-                    match lvar with
-                    | ForHeaderVar hvar -> ForHeader { LoopType = loopType ; Var = hvar }
-                    | _ -> Error
-                | _ -> Error
-            | _ -> Error
-
-
-    let private (|GotForLoop|Error|) (cmd: Token list, rest: Ast list) =
-        match cmd with
-        | [] -> Error
-        | instruction :: args ->
-            match instruction with
-            | ForInstruction ->
-                // At this stage, we have identified the following part
-                // of a FOR loop:
-                //
-                //   FOR %A in (1 2 3) DO echo %A
-                //   ^^^
-                // We now begin matching the remainder, which can come
-                // in one of two forms, either:
-                //
-                //   1. FOR %A in (1 2 3) DO ...
-                //   2. FOR /F %A in ( 1 2 3) DO ...
-                //
-                // When no flag (/F) is identified, we use the default.
-                // See the `ForLoopType' for details.
-                //
-                match args with
-                | ForHeader header ->
-                    printfn "GOT HEADER -> %A" header
-                    GotForLoop
-
-                | _ -> Error
-            | _ -> Error
-
-
-    let private identifyCommand cmd
-        // TODO
+                | _ -> Other trimmedRest
+            | Delimiter _ -> Invalid
 
 
     let rec walk ast =
@@ -188,12 +193,12 @@ module StatementMatcher =
                 walk rest
 
             | Cmd cmd ->
-                match identifyCommand cmd with
-                | 
+                match cmd with
+                | MaybeForLoop loop ->
+                    validForLoop loop rest
+                    walk rest
 
 
-
-            | _ -> false
 
 
     let rec enhanceAst ast =
