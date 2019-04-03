@@ -10,6 +10,7 @@
     <Compile Include="Set.fs" />
     <Compile Include="Echo.fs" />
     <Compile Include="Parser.fs" />
+    <Compile Include="StatementMatcher.fs" />
     <Compile Include="ArgParser.fs" />
     <Compile Include="Interpreter.fs" />
   </ItemGroup>

@@ -25,6 +25,30 @@ type TestClass () =
     [<Test>]
     member this.GenerateAst() =
 
+        let loops = [
+            (* FOR Files *)
+            @"FOR %G IN (Sun Mon Tue Wed Thur Fri Sat) DO echo %G"
+            @"FOR %G IN (MyFile.txt) DO copy %G d:\backups\"
+            @"FOR %G IN (Myfile.txt SecondFile.txt) DO copy %G d:\backups\"
+            @"FOR %G IN (""C:\demo files\file1.txt"" ""C:\demo files\File2.txt"") DO copy %%G d:\backups\"
+
+            (* FOR /R *)
+            @"FOR /R %G in (*.LOG) do Echo REN ""%%G"" ""%%~nG.TXT"""
+            @"FOR /R C:\temp\ %%G IN (*.bak) do Echo del ""%%G"""
+
+            (* FOR /D *)
+            @"for /f ""tokens=*"" %G in ('dir /b /s /a:d ""C:\Work\reports*""') do echo Found %G"
+
+            (* FOR /L*)
+            @"FOR /L %G IN (1,1,5) DO echo %G"
+
+            (* FOR /F*)
+            // https://ss64.com/nt/for_f.html
+            @"FOR /f ""delims="" %G in (files.txt) DO copy ""\\source\folder\%G"" ""H:\destination\%%G"""
+            @"FOR /F ""tokens=1,3 delims=,"" %G IN (weather.txt) DO @echo %G %H"
+            @"FOR /f ""tokens=4 delims=(=""%G IN ('%_ping_cmd% ^|find ""loss""') DO echo Result is [%G]"
+        ]
+
         printfn "========================="
         printfn "%A" (parse @"FOR %A IN (1 2 3) DO (echo %A) & calc")
         printfn "========================="
