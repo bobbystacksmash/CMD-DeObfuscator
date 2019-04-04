@@ -3,27 +3,31 @@ namespace Deobfuscator
 open Deobfuscator.DomainTypes
 open System.Text.RegularExpressions
 
-
-type ForLoopType =
-    | ForFiles // TODO: Add comments about types of loop.
-    | ForFolders
-    | ForNumberList
-    | ForFilesAtPath
-    | ForFileContents
-    | ForCommandResults
+                        // | FLAG |
+type ForLoopType =      // |======|
+    | ForFiles          // |  /F  |
+    | ForFileContents   // |  /F  |
+    | ForCommandResults // |  /F  |
+    | ForFolders        // |  /D  |
+    | ForNumberList     // |  /L  |
+    | ForFilesAtPath    // |  /R  |
 
 
 type InvalidForLoopHeaderReasons =
-    | HeaderListIsEmpty
-    | MissingInKeyword
-    | MissingVariableIdentifier
-    | VariableIdentifierNotValid
-    | CannotFindForInKeyword
+    | FlagOrLoopVarExpected of string option
+    | UnknownFlag of string
+    | HeaderListIsEmpty of string option
+    | MissingInKeyword of string option
+    | MissingVariableIdentifier of string option
+    | VariableIdentifierNotValid of string option
+    | CannotFindForInKeyword of string option
+
 
 type ForLoopHeader = {
     LoopType: ForLoopType
     Var: string
 }
+
 
 type Statement =
     | OperatorStmt of Operator
@@ -85,7 +89,7 @@ module StatementMatcher =
     //   FOR %A in (1 2 3) DO echo %A
     //      ^^^^^^^
     //
-    let (|ForLoopFlag|ForLoopNoFlag|Invalid|) hdr =
+    (*let (|ForLoopFlag|ForLoopNoFlag|Invalid|) hdr =
         match (stripDelimiters hdr) with
         | [] ->
             ForLoopNoFlag ForFiles
@@ -118,9 +122,9 @@ module StatementMatcher =
             match head with
             | Literal str when str.ToUpper() = "IN" -> ForLoopIn (rest |> List.rev)
             | _ -> Missing
+    *)
 
-
-    let (|ForLoopHeader|InvalidForLoopHeader|) hdr =
+    (*let (|ForLoopHeader|InvalidForLoopHeader|) hdr =
         //
         // Assuming what we've been passed via `hdr' is from a valid FOR loop
         // we should expect to see one of the lists:
@@ -138,22 +142,72 @@ module StatementMatcher =
             | ForLoopVar (loopVar, remainingHdr) ->
                 match remainingHdr with
                 |
+*)
+
+    let tryParseForSet hdr =
+        Ok hdr
 
 
+    let tryParseForDirs hdr =
+        Ok hdr
 
 
+    let tryParseForList hdr =
+        Ok hdr
 
-        match (stripDelimiters hdr) with
-        | [] -> InvalidForLoopHeader HeaderListIsEmpty
+
+    let tryParseForRooted hdr =
+        Ok hdr
+
+
+    let tryParseForLoopArgs (flag: string) (hdrRest: Token list) (astRest: Ast list) =
+        Ok hdrRest
+        (*match flag.ToUpper() with
+        | "/F" -> tryParseForSet     hdrRest
+        | "/D" -> tryParseForDirs    hdrRest
+        | "/L" -> tryParseForList    hdrRest
+        | "/R" -> tryParseForRooted  hdrRest
+        | _ -> Error (UnknownFlag (sprintf "FOR loop flag '%A' is not recognised." flag))*)
+
+
+    let (|ForLoopFlag|_|) str =
+        if Regex.IsMatch(str, "^/[DFLR]$", RegexOptions.IgnoreCase)
+        then Some ForLoopFlag
+        else None
+
+    let (|ForLoopVar|_|) str =
+        if Regex.IsMatch (str, @"^%[A-Z]", RegexOptions.IgnoreCase)
+        then Some ForLoopVar
+        else None
+
+
+    let private tryParseForLoop forHdr astRest =
+        // The `forHdr' should look something like the examples below.
+        // The '|' (pipe) in the `INPUT' examples show the header boundary.
+        //
+        //   INPUT > |FOR %A IN| (1 2 3) DO echo %A
+        //   AST   > [Literal "%A"; Literal "IN"]
+        //
+        //   INPUT > |FOR /f "usebackq delims==" %i in| ('set') do @echo %i
+        //   AST   > [Literal "/F"; Literal ""usebackq delims==""; Literal "%i"; Literal "in"]
+        //
+        // The `forHdr' list contains much of the FOR-loop parsing
+        // complexity.
+        //
+        let hdr = stripDelimiters forHdr
+        match hdr with
+        | [] -> Error HeaderListIsEmpty
         | head :: rest ->
             match head with
-
-
-
-    (* FOR loop validation *)
-    let private validForLoop loopHeaderTokens astPart =
-        match loopHeaderTokens with
-        |
+            | Literal firstToken ->
+                match firstToken with
+                // TODO: figure out how to fix this part.
+                | ForLoopFlag -> tryParseForLoopArgs firstToken rest astRest
+                | ForLoopVar  -> tryParseForLoopHeader firstToken rest astRest
+                | _ ->
+                    Error FlagOrLoopVarExpected
+            | _ ->
+                Error FlagOrLoopVarExpected
 
 
     let (|MaybeForLoop|MaybeConditional|MaybeRemark|Other|Invalid|) (command: Token list) =
@@ -212,7 +266,7 @@ module StatementMatcher =
             | Cmd cmd ->
                 match cmd with
                 | MaybeForLoop loop ->
-                    validForLoop loop rest
+                    tryParseForLoop loop rest
                     walk rest
 
 
@@ -223,7 +277,7 @@ module StatementMatcher =
         Ok ast
 
 
-    let identifyStatements maybeAst =
+    let liftAst maybeAst =
         match maybeAst with
         | Ok ast -> enhanceAst ast
         //| Error reason ->

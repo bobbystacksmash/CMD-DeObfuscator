@@ -46,7 +46,6 @@ type TestClass () =
             // https://ss64.com/nt/for_f.html
             @"FOR /f ""delims="" %G in (files.txt) DO copy ""\\source\folder\%G"" ""H:\destination\%%G"""
             @"FOR /F ""tokens=1,3 delims=,"" %G IN (weather.txt) DO @echo %G %H"
-            @"FOR /f ""tokens=4 delims=(=""%G IN ('%_ping_cmd% ^|find ""loss""') DO echo Result is [%G]"
         ]
 
         printfn "========================="
