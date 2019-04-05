@@ -176,6 +176,13 @@ module StatementMatcher =
 
     let private (|ValidForHeader|InvalidForHeader|) (hdr: InterimForLoopHeader) =
         // TODO: work starts here...
+        //
+        // Fields which need validating are:
+        //
+        //   - hdr.Flag
+        //   - hdr.Var
+        //   - hdr.Args
+        //
         printfn "Attempting to validate header: %A" hdr
         let forHeader = { Var = hdr.Var; Type = ForFiles}
         if true then
