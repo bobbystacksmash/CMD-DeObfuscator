@@ -24,6 +24,7 @@ type ForLoopHeaderParseStatuses =
     | MissingVariableIdentifier of string option
     | VariableIdentifierNotValid of string option
     | CannotFindForInKeyword of string option
+    | LoopVariableIsNotValid of string option
 
 
 // When parsing a FOR loop header, we use the `InterimForLoopHeader'
@@ -141,10 +142,8 @@ module StatementMatcher =
         | _ -> None
 
 
-    let (|ForLoopVar|_|) str =
-        if Regex.IsMatch (str, @"^%[A-Z]", RegexOptions.IgnoreCase)
-        then Some ForLoopVar
-        else None
+    let private isValidForLoopVar str =
+        Regex.IsMatch (str, @"^%[A-Z]", RegexOptions.IgnoreCase)
 
 
     let (|UnvalidatedForHeader|InvalidLoop|) (hdr: string list) =
@@ -154,6 +153,11 @@ module StatementMatcher =
         match (hdr |> List.rev |> List.map (fun x -> x.ToUpper())) with
         | [] ->
             InvalidLoop HeaderListIsEmpty
+
+        | [_; loopVar]
+        | [_; loopVar; _]
+        | [_; loopVar; _; _] when not (isValidForLoopVar loopVar) ->
+            InvalidLoop LoopVariableIsNotValid
 
         | ["IN"; loopVar] ->
             // FOR %A IN...
@@ -175,6 +179,9 @@ module StatementMatcher =
 
 
     let private (|ValidForHeader|InvalidForHeader|) (hdr: InterimForLoopHeader) =
+
+        printfn "Attempting to validate header: %A" hdr
+
         // TODO: work starts here...
         //
         // Fields which need validating are:
@@ -183,11 +190,37 @@ module StatementMatcher =
         //   - hdr.Var
         //   - hdr.Args
         //
-        printfn "Attempting to validate header: %A" hdr
+        // While we /can/ pattern match on a record, it's a bit nicer to
+        // use a list for this phase...
+        //
         let forHeader = { Var = hdr.Var; Type = ForFiles}
-        if true then
+
+        match [hdr.Flag.ToUpper(); hdr.Args; hdr.Var] with
+        | [_; _; var] when not (isValidForLoopVar var) ->
+            // Loop vars must look something like "%A"
+            InvalidForHeader LoopVariableIsNotValid
+
+        | [""; ""; var] ->
+            // Matches a 'basic' FOR loop, e.g.: FOR %A IN...
             ValidForHeader forHeader
-        else
+
+        | ["/L"; ""; var] ->
+            // This type of loop does not use args.
+            ValidForHeader forHeader
+
+        | ["/D"; ""; var] ->
+            // Nor does this one.
+            ValidForHeader forHeader
+
+        | ["/R"; args; var] ->
+            // Args may or may not be empty.
+            ValidForHeader forHeader
+
+        | ["/F"; args; var] ->
+            // This one needs A LOT of attention.
+            ValidForHeader forHeader
+
+        | _ ->
             InvalidForHeader FeatureNotImplemented
 
 
@@ -208,10 +241,6 @@ module StatementMatcher =
             | ValidForHeader valid ->
                 printfn "Got a valid header! %A" valid
                 Error FeatureNotImplemented
-
-
-
-
 
 
     let (|KeywordFor|KeywordIf|KeywordRem|Other|Invalid|) (command: Token list) =
@@ -239,6 +268,7 @@ module StatementMatcher =
             | Delimiter _ -> Invalid
 
 
+    (* Walking the AST *)
     let rec walk ast =
         match ast with
         | [] -> true
