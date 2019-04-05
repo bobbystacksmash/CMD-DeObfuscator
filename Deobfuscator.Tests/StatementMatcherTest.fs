@@ -16,7 +16,11 @@ type TestClass () =
     [<Test>]
     member this.MatchStatements() =
 
-        let ast = parse @"FOR %A IN (1 2 3) DO echo %A"
-        enrichAst ast
+        // for /f "eol=; tokens=2,3* delims=," %i in (myfile.txt) do @echo %i %j %k
+
+        //let ast = parse @"FOR /L %A IN (1 2 3) DO echo %A"
+        //let ast = parse @"FOR %A IN (1 2 3) DO echo %A"
+        let ast = parse @"FOR /f ""eol=; tokens=2,3* delims=,"" %i in (myfile.txt) do @echo %i %j %k"
+        liftAst ast
 
         Assert.IsTrue(false)
