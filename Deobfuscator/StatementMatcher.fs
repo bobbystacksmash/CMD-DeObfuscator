@@ -17,6 +17,7 @@ type ForLoopHeaderParseStatuses =
     | LooksGood of string option
     | FeatureNotImplemented of string option
     | FlagOrLoopVarExpected of string option
+    | SkipStringNotNumeric of string option
     | UnknownFlag of string
     | HeaderListIsEmpty of string option
     | HeaderListIsTooLong of string option
@@ -38,6 +39,17 @@ type InterimForLoopHeader = {
     Args: string
 }
 
+
+type ForLoopParsingKeywords = {
+    EOL: string
+    Skip: string
+    Delims: char list
+    Tokens: int list
+    WildcardVar: bool
+    UseBackq: bool
+
+}
+
 type ForLoopHeader = {
     Type: ForLoopType
     Var: string
@@ -51,9 +63,6 @@ type Statement =
 
 
 
-// TODO
-//   At some point we'll split the StatementMatcher out in to its
-//   own module.
 module StatementMatcher =
 
     (* UTILITIES *)
@@ -99,9 +108,9 @@ module StatementMatcher =
 
 
     (*
-       =======================
-       FOR loop identification
-       =======================
+       =================================
+       FOR loop identification & parsing
+       =================================
     *)
 
     let private parseForLoopF hdrRest =
@@ -176,6 +185,63 @@ module StatementMatcher =
 
         | _ ->
             InvalidLoop FlagOrLoopVarExpected
+
+
+    let private (|ForSkip|ForSkipError|ForSkipDefault|) str =
+        let m = Regex.Match(str, @"(?:^|\s)skip=([^\s]+)(?:\b|$)")
+        if m.Success then
+            if Regex.IsMatch(m.Groups.[1].Value, "^\d+$") then
+                ForSkip (m.Groups.[1].Value |> int)
+            else
+                ForSkipError SkipStringNotNumeric
+        else
+            ForSkipDefault 0
+               
+
+    let private (|ForEol|ForEolDefault|) str =
+        let m = Regex.Match(str, @"(?:^|\s)eol=(.)(?:\b|$)", RegexOptions.IgnoreCase)
+        if m.Success then
+            ForEol m.Groups.[1].Value
+        else
+            ForEolDefault ";"
+
+
+    let private tryParseParsingKeywords keywords =
+        // For more details, see:
+        //   https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/for
+        //
+        // Valid syntaxes for the parsing keywords are:
+        //
+        //   eol=<char>         Specifies the EOL char.
+        //
+        //   skip=<num>         Specifies the number of lines to skip
+        //                      at the beginning of the file.
+        //
+        //   delims=<str>       Specifies the delimiter set.  This overwrites
+        //                      the default delimiter set (space & tab).  When using
+        //                      SPC as the delimiter, the `delims' string must come
+        //                      last in the parsing keywords set.
+        //
+        //   tokens=<X,Y,M-N>   Specifies which tokens from each line are to be
+        //                      passed to the FOR loop for each iteration.  As a
+        //                      result, additional variable names are allocated.
+        //                      M-N specifies a range, from the Mth through to Nth
+        //                      tokens.  If the last character in the `tokens='
+        //                      string is an asterisk, an additional variable is
+        //                      allocated, and it receives the remaining text on the
+        //                      line after the last token that is parsed.  This last token
+        //                      includes the whole remaining line, including the EOL char
+        //                      and any chars which come after it.
+        //
+        //   usebackq           Specifies to execute a back-quoted string as a command,
+        //                      use a single-quoted string as a literal string, or, for
+        //                      long file names that contain spaces, allow file names in
+        //                      the given <Set>, to each be enclsed in double quotation
+        //                      marks.
+        //
+        //
+        match keywords with
+
 
 
     let private (|ValidForHeader|InvalidForHeader|) (hdr: InterimForLoopHeader) =
