@@ -52,3 +52,27 @@ type Ast =
     | Cmd of Token list
     | Op of Operator
 
+
+(* FOR loop types *)
+type ForLoopHeaderParseStatuses =
+    | LooksGood of string option
+    | FeatureNotImplemented of string option
+    | FlagOrLoopVarExpected of string option
+    | SkipStringNotNumeric of string option
+    | UnknownFlag of string
+    | HeaderListIsEmpty of string option
+    | HeaderListIsTooLong of string option
+    | MissingInKeyword of string option
+    | MissingVariableIdentifier of string option
+    | VariableIdentifierNotValid of string option
+    | CannotFindForInKeyword of string option
+    | LoopVariableIsNotValid of string option
+
+type ForLoopParsingKeywords = {
+    EOL: string
+    Skip: string
+    Delims: char list
+    Tokens: int list
+    WildcardVar: bool
+    UseBackq: bool
+}

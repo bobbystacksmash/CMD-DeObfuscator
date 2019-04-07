@@ -13,19 +13,7 @@ type ForLoopType =      // |======|
     | ForFilesAtPath    // |  /R  |
 
 
-type ForLoopHeaderParseStatuses =
-    | LooksGood of string option
-    | FeatureNotImplemented of string option
-    | FlagOrLoopVarExpected of string option
-    | SkipStringNotNumeric of string option
-    | UnknownFlag of string
-    | HeaderListIsEmpty of string option
-    | HeaderListIsTooLong of string option
-    | MissingInKeyword of string option
-    | MissingVariableIdentifier of string option
-    | VariableIdentifierNotValid of string option
-    | CannotFindForInKeyword of string option
-    | LoopVariableIsNotValid of string option
+
 
 
 // When parsing a FOR loop header, we use the `InterimForLoopHeader'
@@ -40,15 +28,6 @@ type InterimForLoopHeader = {
 }
 
 
-type ForLoopParsingKeywords = {
-    EOL: string
-    Skip: string
-    Delims: char list
-    Tokens: int list
-    WildcardVar: bool
-    UseBackq: bool
-
-}
 
 type ForLoopHeader = {
     Type: ForLoopType

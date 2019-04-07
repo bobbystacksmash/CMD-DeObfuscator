@@ -15,7 +15,8 @@
   <ItemGroup>
     <Compile Include="ExpanderWithCommandExtensionsTest.fs" />
     <Compile Include="ParserTest.fs" />
-    <Compile Include="StatementMatcherTest.fs" />
+    <Compile Include="ForFileParserTest.fs" />
+    <!--<Compile Include="StatementMatcherTest.fs" />-->
     <Compile Include="InterpreterTest.fs" />
     <Compile Include="Commands/SetTest.fs" />
     <Compile Include="DOSfuscation/WhitepaperTests.fs" />
