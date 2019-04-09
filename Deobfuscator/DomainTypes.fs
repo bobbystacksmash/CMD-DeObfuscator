@@ -67,6 +67,7 @@ type ForLoopHeaderParseStatuses =
     | VariableIdentifierNotValid of string option
     | CannotFindForInKeyword of string option
     | LoopVariableIsNotValid of string option
+    | UnrecognisedParseKeyword of string option
 
 type ForLoopParsingKeywords = {
     EOL: string

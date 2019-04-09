@@ -18,6 +18,7 @@ type TestClass () =
         //
         // Error Tests
         // -----------
+        // "tokens= eol=;"              [ eol=;"] was unexpected at this time.
         // "skip=a"                     [a"] was unexpected at this time.
        //  "eol=abc"                    [bc"]  was unexpected at this time.
         // "eol"                        [eol"] was unexpected at this time.
@@ -28,37 +29,47 @@ type TestClass () =
         // "tokens=0,3"                 [,3"] was unexpected at this time.
         // "tokens=0"                   ["] was unexpected at this time.
         // "tokens=1,0"                 ["] was unexpected at this time.
-        // 
-        // 
-        // 
+        //
+        //
+        //
         //
         // Successful Tests
         // ----------------
+        // "skip=1 eol="                OK
+        // "eol= skip=1"                OK
+        // "eol=; tokens="              OK
         // "tokens=1,2,3,4,5,6,7"       OK
         // "tokens=0xa"                 OK
         // "tokens=1"                   OK
         // "tokens=03"                  OK
         // "tokens=1,5*"                OK
-        // ""                           OK        
+        // ""                           OK
         // "skip=0xa"                   OK
         // "skip=07"                    OK
         // "skip=1 skip=2"              OK
         // "eol= delims="               OK
-        // "eol="                       OK        
-        // "eol= "                      OK        
+        // "eol="                       OK
+        // "eol= "                      OK
         // "eol= eol="                  OK
         // "eol=a eol=b"                OK
         // "delims=a delims=b"          OK
         // "delims= delims="            OK
         // "delims="                    OK
         // "delims= "                   OK
+        let failingTests = [
+            ("skip=a", "Should fail to parse a `skip' keyword when the value is not numeric.")
+        ]
 
+        failingTests |> List.iter (fun test ->
+            let input, msg = test
 
+            let output = parseForFArgs input
 
-        // for /f "delims=a b c" ... -> Error: 'b c' was unexpected at this time
-        // for /f "delims=a^ b^ c" ... -> Error: '^b ^c' was unexpected at this time
+            printfn "========================="
+            printfn "Input  -> [%s]" input
+            printfn "Output -> %A"   output
+            printfn "Msg    -> %s"   msg
+            printfn "========================="
 
-        let x = parseForFArgs "\"delims=x\""
-        printfn ">>> %A" x
-
-        Assert.IsTrue(false)
+            Assert.That(output, Is.EqualTo(UnrecognisedParseKeyword))
+        )
