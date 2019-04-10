@@ -39,15 +39,24 @@ module ForFileParser =
         | _ -> Unrecognised str
 
     let private (|SkipNumBase|Unknown|) str =
-        if Regex.IsMatch("^0x[a-f0-9]+$", str) then SkipNumBase 16
-        elif Regex.IsMatch("^0[0-7]$", str) then SkipNumBase 8
-        elif Regex.IsMatch("^\d+$", str) then SkipNumBase 10
-        else Unknown
+        if Regex.IsMatch(str, @"^0x[a-f0-9]+$")
+        then
+            SkipNumBase 16
+        elif Regex.IsMatch(str, "^0[0-7]$")
+        then
+            SkipNumBase 8
+        elif Regex.IsMatch(str, "^\d+$")
+        then
+            SkipNumBase 10
+        then
+            Unknown
 
 
     let private (|Number|NaN|) str =
         match str with
+        | Unknown -> NaN
         | SkipNumBase numBase ->
+            printfn "Skip num base matched..!!!!!"
             try
                 Number (System.Convert.ToInt32(str, numBase))
             with
@@ -71,6 +80,7 @@ module ForFileParser =
         // Skips N lines from the input.  N can be encoded
         // either as decimal, hex, or octal.
         let (value, rest) = getValue chars " "
+        printfn "tryMatchSkip (value, rest) = %A, %A" value rest
         match value with
         | NaN ->
             let msg = sprintf "Expected FOR /F 'skip=' value (%s) to be numeric." value
