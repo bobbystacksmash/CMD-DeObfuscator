@@ -72,5 +72,5 @@ type TestClass () =
                 printfn "Err Reason -> %A"   reason
                 printfn "Msg        -> %s"   msg
                 printfn "========================="
-                Assert.That(reason, Is.EqualTo(UnrecognisedParseKeyword))
+                Assert.That(reason, Is.EqualTo(FeatureNotImplemented))
         )

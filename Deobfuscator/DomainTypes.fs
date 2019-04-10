@@ -55,21 +55,21 @@ type Ast =
 
 (* FOR loop types *)
 type ForLoopHeaderParseStatuses =
-    | LooksGood of string option
-    | FeatureNotImplemented of string option
-    | FlagOrLoopVarExpected of string option
-    | SkipStringNotNumeric of string option
+    | LooksGood
+    | FeatureNotImplemented
+    | FlagOrLoopVarExpected of string
+    | SkipStringNotNumeric of string
     | UnknownFlag of string
-    | HeaderListIsEmpty of string option
-    | HeaderListIsTooLong of string option
-    | MissingInKeyword of string option
-    | MissingVariableIdentifier of string option
-    | VariableIdentifierNotValid of string option
-    | CannotFindForInKeyword of string option
-    | LoopVariableIsNotValid of string option
-    | UnrecognisedParseKeyword of string option
-    | KeywordSkipValueIsNotNumeric of string option
-    | KeywordSkipNumericConversionFailed of string option
+    | HeaderListIsEmpty of string
+    | HeaderListIsTooLong of string
+    | MissingInKeyword of string
+    | MissingVariableIdentifier of string
+    | VariableIdentifierNotValid of string
+    | CannotFindForInKeyword of string
+    | LoopVariableIsNotValid of string
+    | UnrecognisedParseKeyword of string
+    | KeywordSkipValueIsNotNumeric of string
+    | KeywordSkipNumericConversionFailed of string
 
 type ForLoopParsingKeywords = {
     EOL: string

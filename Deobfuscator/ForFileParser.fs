@@ -72,7 +72,9 @@ module ForFileParser =
         // either as decimal, hex, or octal.
         let (value, rest) = getValue chars " "
         match value with
-        | NaN -> Error KeywordSkipValueIsNotNumeric
+        | NaN ->
+            let msg = sprintf "Expected FOR /F 'skip=' value (%s) to be numeric." value
+            Error (KeywordSkipValueIsNotNumeric msg)
         | Number num -> Ok (num, rest)
 
 
@@ -99,11 +101,13 @@ module ForFileParser =
                     keyValueMatcher rest {args with EOL = head}
 
                 | Skip ->
-                    match tryMatchSkip rest with
+                    match tryMatchSkip chars with
                     | Error reason ->
                         Error reason
 
                     | Ok (num, newRest) ->
+                        // TODO: Fix this part.
+                        printfn "HERE %A / %A" num newRest
                         keyValueMatcher newRest {args with Skip = num}
 
                 | _ ->
