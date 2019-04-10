@@ -63,13 +63,14 @@ type TestClass () =
         failingTests |> List.iter (fun test ->
             let input, msg = test
 
-            let output = parseForFArgs input
-
-            printfn "========================="
-            printfn "Input  -> [%s]" input
-            printfn "Output -> %A"   output
-            printfn "Msg    -> %s"   msg
-            printfn "========================="
-
-            Assert.That(output, Is.EqualTo(UnrecognisedParseKeyword))
+            match parseForFArgs input with
+            | Ok output ->
+                Assert.Fail("Input string was expected to fail with a reason, instead succeeded.")
+            | Error reason ->
+                printfn "========================="
+                printfn "Input      -> [%s]" input
+                printfn "Err Reason -> %A"   reason
+                printfn "Msg        -> %s"   msg
+                printfn "========================="
+                Assert.That(reason, Is.EqualTo(UnrecognisedParseKeyword))
         )
