@@ -33,24 +33,25 @@ module ForFileParser =
         | _ -> Unrecognised str
 
     let private (|SkipNumBase|Unknown|) str =
-        if Regex.IsMatch(str, @"^0x[a-f0-9]+$")
+
+        if Regex.IsMatch(str, @"^0x[a-f0-9]+$", RegexOptions.IgnoreCase)
         then
             SkipNumBase 16
-        elif Regex.IsMatch(str, "^0[0-7]$") 
-        then 
+        elif Regex.IsMatch(str, "^0[0-7]$")
+        then
             SkipNumBase 8
-        elif Regex.IsMatch(str, "^\d+$") 
-        then 
+        elif Regex.IsMatch(str, "^\d+$")
+        then
             SkipNumBase 10
-        else 
+        else
             Unknown
 
 
     let private (|Number|NaN|) str =
         match str with
-        | Unknown -> NaN
+        | Unknown ->
+            NaN
         | SkipNumBase numBase ->
-            printfn "Skip num base matched..!!!!!"
             try
                 Number (System.Convert.ToInt32(str, numBase))
             with
@@ -74,6 +75,7 @@ module ForFileParser =
         // Skips N lines from the input.  N can be encoded
         // either as decimal, hex, or octal.
         let (value, rest) = getValue chars " "
+        printfn "SKIP -----> %A / %A" value rest
         printfn "tryMatchSkip (value, rest) = %A, %A" value rest
         match value with
         | NaN ->
@@ -83,6 +85,7 @@ module ForFileParser =
 
 
     let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
+        printfn "CURRENT KEY >>>>>>>>>>>>>> %A" status.CurrKey
         match chars with
         | [] ->
             Ok args (* TODO: figure out when this is an error *)
@@ -94,6 +97,10 @@ module ForFileParser =
                 | "=" -> (* TODO: special case is 'usebackq*)
                     // A space represents the end of a key, so switch modes.
                     keyValueMatcher rest args {status with Mode = LookingForValue}
+
+                | " " ->
+                    // TODO: this will likely cause problems for us later.
+                    keyValueMatcher rest args status
 
                 | _ ->
                     keyValueMatcher rest args {status with CurrKey = status.CurrKey + head}
@@ -147,7 +154,7 @@ module ForFileParser =
             CurrValue = ""
             Mode = LookingForKey
         }
-        
+
         let defaultArgs = {
             Skip = 0
             UseBackq = false // TODO: is this the correct default value?
