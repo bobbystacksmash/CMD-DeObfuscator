@@ -109,6 +109,9 @@ module ForFileParser =
                 match status.CurrKey with
                 | EOL ->
                     match head with
+                    | " " when rest.Length = 0 ->
+                        keyValueMatcher rest {args with EOL = head} {status with Mode = LookingForKey; CurrKey = ""}
+
                     | " " ->
                         keyValueMatcher rest args {status with Mode = LookingForKey; CurrKey = ""}
                     | _ ->

@@ -23,7 +23,6 @@ type TestClass () =
 
         // Successful Tests
         // ----------------
-        // "eol= skip=1"                OK
         // "eol=; tokens="              OK
         // "tokens=1,2,3,4,5,6,7"       OK
         // "tokens=0xa"                 OK
@@ -31,10 +30,7 @@ type TestClass () =
         // "tokens=03"                  OK
         // "tokens=1,5*"                OK
         // ""                           OK
-        // "skip=1 skip=2"              OK
         // "eol= delims="               OK
-        // "eol="                       OK
-        // "eol= "                      OK
         // "eol= eol="                  OK
         // "eol=a eol=b"                OK
         // "delims=a delims=b"          OK
@@ -43,9 +39,6 @@ type TestClass () =
         // "delims= "                   OK
         // "useback"                    OK
         let successfulTests = [
-            //
-            // ~~ SKIP ~~
-            //
             // Skip, decimal.
             ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
             ("skip=1",  { defaults with Skip = 1 }, "Interpret a skip value (dec).")
@@ -73,6 +66,15 @@ type TestClass () =
 
             // EOL, with empty skip.
             ("eol= skip=3", {defaults with Skip = 3}, "Correctly handle (leading) empty EOL ")
+
+            // EOL (empty)
+            ("eol=", defaults, "Ignore empty EOL")
+
+            // EOL (SPC)
+            ("eol= ", {defaults with EOL = " "}, "Set EOL to an empty string when it appears last.")
+
+            // EOL empty, twice
+            ("eol= eol=", defaults, "Ignore two empty EOLs.")
         ]
 
         successfulTests |> List.iter (fun test ->
@@ -100,6 +102,7 @@ type TestClass () =
         // -----------
         // "tokens= eol=;"              [ eol=;"] was unexpected at this time.
         // "skip=a"                     [a"] was unexpected at this time.
+        // "skip=0"                     ["] was unexpected at this time.
         //  "eol=abc"                    [bc"]  was unexpected at this time.
         // "eol"                        [eol"] was unexpected at this time.
         // "eol=delims="                [elims="] was unexpected at this time.
