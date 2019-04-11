@@ -23,7 +23,6 @@ type TestClass () =
 
         // Successful Tests
         // ----------------
-        // "skip=1 eol="                OK
         // "eol= skip=1"                OK
         // "eol=; tokens="              OK
         // "tokens=1,2,3,4,5,6,7"       OK
@@ -32,8 +31,6 @@ type TestClass () =
         // "tokens=03"                  OK
         // "tokens=1,5*"                OK
         // ""                           OK
-        // "skip=0xa"                   OK
-        // "skip=07"                    OK
         // "skip=1 skip=2"              OK
         // "eol= delims="               OK
         // "eol="                       OK
@@ -50,8 +47,9 @@ type TestClass () =
             // ~~ SKIP ~~
             //
             // Skip, decimal.
-            ("skip=5", { defaults with Skip = 5 }, "Interpret a skip value (dec).")
-            ("skip=1", { defaults with Skip = 1 }, "Interpret a skip value (dec).")
+            ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
+            ("skip=1",  { defaults with Skip = 1 }, "Interpret a skip value (dec).")
+            ("skip=03", { defaults with Skip = 3 }, "Interpret a skip value with leading zero (dec).")
 
             // Skip, hex.
             ("skip=0xF",    { defaults with Skip = 15   }, "Interpret a skip value (hex, uc)")
@@ -60,11 +58,21 @@ type TestClass () =
             ("skip=0x0012", { defaults with Skip = 18   }, "Interpret a skip value (hex, leading zeros)")
 
             // Skip, oct. (TODO)
+            ("skip=017", { defaults with Skip = 15 }, "Interpret a skip value (oct)")
 
             // Skip, whtiespace
             ("  skip=2",  { defaults with Skip = 2 }, "Interpret a skip value (leading whitespace)")
             ("  skip=4",  { defaults with Skip = 4 }, "Interpret a skip value (trailing whitespace)")
             ("  skip=6  ",{ defaults with Skip = 6 }, "Interpret a skip value (leading & trailing whitespace)")
+
+            // Skip, Skip (overwriting defaults)
+            ("skip=2 skip=3", { defaults with Skip = 3}, "Overwrite an existing Skip value")
+
+            // Skip, with empty eol value.
+            ("skip=2 eol=", {defaults with Skip = 2}, "Correctly handle a (trailing) empty EOL value")
+
+            // EOL, with empty skip.
+            ("eol= skip=3", {defaults with Skip = 3}, "Correctly handle (leading) empty EOL ")
         ]
 
         successfulTests |> List.iter (fun test ->

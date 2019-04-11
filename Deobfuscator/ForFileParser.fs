@@ -37,7 +37,7 @@ module ForFileParser =
         if Regex.IsMatch(str, @"^0x[a-f0-9]+$", RegexOptions.IgnoreCase)
         then
             SkipNumBase 16
-        elif Regex.IsMatch(str, "^0[0-7]$")
+        elif Regex.IsMatch(str, "^0[0-7]+$")
         then
             SkipNumBase 8
         elif Regex.IsMatch(str, "^\d+$")
@@ -100,7 +100,7 @@ module ForFileParser =
 
                 | " " ->
                     // TODO: this will likely cause problems for us later.
-                    keyValueMatcher rest args status
+                    keyValueMatcher rest args {status with CurrKey = ""}
 
                 | _ ->
                     keyValueMatcher rest args {status with CurrKey = status.CurrKey + head}
@@ -108,7 +108,11 @@ module ForFileParser =
             | LookingForValue ->
                 match status.CurrKey with
                 | EOL ->
-                    keyValueMatcher rest args status
+                    match head with
+                    | " " ->
+                        keyValueMatcher rest args {status with Mode = LookingForKey; CurrKey = ""}
+                    | _ ->
+                        keyValueMatcher rest {args with EOL = head} {status with Mode = LookingForKey; CurrKey = ""}
 
                 | Skip ->
                     match tryMatchSkip chars with
