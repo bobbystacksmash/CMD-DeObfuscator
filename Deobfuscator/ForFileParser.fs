@@ -106,10 +106,8 @@ module ForFileParser =
                     keyValueMatcher rest args {status with CurrKey = status.CurrKey + head}
 
             | LookingForValue ->
-                printfn "LOOKING FOR VALUE! -> %A" status.CurrKey
                 match status.CurrKey with
                 | EOL ->
-                    printfn "GET EOL VALUE!!!!"
                     keyValueMatcher rest args status
 
                 | Skip ->
@@ -118,12 +116,13 @@ module ForFileParser =
                         Error reason
 
                     | Ok (num, newRest) ->
-                        // TODO: Fix this part.
-                        printfn "HERE %A / %A" num newRest
-                        keyValueMatcher newRest {args with Skip = num} status // TODO: what about status?
+                        let newStatus = { status with Mode = LookingForKey; CurrKey = ""}
+                        keyValueMatcher newRest {args with Skip = num} newStatus
 
                 | _ ->
-                    printfn "NOT YET IMPLEMENTED"
+                    printfn "!!!!!!!!!!!!!!!!!!!!!!!!!"
+                    printfn "!! NOT YET IMPLEMENTED !!"
+                    printfn "!!!!!!!!!!!!!!!!!!!!!!!!!"
                     Error FeatureNotImplemented
 
 

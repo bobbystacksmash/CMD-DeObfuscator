@@ -50,14 +50,14 @@ type TestClass () =
             // ~~ SKIP ~~
             //
             // Skip, decimal.
-            //("skip=5", { defaults with Skip = 5 }, "Interpret a skip value (dec).")
-            //("skip=1", { defaults with Skip = 1 }, "Interpret a skip value (dec).")
+            ("skip=5", { defaults with Skip = 5 }, "Interpret a skip value (dec).")
+            ("skip=1", { defaults with Skip = 1 }, "Interpret a skip value (dec).")
 
             // Skip, hex.
-            (*("skip=0xF",    { defaults with Skip = 15   }, "Interpret a skip value (hex, uc)")
+            ("skip=0xF",    { defaults with Skip = 15   }, "Interpret a skip value (hex, uc)")
             ("skip=0xa",    { defaults with Skip = 10   }, "Interpret a skip value (hex, lc)")
             ("skip=0xff",   { defaults with Skip = 255  }, "Interpret a skip value (hex, mixed)")
-            ("skip=0x0012", { defaults with Skip = 18   }, "Interpret a skip value (hex, leading zeros)")*)
+            ("skip=0x0012", { defaults with Skip = 18   }, "Interpret a skip value (hex, leading zeros)")
 
             // Skip, oct. (TODO)
 
@@ -71,16 +71,16 @@ type TestClass () =
             let input, expected, msg = test
             let output = parseForFArgs input
 
-            match parseForFArgs input with
+            match output with
             | Ok output ->
                 Assert.That(output, Is.EqualTo(expected), msg)
 
             | Error reason ->
                 printfn "========================="
-                printfn "Input    -> %s" input
-                printfn "Output   -> %A" output
-                printfn "Expected -> %A" expected
-                printfn "Msg      -> %s" msg
+                printfn "Input    -> [%s]" input
+                printfn "Output   -> %A"   output
+                printfn "Expected -> %A"   expected
+                printfn "Msg      -> %s"   msg
                 printfn "========================="
                 Assert.Fail("FAILED: " + msg)
         )
