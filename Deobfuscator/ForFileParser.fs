@@ -8,17 +8,11 @@ type ParseArgsMode =
     | LookingForValue
 
 
-type ParseArgs = {
+type ForFParseStatus = {
+    Mode: ParseArgsMode
     CurrKey: string
     CurrValue: string
-    Mode : ParseArgsMode
-    Skip: int
-    Usebackq : bool
-    Delims : string
-    EOL : string
-    Tokens : string
 }
-
 
 type private FindExtractStatus =
     | ExtractSuccess of string * string
@@ -42,13 +36,13 @@ module ForFileParser =
         if Regex.IsMatch(str, @"^0x[a-f0-9]+$")
         then
             SkipNumBase 16
-        elif Regex.IsMatch(str, "^0[0-7]$")
-        then
+        elif Regex.IsMatch(str, "^0[0-7]$") 
+        then 
             SkipNumBase 8
-        elif Regex.IsMatch(str, "^\d+$")
-        then
+        elif Regex.IsMatch(str, "^\d+$") 
+        then 
             SkipNumBase 10
-        then
+        else 
             Unknown
 
 
@@ -88,27 +82,28 @@ module ForFileParser =
         | Number num -> Ok (num, rest)
 
 
-    let rec private keyValueMatcher chars args =
+    let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
         match chars with
         | [] ->
             Ok args (* TODO: figure out when this is an error *)
 
         | head :: rest ->
-            match args.Mode with
+            match status.Mode with
             | LookingForKey ->
                 match head with
                 | "=" -> (* TODO: special case is 'usebackq*)
                     // A space represents the end of a key, so switch modes.
-                    keyValueMatcher rest {args with Mode = LookingForValue}
+                    keyValueMatcher rest args {status with Mode = LookingForValue}
 
                 | _ ->
-                    keyValueMatcher rest {args with CurrKey = args.CurrKey + head}
+                    keyValueMatcher rest args {status with CurrKey = status.CurrKey + head}
 
             | LookingForValue ->
-                printfn "LOOKING FOR VALUE! -> %A" args.CurrKey
-                match args.CurrKey with
+                printfn "LOOKING FOR VALUE! -> %A" status.CurrKey
+                match status.CurrKey with
                 | EOL ->
-                    keyValueMatcher rest {args with EOL = head}
+                    printfn "GET EOL VALUE!!!!"
+                    keyValueMatcher rest args status
 
                 | Skip ->
                     match tryMatchSkip chars with
@@ -118,7 +113,7 @@ module ForFileParser =
                     | Ok (num, newRest) ->
                         // TODO: Fix this part.
                         printfn "HERE %A / %A" num newRest
-                        keyValueMatcher newRest {args with Skip = num}
+                        keyValueMatcher newRest {args with Skip = num} status // TODO: what about status?
 
                 | _ ->
                     printfn "NOT YET IMPLEMENTED"
@@ -147,16 +142,19 @@ module ForFileParser =
         // the `delims' value to a literal space, it must appear last in
         // the string.
         //
-        let args = {
+        let status = {
             CurrKey = ""
             CurrValue = ""
             Mode = LookingForKey
+        }
+        
+        let defaultArgs = {
             Skip = 0
-            Usebackq = false // TODO: is this the correct default value?
-            Delims = ""
+            UseBackq = false // TODO: is this the correct default value?
+            Delims = " "
             EOL = ";" // TODO: is this default correct?
-            Tokens = ""
+            Tokens = "" // TODO: is a string the correct data type?
         }
 
         let chars = keywords |> List.ofSeq |> List.map (fun x -> x.ToString())
-        keyValueMatcher chars args
+        keyValueMatcher chars defaultArgs status

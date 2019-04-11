@@ -71,11 +71,10 @@ type ForLoopHeaderParseStatuses =
     | KeywordSkipValueIsNotNumeric of string
     | KeywordSkipNumericConversionFailed of string
 
-type ForLoopParsingKeywords = {
+type ForLoopParsingArgs = {
     EOL: string
-    Skip: string
-    Delims: char list
-    Tokens: int list
-    WildcardVar: bool
+    Skip: int
+    Delims: string
+    Tokens: string
     UseBackq: bool
 }
