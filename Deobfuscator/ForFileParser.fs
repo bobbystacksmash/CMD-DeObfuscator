@@ -23,13 +23,15 @@ module ForFileParser =
     // ReactOS For /F Implementation:
     //   https://doxygen.reactos.org/d0/d06/for_8c_source.html#l00129
 
-    let private (|Delims|Skip|EOL|Tokens|Usebackq|Unrecognised|) (str: string) =
+    let private (|Delims|Skip|EOL|Tokens|Usebackq|Useback|Unrecognised|) (str: string) =
         match str.ToLower() with
-        | "delims"  -> Delims
-        | "skip"    -> Skip
-        | "eol"     -> EOL
-        | "tokens"  -> Tokens
+        | "delims"   -> Delims
+        | "skip"     -> Skip
+        | "eol"      -> EOL
+        | "tokens"   -> Tokens
+        | "useback"  -> Useback // Undocumented!
         | "usebackq" -> Usebackq
+
         | _ -> Unrecognised str
 
     let private (|SkipNumBase|Unknown|) str =
@@ -84,9 +86,21 @@ module ForFileParser =
         | Number num -> Ok (num, rest)
 
 
+    let private resetStatus status =
+        {status with CurrKey = ""; Mode = LookingForKey}
+
+
+    let private isUseBack (str: string) =
+        Regex.IsMatch(str.ToLower(), "^usebackq?$")
+
+
     let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
         printfn "CURRENT KEY >>>>>>>>>>>>>> %A" status.CurrKey
         match chars with
+        | [] when status.Mode = LookingForKey && (isUseBack status.CurrKey) ->
+            printfn "THINGS: %A %A" (isUseBack status.CurrKey) status
+            Ok {args with UseBackq = true}
+
         | [] ->
             Ok args (* TODO: figure out when this is an error *)
 
@@ -97,6 +111,9 @@ module ForFileParser =
                 | "=" -> (* TODO: special case is 'usebackq*)
                     // A space represents the end of a key, so switch modes.
                     keyValueMatcher rest args {status with Mode = LookingForValue}
+
+                | " " when (isUseBack status.CurrKey) ->
+                    keyValueMatcher rest {args with UseBackq = true} (resetStatus status)
 
                 | " " ->
                     // TODO: this will likely cause problems for us later.

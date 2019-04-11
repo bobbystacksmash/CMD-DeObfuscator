@@ -37,7 +37,6 @@ type TestClass () =
         // "delims= delims="            OK
         // "delims="                    OK
         // "delims= "                   OK
-        // "useback"                    OK
         let successfulTests = [
             // Skip, decimal.
             ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
@@ -55,7 +54,7 @@ type TestClass () =
 
             // Skip, whtiespace
             ("  skip=2",  { defaults with Skip = 2 }, "Interpret a skip value (leading whitespace)")
-            ("  skip=4",  { defaults with Skip = 4 }, "Interpret a skip value (trailing whitespace)")
+            ("skip=4  ",  { defaults with Skip = 4 }, "Interpret a skip value (trailing whitespace)")
             ("  skip=6  ",{ defaults with Skip = 6 }, "Interpret a skip value (leading & trailing whitespace)")
 
             // Skip, Skip (overwriting defaults)
@@ -66,15 +65,13 @@ type TestClass () =
 
             // EOL, with empty skip.
             ("eol= skip=3", {defaults with Skip = 3}, "Correctly handle (leading) empty EOL ")
-
-            // EOL (empty)
             ("eol=", defaults, "Ignore empty EOL")
-
-            // EOL (SPC)
             ("eol= ", {defaults with EOL = " "}, "Set EOL to an empty string when it appears last.")
-
-            // EOL empty, twice
             ("eol= eol=", defaults, "Ignore two empty EOLs.")
+
+            // Useback
+            ("useback",  {defaults with UseBackq = true}, "Set usebackq when only 'useback' is given" )
+            ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
         ]
 
         successfulTests |> List.iter (fun test ->
