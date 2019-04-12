@@ -71,6 +71,12 @@ type ForLoopHeaderParseStatuses =
     | KeywordSkipValueIsNotNumeric of string
     | KeywordSkipNumericConversionFailed of string
 
+
+type ForTokenExpression = {
+    Cols: int list
+    UseWildcard: bool
+}
+
 type ForLoopParsingArgs = {
     EOL: string
     Skip: int

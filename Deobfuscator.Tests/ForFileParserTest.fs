@@ -31,8 +31,6 @@ type TestClass () =
         // "tokens=1,5*"                OK
         // ""                           OK
         // "eol= delims="               OK
-        // "eol= eol="                  OK
-        // "eol=a eol=b"                OK
         // "delims=a delims=b"          OK
         // "delims= delims="            OK
         // "delims="                    OK
@@ -68,10 +66,14 @@ type TestClass () =
             ("eol=", defaults, "Ignore empty EOL")
             ("eol= ", {defaults with EOL = " "}, "Set EOL to an empty string when it appears last.")
             ("eol= eol=", defaults, "Ignore two empty EOLs.")
+            ("eol=a eol=b", {defaults with EOL = "b"}, "Take the latter of two EOLs")
 
             // Useback
             ("useback",  {defaults with UseBackq = true}, "Set usebackq when only 'useback' is given" )
             ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
+
+            // Tokens
+            // ...
         ]
 
         successfulTests |> List.iter (fun test ->

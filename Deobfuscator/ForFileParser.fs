@@ -86,19 +86,32 @@ module ForFileParser =
         | Number num -> Ok (num, rest)
 
 
+    let private tryParseTokenExpression (chars: string list) =
+        (*
+            tokens=2,4,6 will cause the second, fourth and sixth items on each line to be processed.
+            tokens=2-6   will cause the second, third, fourth, fifth and sixth items on each line to be processed.
+            tokens=*     will cause all items on each line to be processed.
+            tokens=3*    will process the third token and the 4th + all subsequent items,
+                         this can also be written as tokens=3,*
+
+            The numbers specified in `tokens=' are automatically sorted,
+            for example: `tokens=5,7,1-3' and `tokens=1,2,3,5,7' produce
+            the same result.
+        *)
+        Error FeatureNotImplemented
+
+
     let private resetStatus status =
         {status with CurrKey = ""; Mode = LookingForKey}
 
 
-    let private isUseBack (str: string) =
+    let private isUseBackq (str: string) =
         Regex.IsMatch(str.ToLower(), "^usebackq?$")
 
 
     let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
-        printfn "CURRENT KEY >>>>>>>>>>>>>> %A" status.CurrKey
         match chars with
-        | [] when status.Mode = LookingForKey && (isUseBack status.CurrKey) ->
-            printfn "THINGS: %A %A" (isUseBack status.CurrKey) status
+        | [] when status.Mode = LookingForKey && (isUseBackq status.CurrKey) ->
             Ok {args with UseBackq = true}
 
         | [] ->
@@ -112,7 +125,7 @@ module ForFileParser =
                     // A space represents the end of a key, so switch modes.
                     keyValueMatcher rest args {status with Mode = LookingForValue}
 
-                | " " when (isUseBack status.CurrKey) ->
+                | " " when (isUseBackq status.CurrKey) ->
                     keyValueMatcher rest {args with UseBackq = true} (resetStatus status)
 
                 | " " ->
