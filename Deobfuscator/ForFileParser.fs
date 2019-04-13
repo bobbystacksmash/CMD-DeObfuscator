@@ -19,6 +19,12 @@ type private FindExtractStatus =
     | NoMatch
 
 
+type private TokenColumn =
+    | Column of int
+    | Wildcard
+    | Invalid of string
+
+
 module ForFileParser =
     // ReactOS For /F Implementation:
     //   https://doxygen.reactos.org/d0/d06/for_8c_source.html#l00129
@@ -86,6 +92,48 @@ module ForFileParser =
         | Number num -> Ok (num, rest)
 
 
+    let private (|TokenRange|WildcardRange|Col|WildcardCol|Wildcard|NotValid|) expr =
+        let m = Regex.Match(expr, "^(\d+)-(\d+)([*])?$")
+        if m.Success
+        then
+            let rangeStart = m.Groups.[1].Value |> int
+            let rangeEnd   = m.Groups.[2].Value |> int
+
+            if m.Groups.Count = 4
+            then
+                WildcardRange [rangeStart .. rangeEnd]
+            else
+                TokenRange [rangeStart .. rangeEnd]
+        elif Regex.IsMatch(expr, "^\d+$")
+        then
+            Col (expr |> int)
+
+        elif Regex.IsMatch(expr, "^\d[*]$")
+        then
+            WildcardCol (expr.Replace("*", "") |> int)
+        elif expr = "*" then
+            Wildcard
+        else
+            NotValid
+
+
+    let private expandTokenRanges expr =
+        match expr with
+        | TokenRange range
+        | WildcardRange range ->
+            range |> List.map (fun x -> Column(x))
+
+        | Col col
+        | WildcardCol col ->
+            [Column col]
+
+        | Wildcard ->
+            [Wildcard]
+
+        | NotValid ->
+            [Invalid expr]
+
+
     let private tryParseTokenExpression (chars: string list) =
         (*
             tokens=2,4,6 will cause the second, fourth and sixth items on each line to be processed.
@@ -93,11 +141,25 @@ module ForFileParser =
             tokens=*     will cause all items on each line to be processed.
             tokens=3*    will process the third token and the 4th + all subsequent items,
                          this can also be written as tokens=3,*
+            tokens=1-1   will cause the first item to be processed.
+            tokens=2-1   seems to set the vars to ""
+            tokens=2-1,1,2 will set var1 and var2 appropriately.
+
+            tokens=1,2*,3 throws an error - ',3' unexpected at this time.
 
             The numbers specified in `tokens=' are automatically sorted,
             for example: `tokens=5,7,1-3' and `tokens=1,2,3,5,7' produce
             the same result.
         *)
+        let (value, rest) = getValue chars " "
+
+        let columns =
+            value.Split [|','|]
+            |> List.ofSeq
+            |> List.collect expandTokenRanges
+            // TODO: valdate the generated range list...
+
+        printfn "GOT RESULT -> %A" columns
         Error FeatureNotImplemented
 
 
@@ -153,8 +215,15 @@ module ForFileParser =
                         Error reason
 
                     | Ok (num, newRest) ->
-                        let newStatus = { status with Mode = LookingForKey; CurrKey = ""}
-                        keyValueMatcher newRest {args with Skip = num} newStatus
+                        keyValueMatcher newRest {args with Skip = num} (resetStatus status)
+
+                | Tokens ->
+                    match tryParseTokenExpression chars with
+                    | Error reason ->
+                        Error reason
+
+                    | Ok (tokens, newRest) ->
+                        keyValueMatcher newRest {args with Tokens = tokens} (resetStatus status)
 
                 | _ ->
                     printfn "!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -196,7 +265,7 @@ module ForFileParser =
             UseBackq = false // TODO: is this the correct default value?
             Delims = " "
             EOL = ";" // TODO: is this default correct?
-            Tokens = "" // TODO: is a string the correct data type?
+            Tokens = []
         }
 
         let chars = keywords |> List.ofSeq |> List.map (fun x -> x.ToString())

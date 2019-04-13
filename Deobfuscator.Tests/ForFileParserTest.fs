@@ -17,7 +17,7 @@ type TestClass () =
             Skip = 0
             EOL = ";"
             Delims = " "
-            Tokens = ""
+            Tokens = []
             UseBackq = false
         }
 
@@ -37,7 +37,7 @@ type TestClass () =
         // "delims= "                   OK
         let successfulTests = [
             // Skip, decimal.
-            ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
+            (*("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
             ("skip=1",  { defaults with Skip = 1 }, "Interpret a skip value (dec).")
             ("skip=03", { defaults with Skip = 3 }, "Interpret a skip value with leading zero (dec).")
 
@@ -70,10 +70,11 @@ type TestClass () =
 
             // Useback
             ("useback",  {defaults with UseBackq = true}, "Set usebackq when only 'useback' is given" )
-            ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
+            ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )*)
 
             // Tokens
             // ...
+            ("tokens=1,2,3", {defaults with Tokens = [1; 2; 3]}, "Correctly parse token expr.")
         ]
 
         successfulTests |> List.iter (fun test ->

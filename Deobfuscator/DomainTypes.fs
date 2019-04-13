@@ -81,6 +81,6 @@ type ForLoopParsingArgs = {
     EOL: string
     Skip: int
     Delims: string
-    Tokens: string
+    Tokens: int list
     UseBackq: bool
 }
