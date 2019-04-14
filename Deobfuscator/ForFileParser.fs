@@ -92,7 +92,7 @@ module ForFileParser =
         | Number num -> Ok (num, rest)
 
 
-    let private (|TokenRange|WildcardRange|Col|WildcardCol|Wildcard|NotValid|) expr =
+    let private (|TokenRange|WildcardRange|Col|WildcardCol|WC|NotValid|) expr =
         let m = Regex.Match(expr, "^(\d+)-(\d+)([*])?$")
         if m.Success
         then
@@ -112,7 +112,7 @@ module ForFileParser =
         then
             WildcardCol (expr.Replace("*", "") |> int)
         elif expr = "*" then
-            Wildcard
+            WC
         else
             NotValid
 
@@ -127,11 +127,32 @@ module ForFileParser =
         | WildcardCol col ->
             [Column col]
 
-        | Wildcard ->
+        | WC ->
             [Wildcard]
 
         | NotValid ->
             [Invalid expr]
+
+
+    let private (|ValidTokenExpr|_|) (exprs: TokenColumn list) =
+        let numWildcards =
+            exprs
+            |> List.filter (fun tc ->
+                match tc with
+                | Wildcard _ -> true
+                | _ -> false)
+
+        if numWildcards.Length > 1 then
+            None
+        elif numWildcards.Length = 0 then
+            Some ValidTokenExpr
+        else
+            match exprs |> List.rev with
+            | [] -> Some ValidTokenExpr
+            | last :: _ ->
+                match last with
+                | Wildcard -> Some ValidTokenExpr
+                | _ -> None
 
 
     let private tryParseTokenExpression (chars: string list) =
@@ -159,8 +180,16 @@ module ForFileParser =
             |> List.collect expandTokenRanges
             // TODO: valdate the generated range list...
 
-        printfn "GOT RESULT -> %A" columns
-        Error FeatureNotImplemented
+        match columns with
+        | ValidTokenExpr ->
+            printfn "This expr appears VALID! >>>> %A" columns
+            // TODO: Now we have a valid expr, we need to turn this in to a token list
+            //       that can be saved.  This will involve stripping duplicates, ordering
+            //       the columns, and setting some kind of flag to indicate whether or
+            //       not a wildcard was used in the expr.
+            Error FeatureNotImplemented
+        | _ ->
+            Error FeatureNotImplemented
 
 
     let private resetStatus status =

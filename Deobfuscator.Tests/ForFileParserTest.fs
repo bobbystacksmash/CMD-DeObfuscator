@@ -74,7 +74,7 @@ type TestClass () =
 
             // Tokens
             // ...
-            ("tokens=1,2,3", {defaults with Tokens = [1; 2; 3]}, "Correctly parse token expr.")
+            ("tokens=1-2,2-3,3,*", {defaults with Tokens = [1; 2; 3]}, "Correctly parse token expr.")
         ]
 
         successfulTests |> List.iter (fun test ->

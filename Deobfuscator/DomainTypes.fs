@@ -70,6 +70,8 @@ type ForLoopHeaderParseStatuses =
     | UnrecognisedParseKeyword of string
     | KeywordSkipValueIsNotNumeric of string
     | KeywordSkipNumericConversionFailed of string
+    | TooManyWildcardsUsedInTokensExpr of string
+    | WildcardNotAllowedHereInTokensExpr of string
 
 
 type ForTokenExpression = {
