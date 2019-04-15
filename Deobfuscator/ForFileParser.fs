@@ -40,31 +40,34 @@ module ForFileParser =
 
         | _ -> Unrecognised str
 
-    let private (|SkipNumBase|Unknown|) str =
 
-        if Regex.IsMatch(str, @"^0x[a-f0-9]+$", RegexOptions.IgnoreCase)
+    let private (|Hex|Dec|Oct|Unknown|) str =
+        if Regex.IsMatch(str, @"^0x[0-9a-f]+$", RegexOptions.IgnoreCase)
         then
-            SkipNumBase 16
-        elif Regex.IsMatch(str, "^0[0-7]+$")
+            Hex(str)
+        elif Regex.IsMatch(str, @"^0[0-7]+$")
         then
-            SkipNumBase 8
-        elif Regex.IsMatch(str, "^\d+$")
+            Oct(str)
+        elif Regex.IsMatch(str, @"^\d+$")
         then
-            SkipNumBase 10
+            Dec(str)
         else
             Unknown
 
 
     let private (|Number|NaN|) str =
-        match str with
-        | Unknown ->
-            NaN
-        | SkipNumBase numBase ->
+
+        let toNumBase (numstr: string) (numbase: int) =
             try
-                Number (System.Convert.ToInt32(str, numBase))
+                Number (System.Convert.ToInt32(numstr, numbase))
             with
-                _ ->
-                    NaN
+                _ -> NaN
+
+        match str with
+        | Hex num -> toNumBase str 16
+        | Dec num -> toNumBase str 10
+        | Oct num -> toNumBase str  8
+        | Unknown -> NaN
 
 
     let private getValue (chars: string list) delim =
@@ -80,11 +83,7 @@ module ForFileParser =
 
 
     let private tryMatchSkip (chars: string list) =
-        // Skips N lines from the input.  N can be encoded
-        // either as decimal, hex, or octal.
         let (value, rest) = getValue chars " "
-        printfn "SKIP -----> %A / %A" value rest
-        printfn "tryMatchSkip (value, rest) = %A, %A" value rest
         match value with
         | NaN ->
             let msg = sprintf "Expected FOR /F 'skip=' value (%s) to be numeric." value
@@ -92,29 +91,35 @@ module ForFileParser =
         | Number num -> Ok (num, rest)
 
 
-    let private (|TokenRange|WildcardRange|Col|WildcardCol|WC|NotValid|) expr =
-        let m = Regex.Match(expr, "^(\d+)-(\d+)([*])?$")
-        if m.Success
-        then
-            let rangeStart = m.Groups.[1].Value |> int
-            let rangeEnd   = m.Groups.[2].Value |> int
+    let private (|TokenRange|WildcardRange|Col|WildcardCol|WC|NotValid|) (expr: string) =
 
-            if m.Groups.Count = 4
-            then
-                WildcardRange [rangeStart .. rangeEnd]
-            else
-                TokenRange [rangeStart .. rangeEnd]
-        elif Regex.IsMatch(expr, "^\d+$")
-        then
-            Col (expr |> int)
+        let endsWithWildcard = Regex.IsMatch(expr, "[*]$")
+        let strippedWildcard = Regex.Replace(expr, "[*]$", "")
 
-        elif Regex.IsMatch(expr, "^\d[*]$")
+        if strippedWildcard.Contains "-"
         then
-            WildcardCol (expr.Replace("*", "") |> int)
-        elif expr = "*" then
-            WC
+            let parts = expr.Split [|'-'|] |> List.ofSeq
+            match parts with
+            | [Number rangeFrom; Number rangeTo] when endsWithWildcard ->
+                WildcardRange [rangeFrom .. rangeTo]
+
+            | [Number rangeFrom; Number rangeTo] ->
+                TokenRange [rangeFrom .. rangeTo]
+
+            | _ -> NotValid
         else
-            NotValid
+            match strippedWildcard with
+            | Number num when endsWithWildcard ->
+                WildcardCol num
+
+            | Number num ->
+                Col num
+
+            | _ when expr = "*" ->
+                WC
+
+            | _ ->
+                NotValid
 
 
     let private expandTokenRanges expr =
