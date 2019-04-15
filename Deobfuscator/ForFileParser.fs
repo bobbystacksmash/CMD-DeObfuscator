@@ -142,16 +142,28 @@ module ForFileParser =
                 | Wildcard _ -> true
                 | _ -> false)
 
+        let columns =
+            exprs
+            |> List.map (fun tc ->
+                match tc with
+                | Column col -> col
+                | _ -> -1)
+            |> List.filter (fun col -> col >= 0)
+            |> set
+            |> List.ofSeq
+
+        // Wildcard validation checks...
         if numWildcards.Length > 1 then
             None
         elif numWildcards.Length = 0 then
-            Some ValidTokenExpr
+            Some (ValidTokenExpr { Cols = columns; UseWildcard = false })
         else
+            // Check wildcards only appear at the end.
             match exprs |> List.rev with
-            | [] -> Some ValidTokenExpr
+            | [] -> Some (ValidTokenExpr { Cols = columns; UseWildcard = false})
             | last :: _ ->
                 match last with
-                | Wildcard -> Some ValidTokenExpr
+                | Wildcard -> Some (ValidTokenExpr { Cols = columns; UseWildcard = true })
                 | _ -> None
 
 
@@ -178,16 +190,10 @@ module ForFileParser =
             value.Split [|','|]
             |> List.ofSeq
             |> List.collect expandTokenRanges
-            // TODO: valdate the generated range list...
 
         match columns with
-        | ValidTokenExpr ->
-            printfn "This expr appears VALID! >>>> %A" columns
-            // TODO: Now we have a valid expr, we need to turn this in to a token list
-            //       that can be saved.  This will involve stripping duplicates, ordering
-            //       the columns, and setting some kind of flag to indicate whether or
-            //       not a wildcard was used in the expr.
-            Error FeatureNotImplemented
+        | ValidTokenExpr tokensExpr ->
+            Ok (tokensExpr, rest)
         | _ ->
             Error FeatureNotImplemented
 
@@ -289,12 +295,17 @@ module ForFileParser =
             Mode = LookingForKey
         }
 
+        let defaultTokensExpr = {
+            Cols = []
+            UseWildcard = false
+        }
+
         let defaultArgs = {
             Skip = 0
             UseBackq = false // TODO: is this the correct default value?
             Delims = " "
             EOL = ";" // TODO: is this default correct?
-            Tokens = []
+            Tokens = defaultTokensExpr
         }
 
         let chars = keywords |> List.ofSeq |> List.map (fun x -> x.ToString())

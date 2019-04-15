@@ -74,7 +74,7 @@ type ForLoopHeaderParseStatuses =
     | WildcardNotAllowedHereInTokensExpr of string
 
 
-type ForTokenExpression = {
+type ForTokenExpr = {
     Cols: int list
     UseWildcard: bool
 }
@@ -83,6 +83,6 @@ type ForLoopParsingArgs = {
     EOL: string
     Skip: int
     Delims: string
-    Tokens: int list
+    Tokens: ForTokenExpr
     UseBackq: bool
 }
