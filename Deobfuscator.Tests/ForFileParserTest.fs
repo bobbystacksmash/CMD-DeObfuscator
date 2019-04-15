@@ -26,7 +26,6 @@ type TestClass () =
         // Successful Tests
         // ----------------
         // "eol=; tokens="              OK
-        // "tokens=1,2,3,4,5,6,7"       OK
         // "tokens=0xa"                 OK
         // "tokens=1"                   OK
         // "tokens=03"                  OK
@@ -39,7 +38,7 @@ type TestClass () =
         // "delims= "                   OK
         let successfulTests = [
             // Skip, decimal.
-            (*("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
+            ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
             ("skip=1",  { defaults with Skip = 1 }, "Interpret a skip value (dec).")
             ("skip=03", { defaults with Skip = 3 }, "Interpret a skip value with leading zero (dec).")
 
@@ -72,11 +71,14 @@ type TestClass () =
 
             // Useback
             ("useback",  {defaults with UseBackq = true}, "Set usebackq when only 'useback' is given" )
-            ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )*)
+            ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
 
             // Tokens
             // ...
+            ("tokens=1", {defaults with Tokens = { Cols = [1]; UseWildcard = false }}, "Handle simple tokens parsing.")
+            ("tokens=1,2,3,4,5,6", {defaults with Tokens = { Cols = [1..6]; UseWildcard = false }}, "Handle large number of columns.")
             ("tokens=1-2,2-3,3,*", {defaults with Tokens = { Cols = [1; 2; 3]; UseWildcard = true } }, "Correctly parse token expr.")
+            // TODO: add hex and octal tokens tests...
         ]
 
         successfulTests |> List.iter (fun test ->
