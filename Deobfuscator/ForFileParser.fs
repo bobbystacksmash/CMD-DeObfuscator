@@ -208,6 +208,12 @@ module ForFileParser =
             Error FeatureNotImplemented
 
 
+    let private tryParseDelims (chars: string list) =
+        let (value, rest) = getValue chars " "
+        let delims = value |> List.ofSeq
+        Ok (delims, rest)
+
+
     let private resetStatus status =
         {status with CurrKey = ""; Mode = LookingForKey}
 
@@ -263,12 +269,21 @@ module ForFileParser =
                         keyValueMatcher newRest {args with Skip = num} (resetStatus status)
 
                 | Tokens ->
+                    // TODO: handle the case where the value is a SPC
                     match tryParseTokenExpression chars with
                     | Error reason ->
                         Error reason
 
                     | Ok (tokens, newRest) ->
                         keyValueMatcher newRest {args with Tokens = tokens} (resetStatus status)
+
+                | Delims ->
+                    match tryParseDelims chars with
+                    | Error reason ->
+                        Error reason
+                    | Ok (delims, newRest) ->
+                        keyValueMatcher newRest {args with Delims = delims} (resetStatus status)
+
 
                 | _ ->
                     printfn "!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -313,7 +328,7 @@ module ForFileParser =
         let defaultArgs = {
             Skip = 0
             UseBackq = false // TODO: is this the correct default value?
-            Delims = " "
+            Delims = [' '; '\t']
             EOL = ";" // TODO: is this default correct?
             Tokens = defaultTokensExpr
         }

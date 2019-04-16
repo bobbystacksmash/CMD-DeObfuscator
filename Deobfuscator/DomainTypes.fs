@@ -82,7 +82,7 @@ type ForTokenExpr = {
 type ForLoopParsingArgs = {
     EOL: string
     Skip: int
-    Delims: string
+    Delims: char list
     Tokens: ForTokenExpr
     UseBackq: bool
 }
