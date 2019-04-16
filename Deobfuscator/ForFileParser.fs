@@ -98,7 +98,7 @@ module ForFileParser =
 
         if strippedWildcard.Contains "-"
         then
-            let parts = expr.Split [|'-'|] |> List.ofSeq
+            let parts = strippedWildcard.Split [|'-'|] |> List.ofSeq
             match parts with
             | [Number rangeFrom; Number rangeTo] when endsWithWildcard ->
                 WildcardRange [rangeFrom .. rangeTo]

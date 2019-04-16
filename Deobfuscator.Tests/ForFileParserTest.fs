@@ -80,6 +80,9 @@ type TestClass () =
             ("tokens=1-2,2-3,3,*", {defaults with Tokens = { Cols = [1; 2; 3]; UseWildcard = true } }, "Correctly parse token expr.")
             ("tokens=0x1,0xa,*", {defaults with Tokens = { Cols = [1; 10]; UseWildcard = true}}, "Parse hex tokens.")
             ("tokens=0xa-0xf", {defaults with Tokens = { Cols = [10; 11; 12; 13; 14; 15]; UseWildcard = false } }, "Handle hex ranges")
+            ("tokens=011", {defaults with Tokens = { Cols = [9]; UseWildcard = false}}, "Handle literal octal.")
+            ("tokens=017", {defaults with Tokens = { Cols = [15]; UseWildcard = false}}, "Handle octal numbers.")
+            ("tokens=015-017*", {defaults with Tokens = { Cols = [13; 14; 15]; UseWildcard = false}}, "Handle octal ranges + wildcard")
         ]
 
         successfulTests |> List.iter (fun test ->
