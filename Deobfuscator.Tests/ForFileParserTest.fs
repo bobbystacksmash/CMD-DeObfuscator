@@ -74,12 +74,12 @@ type TestClass () =
             ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
 
             // Tokens
-            // ...
             ("tokens=*", {defaults with Tokens = { Cols = []; UseWildcard = true}}, "Handle lone wildcard.")
             ("tokens=1", {defaults with Tokens = { Cols = [1]; UseWildcard = false }}, "Handle simple tokens parsing.")
             ("tokens=1,2,3,4,5,6", {defaults with Tokens = { Cols = [1..6]; UseWildcard = false }}, "Handle large number of columns.")
             ("tokens=1-2,2-3,3,*", {defaults with Tokens = { Cols = [1; 2; 3]; UseWildcard = true } }, "Correctly parse token expr.")
-            // TODO: add hex and octal tokens tests...
+            ("tokens=0x1,0xa,*", {defaults with Tokens = { Cols = [1; 10]; UseWildcard = true}}, "Parse hex tokens.")
+            ("tokens=0xa-0xf", {defaults with Tokens = { Cols = [10; 11; 12; 13; 14; 15]; UseWildcard = false } }, "Handle hex ranges")
         ]
 
         successfulTests |> List.iter (fun test ->
@@ -119,7 +119,10 @@ type TestClass () =
         // "tokens=1,0"                 ["] was unexpected at this time.
         //
         let failingTests = [
-            ("skip=a", "Should fail to parse a `skip' keyword when the value is not numeric.")
+            //("skip=a", "Should fail to parse a `skip' keyword when the value is not numeric.")
+            ("tokens=0x00", "Should not allow (hex) zero values to be set in tokens keyword.")
+            ("tokens=0",    "Should not allow (dec) zero values to be set in tokens keyword.")
+            ("tokens=00",   "Should not allow (oct) zero values to be set in tokens keyword.")
         ]
 
         failingTests |> List.iter (fun test ->

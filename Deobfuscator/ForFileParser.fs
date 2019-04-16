@@ -157,8 +157,13 @@ module ForFileParser =
             |> set
             |> List.ofSeq
 
-        // Wildcard validation checks...
-        if numWildcards.Length > 1 then
+        let zeroOrNegatives =
+            columns
+            |> List.filter (fun x -> x <= 0)
+
+        if zeroOrNegatives.Length > 0 then
+            None
+        elif numWildcards.Length > 1 then
             None
         elif numWildcards.Length = 0 then
             Some (ValidTokenExpr { Cols = columns; UseWildcard = false })
