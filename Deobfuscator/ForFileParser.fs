@@ -128,9 +128,11 @@ module ForFileParser =
         | WildcardRange range ->
             range |> List.map (fun x -> Column(x))
 
-        | Col col
-        | WildcardCol col ->
+        | Col col ->
             [Column col]
+
+        | WildcardCol col ->
+            [Column col; Wildcard]
 
         | WC ->
             [Wildcard]

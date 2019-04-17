@@ -76,6 +76,8 @@ type TestClass () =
             // Tokens
             ("tokens=*", {defaults with Tokens = { Cols = []; UseWildcard = true}}, "Handle lone wildcard.")
             ("tokens=1", {defaults with Tokens = { Cols = [1]; UseWildcard = false }}, "Handle simple tokens parsing.")
+            ("tokens=3*", {defaults with Tokens = { Cols = [3]; UseWildcard = true}}, "Handle num + wildcard.")
+            ("tokens=3,*", {defaults with Tokens = { Cols = [3]; UseWildcard = true}}, "Handle num + wildcard separated by comma.")
             ("tokens=1,2,3,4,5,6", {defaults with Tokens = { Cols = [1..6]; UseWildcard = false }}, "Handle large number of columns.")
             ("tokens=1-2,2-3,3,*", {defaults with Tokens = { Cols = [1; 2; 3]; UseWildcard = true } }, "Correctly parse token expr.")
             ("tokens=0x1,0xa,*", {defaults with Tokens = { Cols = [1; 10]; UseWildcard = true}}, "Parse hex tokens.")
