@@ -87,6 +87,7 @@ type TestClass () =
             ("tokens=017", {defaults with Tokens = { Cols = [15]; UseWildcard = false}}, "Handle octal numbers.")
             ("tokens=015-017*", {defaults with Tokens = { Cols = [13; 14; 15]; UseWildcard = false}}, "Handle octal ranges + wildcard")
             ("tokens=1-2 tokens=2-4", {defaults with Tokens = { Cols = [2..4]; UseWildcard = false}}, "Latter 'tokens=' overwrites former")
+            ("tokens= ", defaults, "Allow empty tokens keyword when at the end of the expr.")
 
             //
             // Delims

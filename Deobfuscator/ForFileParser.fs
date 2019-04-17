@@ -181,8 +181,16 @@ module ForFileParser =
     let private tryParseTokenExpression (chars: string list) =
 
         let (value, rest) = getValue chars " "
-
-        if value = "" then
+        //
+        // Handle the curious case where the following is INVALID:
+        //
+        //   `tokens= eol=;`
+        //
+        // ...however, the following is VALID:
+        //
+        //   `tokens= ` (note: trailing space)
+        //
+        if value = "" && rest.Length > 0 then
             let errmsg = sprintf "Expected value on right-hand side of '%s'" (chars |> List.fold (+) "")
             Error (ExpectedParseKeywordValue errmsg)
         else
