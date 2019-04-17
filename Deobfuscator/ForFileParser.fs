@@ -37,8 +37,7 @@ module ForFileParser =
         | "tokens"   -> Tokens
         | "useback"  -> Useback // Undocumented!
         | "usebackq" -> Usebackq
-
-        | _ -> Unrecognised str
+        | _          -> Unrecognised str
 
 
     let private (|Hex|Dec|Oct|Unknown|) str =
@@ -180,34 +179,23 @@ module ForFileParser =
 
 
     let private tryParseTokenExpression (chars: string list) =
-        (*
-            tokens=2,4,6 will cause the second, fourth and sixth items on each line to be processed.
-            tokens=2-6   will cause the second, third, fourth, fifth and sixth items on each line to be processed.
-            tokens=*     will cause all items on each line to be processed.
-            tokens=3*    will process the third token and the 4th + all subsequent items,
-                         this can also be written as tokens=3,*
-            tokens=1-1   will cause the first item to be processed.
-            tokens=2-1   seems to set the vars to ""
-            tokens=2-1,1,2 will set var1 and var2 appropriately.
 
-            tokens=1,2*,3 throws an error - ',3' unexpected at this time.
-
-            The numbers specified in `tokens=' are automatically sorted,
-            for example: `tokens=5,7,1-3' and `tokens=1,2,3,5,7' produce
-            the same result.
-        *)
         let (value, rest) = getValue chars " "
 
-        let columns =
-            value.Split [|','|]
-            |> List.ofSeq
-            |> List.collect expandTokenRanges
+        if value = "" then
+            let errmsg = sprintf "Expected value on right-hand side of '%s'" (chars |> List.fold (+) "")
+            Error (ExpectedParseKeywordValue errmsg)
+        else
+            let columns =
+                value.Split [|','|]
+                |> List.ofSeq
+                |> List.collect expandTokenRanges
 
-        match columns with
-        | ValidTokenExpr tokensExpr ->
-            Ok (tokensExpr, rest)
-        | _ ->
-            Error FeatureNotImplemented
+            match columns with
+            | ValidTokenExpr tokensExpr ->
+                Ok (tokensExpr, rest)
+            | _ ->
+                Error FeatureNotImplemented
 
 
     let private tryParseDelims (chars: string list) =

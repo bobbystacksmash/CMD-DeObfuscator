@@ -37,6 +37,7 @@ type TestClass () =
         // "delims="                    OK
         // "delims= "                   OK
         let successfulTests = [
+
             // Skip, decimal.
             ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
             ("skip=1",  { defaults with Skip = 1 }, "Interpret a skip value (dec).")
@@ -92,6 +93,7 @@ type TestClass () =
             //
             ("delims=,", {defaults with Delims = [',']}, "Set delimiter correctly to a comma.")
             ("delims=abc", {defaults with Delims = ['a'; 'b'; 'c';]}, "Set delimiter to be multiple chars.")
+
             //
             // Mixed-keyword tests
             //
@@ -121,7 +123,7 @@ type TestClass () =
         )
 
     [<Test>]
-    member this.ParseForFErros() =
+    member this.ParseForFErrors() =
 
         // Error Tests
         // -----------
@@ -143,6 +145,8 @@ type TestClass () =
             ("tokens=0x00", "Should not allow (hex) zero values to be set in tokens keyword.")
             ("tokens=0",    "Should not allow (dec) zero values to be set in tokens keyword.")
             ("tokens=00",   "Should not allow (oct) zero values to be set in tokens keyword.")
+
+            ("tokens= eol=;", "Should not allow the tokens= keyword to be a single space.")
         ]
 
         failingTests |> List.iter (fun test ->
