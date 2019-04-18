@@ -125,12 +125,27 @@ type TestClass () =
 
     [<Test>]
     member this.ParseForFErrors() =
+        // April, 2019:
+        // This is *REALLY* hacky, and I'm sure there's a smarter way to do exception
+        // checking.  Perhaps returning a Result is the wrong pattern -- maybe exceptions
+        // are better suited?  Either way, still learning F# so this'll have to do (for now).
+        let checkCorrectErrorReturned errName output =
+            printfn "Checking ErrName -> %A" errName
+            match output with
+            | Ok _ -> false
+            | Error err ->
+                printfn "What type of err? > %A" err
+                match err with
+                | FeatureNotImplemented -> false
+                | KeywordSkipValueIsNotNumeric _ when errName = "KeywordSkipValueIsNotNumeric" -> true
+                | KeywordSkipCannotBeZero _ when errName = "KeywordSkipCannotBeZero" -> true
+                | KeywordTokensIsInvalid _ when errName = "KeywordTokensIsInvalid" -> true
+                | ExpectedParseKeywordValue _ when errName = "ExpectedParseKeywordValue" -> true
+                | _ -> false
+
 
         // Error Tests
         // -----------
-        // "tokens= eol=;"              [ eol=;"] was unexpected at this time.
-        // "skip=a"                     [a"] was unexpected at this time.
-        // "skip=0"                     ["] was unexpected at this time.
         //  "eol=abc"                    [bc"]  was unexpected at this time.
         // "eol"                        [eol"] was unexpected at this time.
         // "eol=delims="                [elims="] was unexpected at this time.
@@ -142,26 +157,48 @@ type TestClass () =
         // "tokens=1,0"                 ["] was unexpected at this time.
         //
         let failingTests = [
-            //("skip=a", "Should fail to parse a `skip' keyword when the value is not numeric.")
-            ("tokens=0x00", "Should not allow (hex) zero values to be set in tokens keyword.")
-            ("tokens=0",    "Should not allow (dec) zero values to be set in tokens keyword.")
-            ("tokens=00",   "Should not allow (oct) zero values to be set in tokens keyword.")
+            (*("skip=a", "KeywordSkipValueIsNotNumeric", "Should fail to parse a `skip' keyword when the value is not numeric.")
+            ("skip=0", "KeywordSkipCannotBeZero", "Should not allow skip to equal zero.")
 
-            ("tokens= eol=;", "Should not allow the tokens= keyword to be a single space.")
+            ("tokens=0x00-0x01", "KeywordTokensIsInvalid", "Should not allow (hex) zero values to be set in tokens keyword.")
+            ("tokens=0", "KeywordTokensIsInvalid", "Should not allow (dec) zero values to be set in tokens keyword.")*)
+            ("tokens=00", "KeywordTokensIsInvalid", "Should not allow (oct) zero values to be set in tokens keyword.")
+
+            ("tokens= eol=;", "ExpectedParseKeywordValue", "Should not allow the tokens= keyword to be a single space.")
         ]
 
-        failingTests |> List.iter (fun test ->
-            let input, msg = test
+        let runTest test =
+            let input, expectedErr, msg = test
             let output = parseForFArgs input
+            let outbuf = [
+                "========================="
+                (sprintf "Input  -> [%s]" input)
+                (sprintf "Output -> %A"   output)
+                (sprintf "Msg    -> %s"   msg)
+                "========================="
+            ]
+            (checkCorrectErrorReturned expectedErr output, outbuf)
 
-            printfn "========================="
-            printfn "Input  -> [%s]" input
-            printfn "Output -> %A"   output
-            printfn "Msg    -> %s"   msg
-            printfn "========================="
-            match output with
-            | Ok output ->
-                Assert.Fail("Input string was expected to fail with a reason, instead succeeded.")
-            | Error reason ->
-                Assert.Pass(sprintf "Failed to parse '%s' - reason: %A" input reason)
-        )
+
+        let findFailingTests testResult =
+            match testResult with
+            | (false, reason) -> true
+            | _ -> false
+
+
+        let results =
+            failingTests
+            |> List.map runTest
+            |> List.filter findFailingTests
+
+        if results.Length = 0 then
+            Assert.Pass("All expected errors were thrown.")
+        else
+            printfn "************"
+            printfn "RESULTS > %A" results
+            results
+            |> List.map snd
+            |> List.iter (fun output -> output |> List.iter (fun line -> printfn "%s" line))
+            Assert.Fail("Test ran without erroring (this is bad - these tests check errors!)")
+
+

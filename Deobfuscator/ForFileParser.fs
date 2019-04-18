@@ -54,11 +54,16 @@ module ForFileParser =
             Unknown
 
 
-    let private (|Number|NaN|) str =
+    let private (|PositiveInt|Zero|NegativeInt|NaN|) str =
 
         let toNumBase (numstr: string) (numbase: int) =
             try
-                Number (System.Convert.ToInt32(numstr, numbase))
+                let num = (System.Convert.ToInt32(numstr, numbase))
+                match num with
+                | _ when num < 0 -> NegativeInt num
+                | _ when num = 0 -> Zero num
+                | _ when num > 0 -> PositiveInt num
+                | _ -> NaN
             with
                 _ -> NaN
 
@@ -87,7 +92,13 @@ module ForFileParser =
         | NaN ->
             let msg = sprintf "Expected FOR /F 'skip=' value (%s) to be numeric." value
             Error (KeywordSkipValueIsNotNumeric msg)
-        | Number num -> Ok (num, rest)
+
+        | Zero num
+        | NegativeInt num ->
+            Error (KeywordSkipCannotBeZero "Using 'skip=0' is not allowed.")
+
+        | PositiveInt num ->
+            Ok (num, rest)
 
 
     let private (|TokenRange|WildcardRange|Col|WildcardCol|WC|NotValid|) (expr: string) =
@@ -99,19 +110,19 @@ module ForFileParser =
         then
             let parts = strippedWildcard.Split [|'-'|] |> List.ofSeq
             match parts with
-            | [Number rangeFrom; Number rangeTo] when endsWithWildcard ->
+            | [PositiveInt rangeFrom; PositiveInt rangeTo] when endsWithWildcard ->
                 WildcardRange [rangeFrom .. rangeTo]
 
-            | [Number rangeFrom; Number rangeTo] ->
+            | [PositiveInt rangeFrom; PositiveInt rangeTo] ->
                 TokenRange [rangeFrom .. rangeTo]
 
             | _ -> NotValid
         else
             match strippedWildcard with
-            | Number num when endsWithWildcard ->
+            | PositiveInt num when endsWithWildcard ->
                 WildcardCol num
 
-            | Number num ->
+            | PositiveInt num ->
                 Col num
 
             | _ when expr = "*" ->
@@ -141,6 +152,15 @@ module ForFileParser =
 
 
     let private (|ValidTokenExpr|_|) (exprs: TokenColumn list) =
+
+        let invalidExprs =
+            exprs
+            |> List.filter (fun exp ->
+                match exp with
+                | Invalid _ -> true
+                | _ -> false)
+
+
         let numWildcards =
             exprs
             |> List.filter (fun tc ->
@@ -162,7 +182,9 @@ module ForFileParser =
             columns
             |> List.filter (fun x -> x <= 0)
 
-        if zeroOrNegatives.Length > 0 then
+        if invalidExprs.Length > 0 then
+            None
+        elif zeroOrNegatives.Length > 0 then
             None
         elif numWildcards.Length > 1 then
             None
@@ -203,7 +225,7 @@ module ForFileParser =
             | ValidTokenExpr tokensExpr ->
                 Ok (tokensExpr, rest)
             | _ ->
-                Error FeatureNotImplemented
+                Error (KeywordTokensIsInvalid "Invalid 'tokens=' value provided.")
 
 
     let private tryParseDelims (chars: string list) =
