@@ -284,9 +284,7 @@ module ForFileParser =
         | _ -> false
 
 
-
-
-    let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
+    let rec private parseKeywords chars (args: ForLoopParsingArgs) status =
         match chars with
         | [] when status.Mode = LookingForKey && (isUseBackq status.CurrKey) ->
             Ok {args with UseBackq = true}
@@ -300,19 +298,19 @@ module ForFileParser =
             match status.Mode with
             | LookingForKey ->
                 match head with
-                | "=" -> (* TODO: special case is 'usebackq*)
+                | "=" ->
                     // A space represents the end of a key, so switch modes.
-                    keyValueMatcher rest args {status with Mode = LookingForValue}
+                    parseKeywords rest args {status with Mode = LookingForValue}
 
                 | " " when (isUseBackq status.CurrKey) ->
-                    keyValueMatcher rest {args with UseBackq = true} (resetStatus status)
+                    parseKeywords rest {args with UseBackq = true} (resetStatus status)
 
                 | " " ->
-                    // TODO: this will likely cause problems for us later.
-                    keyValueMatcher rest args {status with CurrKey = ""}
+                    // TODO: this will likely cause problems for us later...
+                    parseKeywords rest args {status with CurrKey = ""}
 
                 | _ ->
-                    keyValueMatcher rest args {status with CurrKey = status.CurrKey + head}
+                    parseKeywords rest args {status with CurrKey = status.CurrKey + head}
 
             | LookingForValue ->
                 match status.CurrKey with
@@ -322,7 +320,7 @@ module ForFileParser =
                         Error reason
 
                     | Ok (eol, newRest) ->
-                        keyValueMatcher newRest {args with EOL = eol} (resetStatus status)
+                        parseKeywords newRest {args with EOL = eol} (resetStatus status)
 
                 | Skip ->
                     match tryMatchSkip chars with
@@ -330,7 +328,7 @@ module ForFileParser =
                         Error reason
 
                     | Ok (num, newRest) ->
-                        keyValueMatcher newRest {args with Skip = num} (resetStatus status)
+                        parseKeywords newRest {args with Skip = num} (resetStatus status)
 
                 | Tokens ->
                     match tryParseTokenExpression chars with
@@ -338,14 +336,14 @@ module ForFileParser =
                         Error reason
 
                     | Ok (tokens, newRest) ->
-                        keyValueMatcher newRest {args with Tokens = tokens} (resetStatus status)
+                        parseKeywords newRest {args with Tokens = tokens} (resetStatus status)
 
                 | Delims ->
                     match tryParseDelims chars with
                     | Error reason ->
                         Error reason
                     | Ok (delims, newRest) ->
-                        keyValueMatcher newRest {args with Delims = delims} (resetStatus status)
+                        parseKeywords newRest {args with Delims = delims} (resetStatus status)
 
                 | _ ->
                     // We'll never match *all* patterns here because 'usebackq' doesn't accept
@@ -388,11 +386,14 @@ module ForFileParser =
 
         let defaultArgs = {
             Skip = 0
-            UseBackq = false // TODO: is this the correct default value?
+            UseBackq = false
             Delims = [' '; '\t']
             EOL = ';'
             Tokens = defaultTokensExpr
         }
 
-        let chars = keywords |> List.ofSeq |> List.map (fun x -> x.ToString())
-        keyValueMatcher chars defaultArgs status
+        let chars =
+            keywords
+            |> List.ofSeq
+            |> List.map (fun x -> x.ToString())
+        parseKeywords chars defaultArgs status

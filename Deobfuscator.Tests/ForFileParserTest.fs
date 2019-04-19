@@ -135,7 +135,7 @@ type TestClass () =
         )
 
     [<Test>]
-    member this.ParseForFileErrors() =
+    member this.ParseForFileFailures() =
         // April, 2019:
         // This is *REALLY* hacky, and I'm sure there's a smarter way to do exception
         // checking.  Perhaps returning a Result is the wrong pattern -- maybe exceptions
