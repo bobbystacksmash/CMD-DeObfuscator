@@ -14,10 +14,6 @@ type ForFParseStatus = {
     CurrValue: string
 }
 
-type private FindExtractStatus =
-    | ExtractSuccess of string * string
-    | NoMatch
-
 
 type private TokenColumn =
     | Column of int
