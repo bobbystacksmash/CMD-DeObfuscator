@@ -1,4 +1,4 @@
-namespace Deobfuscator.Tests.StatementMatcherTest
+namespace Deobfuscator.Tests.ForFileParserTest
 
 open NUnit.Framework
 open Deobfuscator
@@ -7,7 +7,6 @@ open Deobfuscator.For.ForFileParser
 open NUnit.Framework
 
 [<TestFixture>]
-
 type TestClass () =
 
     [<Test>]
