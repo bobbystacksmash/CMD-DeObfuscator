@@ -17,7 +17,7 @@ type TestClass () =
 
         let defaults = {
             Skip = 0
-            EOL = ";"
+            EOL = ';'
             Delims = [' '; '\t']
             Tokens = defaultTokenExpr
             UseBackq = false
@@ -55,12 +55,13 @@ type TestClass () =
             ("skip=2 eol=", {defaults with Skip = 2}, "Correctly handle a (trailing) empty EOL value")
 
             // EOL, with empty skip.
+
             ("eol= skip=3", {defaults with Skip = 3}, "Correctly handle (leading) empty EOL ")
             ("eol=", defaults, "Ignore empty EOL")
-            ("eol= ", {defaults with EOL = " "}, "Set EOL to an empty string when it appears last.")
+            ("eol= ", {defaults with EOL = ' '}, "Set EOL to an empty string when it appears last.")
             ("eol= eol=", defaults, "Ignore two empty EOLs.")
-            ("eol=a eol=b", {defaults with EOL = "b"}, "Take the latter of two EOLs")
-
+            ("eol=a eol=b", {defaults with EOL = 'b'}, "Take the latter of two EOLs")
+            ("eol=x", {defaults with EOL = 'x'}, "Accept a single-char EOL value.")
             // Useback
             ("useback",  {defaults with UseBackq = true}, "Set usebackq when only 'useback' is given" )
             ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
@@ -99,12 +100,12 @@ type TestClass () =
             //
             (
                 "tokens=1 eol=; useback",
-                {defaults with Tokens = { Cols = [1]; UseWildcard = false}; EOL = ";"; UseBackq = true},
+                {defaults with Tokens = { Cols = [1]; UseWildcard = false}; EOL = ';'; UseBackq = true},
                 "Correctly parse multiple keywords in the same expr."
             )
             (
                 "eol=! tokens=",
-                {defaults with EOL = "!"; Tokens = { Cols = []; UseWildcard = false}},
+                {defaults with EOL = '!'; Tokens = { Cols = []; UseWildcard = false}},
                 "Correctly handle an empty 'tokens=' keyword in a mixed-keyword expression."
             )
             (
@@ -151,6 +152,7 @@ type TestClass () =
                 | KeywordSkipCannotBeZero _ when errName = "KeywordSkipCannotBeZero" -> true
                 | KeywordTokensIsInvalid _ when errName = "KeywordTokensIsInvalid" -> true
                 | ExpectedParseKeywordValue _ when errName = "ExpectedParseKeywordValue" -> true
+                | KeywordEolTooManyChars _ when errName = "KeywordEolTooManyChars" -> true
                 | _ -> false
 
 
@@ -167,6 +169,9 @@ type TestClass () =
         // "tokens=1,0"                 ["] was unexpected at this time.
         //
         let failingTests = [
+            // EOL
+            ("eol=abc", "KeywordEolTooManyChars", "Should not allow multiple chars to be set for EOL.")
+
             ("skip=a", "KeywordSkipValueIsNotNumeric", "Should fail to parse a `skip' keyword when the value is not numeric.")
             ("skip=0", "KeywordSkipCannotBeZero", "Should not allow skip to equal zero.")
 
@@ -204,8 +209,6 @@ type TestClass () =
         if results.Length = 0 then
             Assert.Pass("All expected errors were thrown.")
         else
-            printfn "************"
-            printfn "RESULTS > %A" results
             results
             |> List.map snd
             |> List.iter (fun output -> output |> List.iter (fun line -> printfn "%s" line))

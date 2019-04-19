@@ -247,6 +247,32 @@ module ForFileParser =
             Ok (delims, rest)
 
 
+    let private tryParseEOL (chars: string list) args =
+        let (value, rest) = getValue chars " "
+        let eolValue = value |> List.ofSeq
+
+        printfn "EOL VALUE -> %A" eolValue
+        printfn "REST %A" rest
+
+        match eolValue with
+        | [] when rest.Length = 0 ->
+            Ok (' ', rest)
+
+        | [] ->
+            // Weird edge-case where we have something like:
+            //
+            //   eol= skip=4
+            //
+            // We need to set 'EOL' to whatever it currently is set to in 'args'.
+            Ok (args.EOL, rest)
+
+        | [_] ->
+            Ok (eolValue.[0], rest)
+
+        | _ ->
+            Error (KeywordEolTooManyChars (sprintf "Too many chars in EOL value '%s'." value))
+
+
     let private resetStatus status =
         {status with CurrKey = ""; Mode = LookingForKey}
 
@@ -256,6 +282,8 @@ module ForFileParser =
         | Useback
         | Usebackq -> true
         | _ -> false
+
+
 
 
     let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
@@ -287,14 +315,12 @@ module ForFileParser =
             | LookingForValue ->
                 match status.CurrKey with
                 | EOL ->
-                    match head with
-                    | " " when rest.Length = 0 ->
-                        keyValueMatcher rest {args with EOL = head} {status with Mode = LookingForKey; CurrKey = ""}
+                    match tryParseEOL chars args with
+                    | Error reason ->
+                        Error reason
 
-                    | " " ->
-                        keyValueMatcher rest args {status with Mode = LookingForKey; CurrKey = ""}
-                    | _ ->
-                        keyValueMatcher rest {args with EOL = head} {status with Mode = LookingForKey; CurrKey = ""}
+                    | Ok (eol, newRest) ->
+                        keyValueMatcher newRest {args with EOL = eol} (resetStatus status)
 
                 | Skip ->
                     match tryMatchSkip chars with
@@ -305,7 +331,6 @@ module ForFileParser =
                         keyValueMatcher newRest {args with Skip = num} (resetStatus status)
 
                 | Tokens ->
-                    // TODO: handle the case where the value is a SPC
                     match tryParseTokenExpression chars with
                     | Error reason ->
                         Error reason
@@ -363,7 +388,7 @@ module ForFileParser =
             Skip = 0
             UseBackq = false // TODO: is this the correct default value?
             Delims = [' '; '\t']
-            EOL = ";" // TODO: is this default correct?
+            EOL = ';'
             Tokens = defaultTokensExpr
         }
 

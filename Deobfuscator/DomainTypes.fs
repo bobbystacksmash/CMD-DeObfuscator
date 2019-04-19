@@ -70,6 +70,7 @@ type ForLoopHeaderParseStatuses =
     | UnrecognisedParseKeyword of string
     | ExpectedParseKeywordValue of string
     | KeywordTokensIsInvalid of string
+    | KeywordEolTooManyChars of string
     | KeywordSkipCannotBeZero of string
     | KeywordSkipValueIsNotNumeric of string
     | KeywordSkipNumericConversionFailed of string
@@ -83,7 +84,7 @@ type ForTokenExpr = {
 }
 
 type ForLoopParsingArgs = {
-    EOL: string
+    EOL: char
     Skip: int
     Delims: char list
     Tokens: ForTokenExpr
