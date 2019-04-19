@@ -159,30 +159,24 @@ type TestClass () =
 
         // Error Tests
         // -----------
-        // "eol=delims="                [elims="] was unexpected at this time.
-        // "delims=a b c"               [b c"] was unexpected at this time.
-        // "tokens=a"                   [a"] was unexpected at this time.
-        // "tokens=0a"                  [a"] was unexpected at this time.
-        // "tokens=0,3"                 [,3"] was unexpected at this time.
-        // "tokens=0"                   ["] was unexpected at this time.
-        // "tokens=1,0"                 ["] was unexpected at this time.
-        //
         let failingTests = [
-            // EOL
+            ("tokens=a", "KeywordTokensIsInvalid", "The char 'a' is not numeric, and is therefore invalid.")
+            ("tokens=0,3", "KeywordTokensIsInvalid", "A token range cannot contain a zero.")
+            ("tokens=0", "KeywordTokensIsInvalid", "A token cannot be zero.")
+            ("tokens=1,0", "KeywordTokensIsInvalid", "A token range cannot contain zero.")
+            ("tokens=0a", "KeywordTokensIsInvalid", "The str '0a' is not valid numerically.")
+            ("delims= a b c", "InvalidKeyword", "'b' is an invalid keyword.")
             ("eol",    "InvalidKeyword", "EOL on its own is illegal.")
             ("skip",   "InvalidKeyword", "SKIP on its own is illegal.")
             ("delims", "InvalidKeyword", "DELIMS on its own is illegal.")
             ("tokens", "InvalidKeyword", "TOKENS on its own is illegal.")
+            ("eol=delims=", "KeywordEolTooManyChars", "Not a legal expression.")
             ("eol=abc", "KeywordEolTooManyChars", "Should not allow multiple chars to be set for EOL.")
-
-
             ("skip=a", "KeywordSkipValueIsNotNumeric", "Should fail to parse a `skip' keyword when the value is not numeric.")
             ("skip=0", "KeywordSkipCannotBeZero", "Should not allow skip to equal zero.")
-
             ("tokens=0x00-0x01", "KeywordTokensIsInvalid", "Should not allow (hex) zero values to be set in tokens keyword.")
             ("tokens=0", "KeywordTokensIsInvalid", "Should not allow (dec) zero values to be set in tokens keyword.")
             ("tokens=00", "KeywordTokensIsInvalid", "Should not allow (oct) zero values to be set in tokens keyword.")
-
             ("tokens= eol=;", "ExpectedParseKeywordValue", "Should not allow the tokens= keyword to be a single space.")
         ]
 
