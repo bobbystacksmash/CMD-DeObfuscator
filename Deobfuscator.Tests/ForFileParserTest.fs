@@ -157,11 +157,11 @@ type TestClass () =
         // "tokens=1,0"                 ["] was unexpected at this time.
         //
         let failingTests = [
-            (*("skip=a", "KeywordSkipValueIsNotNumeric", "Should fail to parse a `skip' keyword when the value is not numeric.")
+            ("skip=a", "KeywordSkipValueIsNotNumeric", "Should fail to parse a `skip' keyword when the value is not numeric.")
             ("skip=0", "KeywordSkipCannotBeZero", "Should not allow skip to equal zero.")
 
             ("tokens=0x00-0x01", "KeywordTokensIsInvalid", "Should not allow (hex) zero values to be set in tokens keyword.")
-            ("tokens=0", "KeywordTokensIsInvalid", "Should not allow (dec) zero values to be set in tokens keyword.")*)
+            ("tokens=0", "KeywordTokensIsInvalid", "Should not allow (dec) zero values to be set in tokens keyword.")
             ("tokens=00", "KeywordTokensIsInvalid", "Should not allow (oct) zero values to be set in tokens keyword.")
 
             ("tokens= eol=;", "ExpectedParseKeywordValue", "Should not allow the tokens= keyword to be a single space.")

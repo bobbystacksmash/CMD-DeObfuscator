@@ -22,6 +22,7 @@ type private FindExtractStatus =
 type private TokenColumn =
     | Column of int
     | Wildcard
+    | Empty
     | Invalid of string
 
 
@@ -101,12 +102,14 @@ module ForFileParser =
             Ok (num, rest)
 
 
-    let private (|TokenRange|WildcardRange|Col|WildcardCol|WC|NotValid|) (expr: string) =
+    let private (|TokenRange|WildcardRange|Col|WildcardCol|WC|NotValid|NoValue|) (expr: string) =
 
         let endsWithWildcard = Regex.IsMatch(expr, "[*]$")
         let strippedWildcard = Regex.Replace(expr, "[*]$", "")
 
-        if strippedWildcard.Contains "-"
+        if expr = "" then
+            NoValue
+        elif strippedWildcard.Contains "-"
         then
             let parts = strippedWildcard.Split [|'-'|] |> List.ofSeq
             match parts with
@@ -147,48 +150,55 @@ module ForFileParser =
         | WC ->
             [Wildcard]
 
+        | NoValue ->
+            [Empty]
+
         | NotValid ->
             [Invalid expr]
 
 
     let private (|ValidTokenExpr|_|) (exprs: TokenColumn list) =
 
-        let invalidExprs =
-            exprs
-            |> List.filter (fun exp ->
-                match exp with
-                | Invalid _ -> true
-                | _ -> false)
+        let isInvalid exp =
+            match exp with
+            | Invalid _ -> true
+            | _ -> false
 
+        let isWildcard exp =
+            match exp with
+            | Wildcard -> true
+            | _ -> false
 
-        let numWildcards =
-            exprs
-            |> List.filter (fun tc ->
-                match tc with
-                | Wildcard _ -> true
-                | _ -> false)
+        let isColumn exp =
+            match exp with
+            | Column _ -> true
+            | _ -> false
 
+        let unpackColumn col =
+            match col with
+            | Column value -> value
+            | _ -> -1
+
+        let invalidExprs = exprs |> List.filter isInvalid
+        let wildcards    = exprs |> List.filter isWildcard
         let columns =
             exprs
-            |> List.map (fun tc ->
-                match tc with
-                | Column col -> col
-                | _ -> -1)
-            |> List.filter (fun col -> col >= 0)
+            |> List.filter isColumn
             |> set
             |> List.ofSeq
+            |> List.map unpackColumn
 
-        let zeroOrNegatives =
+        let invalidColumns =
             columns
             |> List.filter (fun x -> x <= 0)
 
         if invalidExprs.Length > 0 then
             None
-        elif zeroOrNegatives.Length > 0 then
+        elif invalidColumns.Length > 0 then
             None
-        elif numWildcards.Length > 1 then
+        elif wildcards.Length > 1 then
             None
-        elif numWildcards.Length = 0 then
+        elif wildcards.Length = 0 then
             Some (ValidTokenExpr { Cols = columns; UseWildcard = false })
         else
             // Check wildcards only appear at the end.
@@ -239,7 +249,10 @@ module ForFileParser =
 
 
     let private isUseBackq (str: string) =
-        Regex.IsMatch(str.ToLower(), "^usebackq?$")
+        match str.ToUpper() with
+        | Useback
+        | Usebackq -> true
+        | _ -> false
 
 
     let rec private keyValueMatcher chars (args: ForLoopParsingArgs) status =
@@ -304,13 +317,11 @@ module ForFileParser =
                     | Ok (delims, newRest) ->
                         keyValueMatcher newRest {args with Delims = delims} (resetStatus status)
 
-
                 | _ ->
-                    printfn "!!!!!!!!!!!!!!!!!!!!!!!!!"
-                    printfn "!! NOT YET IMPLEMENTED !!"
-                    printfn "!!!!!!!!!!!!!!!!!!!!!!!!!"
-                    Error FeatureNotImplemented
-
+                    // We'll never match *all* patterns here because 'usebackq' doesn't accept
+                    // any arguments, and is instead handled in the `LookingForKey' section of
+                    // this fn.
+                    Error (UnrecognisedParseKeyword (sprintf "The keyword '%s' is not recognised." status.CurrKey))
 
 
     let parseForFArgs (keywords: string) =
