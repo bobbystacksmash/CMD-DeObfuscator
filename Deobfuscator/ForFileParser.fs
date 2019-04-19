@@ -235,9 +235,16 @@ module ForFileParser =
 
 
     let private tryParseDelims (chars: string list) =
-        let (value, rest) = getValue chars " "
-        let delims = value |> List.ofSeq
-        Ok (delims, rest)
+        match chars with
+        | [" "] ->
+            // This is a special case where 'delims= ' is at the end of the
+            // expression.  This is the only way to set the delimiter to a
+            // space char.
+            Ok ([' '], [])
+        | _ ->
+            let (value, rest) = getValue chars " "
+            let delims = value |> List.ofSeq
+            Ok (delims, rest)
 
 
     let private resetStatus status =

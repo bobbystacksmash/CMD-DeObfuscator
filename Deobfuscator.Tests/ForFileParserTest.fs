@@ -94,6 +94,7 @@ type TestClass () =
             //
             ("delims=,", {defaults with Delims = [',']}, "Set delimiter correctly to a comma.")
             ("delims=abc", {defaults with Delims = ['a'; 'b'; 'c';]}, "Set delimiter to be multiple chars.")
+            ("delims= ", {defaults with Delims = [' ']}, "Allow empty string 'delims' keyword.")
 
             //
             // Mixed-keyword tests
@@ -109,17 +110,18 @@ type TestClass () =
             let input, expected, msg = test
             let output = parseForFArgs input
 
+            printfn "========================="
+            printfn "Input    -> [%s]" input
+            printfn "Output   -> %A"   output
+            printfn "Expected -> %A"   expected
+            printfn "Msg      -> %s"   msg
+            printfn "========================="
+
             match output with
             | Ok output ->
                 Assert.That(output, Is.EqualTo(expected), msg)
 
             | Error reason ->
-                printfn "========================="
-                printfn "Input    -> [%s]" input
-                printfn "Output   -> %A"   output
-                printfn "Expected -> %A"   expected
-                printfn "Msg      -> %s"   msg
-                printfn "========================="
                 Assert.Fail("FAILED: " + msg)
         )
 
