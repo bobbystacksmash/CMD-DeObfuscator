@@ -69,6 +69,7 @@ type ForLoopHeaderParseStatuses =
     | LoopVariableIsNotValid of string
     | UnrecognisedParseKeyword of string
     | ExpectedParseKeywordValue of string
+    | InvalidKeyword of string
     | KeywordTokensIsInvalid of string
     | KeywordEolTooManyChars of string
     | KeywordSkipCannotBeZero of string

@@ -27,7 +27,7 @@ type TestClass () =
         // ----------------
         let successfulTests = [
 
-            ("", defaults, "Empty string = fetch detauls.")
+            ("", defaults, "Empty string = fetch defaults.")
 
             // Skip, decimal.
             ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
@@ -148,6 +148,7 @@ type TestClass () =
                 printfn "What type of err? > %A" err
                 match err with
                 | FeatureNotImplemented -> false
+                | InvalidKeyword _ when errName = "InvalidKeyword" -> true
                 | KeywordSkipValueIsNotNumeric _ when errName = "KeywordSkipValueIsNotNumeric" -> true
                 | KeywordSkipCannotBeZero _ when errName = "KeywordSkipCannotBeZero" -> true
                 | KeywordTokensIsInvalid _ when errName = "KeywordTokensIsInvalid" -> true
@@ -158,8 +159,6 @@ type TestClass () =
 
         // Error Tests
         // -----------
-        //  "eol=abc"                    [bc"]  was unexpected at this time.
-        // "eol"                        [eol"] was unexpected at this time.
         // "eol=delims="                [elims="] was unexpected at this time.
         // "delims=a b c"               [b c"] was unexpected at this time.
         // "tokens=a"                   [a"] was unexpected at this time.
@@ -170,7 +169,12 @@ type TestClass () =
         //
         let failingTests = [
             // EOL
+            ("eol",    "InvalidKeyword", "EOL on its own is illegal.")
+            ("skip",   "InvalidKeyword", "SKIP on its own is illegal.")
+            ("delims", "InvalidKeyword", "DELIMS on its own is illegal.")
+            ("tokens", "InvalidKeyword", "TOKENS on its own is illegal.")
             ("eol=abc", "KeywordEolTooManyChars", "Should not allow multiple chars to be set for EOL.")
+
 
             ("skip=a", "KeywordSkipValueIsNotNumeric", "Should fail to parse a `skip' keyword when the value is not numeric.")
             ("skip=0", "KeywordSkipCannotBeZero", "Should not allow skip to equal zero.")

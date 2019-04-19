@@ -291,8 +291,10 @@ module ForFileParser =
         | [] when status.Mode = LookingForKey && (isUseBackq status.CurrKey) ->
             Ok {args with UseBackq = true}
 
-        | [] ->
-            Ok args (* TODO: figure out when this is an error *)
+        | [] when status.Mode = LookingForKey && status.CurrKey.Length > 0 ->
+            Error (InvalidKeyword (sprintf "Invalid keyword: '%s'" status.CurrKey))
+
+        | [] -> Ok args
 
         | head :: rest ->
             match status.Mode with
