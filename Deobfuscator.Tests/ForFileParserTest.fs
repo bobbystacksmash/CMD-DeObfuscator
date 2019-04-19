@@ -25,15 +25,9 @@ type TestClass () =
 
         // Successful Tests
         // ----------------
-        // "eol=; tokens="              OK
-        // "tokens=0xa"                 OK
-        // "tokens=1"                   OK
-        // "tokens=03"                  OK
-        // "tokens=1,5*"                OK
-        // ""                           OK
-        // "eol= delims="               OK
-        // "delims=a delims=b"          OK
         let successfulTests = [
+
+            ("", defaults, "Empty string = fetch detauls.")
 
             // Skip, decimal.
             ("skip=5",  { defaults with Skip = 5 }, "Interpret a skip value (dec).")
@@ -72,14 +66,18 @@ type TestClass () =
             ("usebackq", {defaults with UseBackq = true}, "Set usebackq when only 'usebackq' is given" )
 
             // Tokens
+            ("tokens=", {defaults with Tokens = { Cols = []; UseWildcard = false}}, "Clear the tokens array when empty.")
             ("tokens=*", {defaults with Tokens = { Cols = []; UseWildcard = true}}, "Handle lone wildcard.")
             ("tokens=1", {defaults with Tokens = { Cols = [1]; UseWildcard = false }}, "Handle simple tokens parsing.")
             ("tokens=3*", {defaults with Tokens = { Cols = [3]; UseWildcard = true}}, "Handle num + wildcard.")
             ("tokens=3,*", {defaults with Tokens = { Cols = [3]; UseWildcard = true}}, "Handle num + wildcard separated by comma.")
+            ("tokens=1,5*", {defaults with Tokens = { Cols = [1; 5]; UseWildcard = true }}, "Handle decimal range with wildcard.")
             ("tokens=1,2,3,4,5,6", {defaults with Tokens = { Cols = [1..6]; UseWildcard = false }}, "Handle large number of columns.")
-            ("tokens=1-2,2-3,3,*", {defaults with Tokens = { Cols = [1; 2; 3]; UseWildcard = true } }, "Correctly parse token expr.")
+            ("tokens=1-2,2-3,3,*", {defaults with Tokens = { Cols = [1; 2; 3]; UseWildcard = true }}, "Correctly parse token expr.")
+            ("tokens=0xa", {defaults with Tokens = { Cols = [10]; UseWildcard = false }}, "Handle a single hex column.")
             ("tokens=0x1,0xa,*", {defaults with Tokens = { Cols = [1; 10]; UseWildcard = true}}, "Parse hex tokens.")
             ("tokens=0xa-0xf", {defaults with Tokens = { Cols = [10; 11; 12; 13; 14; 15]; UseWildcard = false } }, "Handle hex ranges")
+            ("tokens=03", {defaults with Tokens = { Cols = [3]; UseWildcard = false }}, "Handle single octal literal.")
             ("tokens=011", {defaults with Tokens = { Cols = [9]; UseWildcard = false}}, "Handle literal octal.")
             ("tokens=017", {defaults with Tokens = { Cols = [15]; UseWildcard = false}}, "Handle octal numbers.")
             ("tokens=015-017*", {defaults with Tokens = { Cols = [13; 14; 15]; UseWildcard = false}}, "Handle octal ranges + wildcard")
@@ -94,6 +92,7 @@ type TestClass () =
             ("delims= ", {defaults with Delims = [' ']}, "Allow empty string 'delims' keyword.")
             ("delims=", defaults, "Allow unallocated delims keyword.")
             ("delims= delims=", {defaults with Delims = []}, "Allow two unallocated delims keywords.")
+            ("delims=a delims=b", {defaults with Delims = ['b']}, "Overwrite previous delimiters.")
 
             //
             // Mixed-keyword tests
@@ -102,6 +101,16 @@ type TestClass () =
                 "tokens=1 eol=; useback",
                 {defaults with Tokens = { Cols = [1]; UseWildcard = false}; EOL = ";"; UseBackq = true},
                 "Correctly parse multiple keywords in the same expr."
+            )
+            (
+                "eol=! tokens=",
+                {defaults with EOL = "!"; Tokens = { Cols = []; UseWildcard = false}},
+                "Correctly handle an empty 'tokens=' keyword in a mixed-keyword expression."
+            )
+            (
+                "eol= delims=",
+                defaults,
+                "Handle empty eol and delims keywords."
             )
         ]
 
