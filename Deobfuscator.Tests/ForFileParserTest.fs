@@ -33,9 +33,6 @@ type TestClass () =
         // ""                           OK
         // "eol= delims="               OK
         // "delims=a delims=b"          OK
-        // "delims= delims="            OK
-        // "delims="                    OK
-        // "delims= "                   OK
         let successfulTests = [
 
             // Skip, decimal.
@@ -95,6 +92,8 @@ type TestClass () =
             ("delims=,", {defaults with Delims = [',']}, "Set delimiter correctly to a comma.")
             ("delims=abc", {defaults with Delims = ['a'; 'b'; 'c';]}, "Set delimiter to be multiple chars.")
             ("delims= ", {defaults with Delims = [' ']}, "Allow empty string 'delims' keyword.")
+            ("delims=", defaults, "Allow unallocated delims keyword.")
+            ("delims= delims=", {defaults with Delims = []}, "Allow two unallocated delims keywords.")
 
             //
             // Mixed-keyword tests
