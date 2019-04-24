@@ -48,7 +48,7 @@ type Token =
         Literal(strA + strB)
 
 
-type ParseTree =
+type ParseResult =
     | Cmd of Token list
     | Op of Operator
 
