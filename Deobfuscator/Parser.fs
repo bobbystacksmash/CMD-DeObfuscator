@@ -19,7 +19,7 @@ type ParseState = {
     Mode: ReadMode
     Escape: bool
     Input: char list
-    AstStack: Ast list
+    ParseTreeStack: ParseTree list
     CmdAppendMode: CommandAppendMode
 }
 
@@ -71,27 +71,27 @@ module Parser =
         | _   -> None
 
 
-    let (|ASTCOMMAND|ASTPIPE|ASTALWAYS|IGNORE|) (ast: Ast) =
-        match ast with
-        | Cmd cmd -> ASTCOMMAND cmd
+    let (|ParseTreeCommand|ParseTreePipe|ParseTreeAlways|Ignore|) (parseTree: ParseTree) =
+        match parseTree with
+        | Cmd cmd -> ParseTreeCommand cmd
         | Op operator ->
             match operator with
-            | Pipe -> ASTPIPE
-            | CondAlways -> ASTALWAYS
-            | _ -> IGNORE
+            | Pipe -> ParseTreePipe
+            | CondAlways -> ParseTreeAlways
+            | _ -> Ignore
 
 
     let pushAst x rest state =
-        {state with Input = rest; AstStack = [x]}
+        {state with Input = rest; ParseTreeStack = [x]}
 
 
     let pushParen p rest state =
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst p rest state
 
          | _ ->
-            {state with Input = rest; AstStack = p :: state.AstStack}
+            {state with Input = rest; ParseTreeStack = p :: state.ParseTreeStack}
 
 
     let pushLParen rest state =
@@ -103,49 +103,49 @@ module Parser =
 
 
     let pushPipe rest state =
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst (Op Pipe) rest state
 
         | topOfStack :: restOfStack ->
             match topOfStack with
-            | ASTPIPE ->
-                {state with Input = rest; AstStack = (Op CondOr) :: restOfStack}
+            | ParseTreePipe ->
+                {state with Input = rest; ParseTreeStack = (Op CondOr) :: restOfStack}
 
             | _ ->
-                {state with Input = rest; AstStack = (Op Pipe) :: state.AstStack}
+                {state with Input = rest; ParseTreeStack = (Op Pipe) :: state.ParseTreeStack}
 
 
     let pushAmpersand rest state =
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst (Op CondAlways) rest state
 
         | topOfStack :: restOfStack ->
             match topOfStack with
-            | ASTALWAYS ->
-                {state with Input = rest; AstStack = (Op CondSuccess) :: restOfStack}
+            | ParseTreeAlways ->
+                {state with Input = rest; ParseTreeStack = (Op CondSuccess) :: restOfStack}
 
             | _ ->
-                {state with Input = rest; AstStack = (Op CondAlways) :: state.AstStack}
+                {state with Input = rest; ParseTreeStack = (Op CondAlways) :: state.ParseTreeStack}
 
 
     let pushLRedirect rest state =
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst (Op LeftRedirect) rest state
 
         | _ ->
-            {state with Input = rest; AstStack = (Op LeftRedirect) :: state.AstStack}
+            {state with Input = rest; ParseTreeStack = (Op LeftRedirect) :: state.ParseTreeStack}
 
 
     let pushRRedirect rest state =
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst (Op RightRedirect) rest state
 
         | _ ->
-            {state with Input = rest; AstStack = (Op RightRedirect) :: state.AstStack}
+            {state with Input = rest; ParseTreeStack = (Op RightRedirect) :: state.ParseTreeStack}
 
 
     let addCharToCmd (ch: char) (cmdlst: Token list) =
@@ -158,98 +158,98 @@ module Parser =
 
 
     let pushCommand ch rest state =
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst (Cmd [Literal (ch.ToString())]) rest state
 
         | topOfStack :: restOfStack ->
             match topOfStack with
             | Op _ ->
-                {state with Input = rest; CmdAppendMode = AppendToExisting; AstStack = (Cmd [Literal (ch.ToString())]) :: state.AstStack}
+                {state with Input = rest; CmdAppendMode = AppendToExisting; ParseTreeStack = (Cmd [Literal (ch.ToString())]) :: state.ParseTreeStack}
 
             | Cmd cmd when state.CmdAppendMode = AppendToExisting ->
                 let updatedCmd = Cmd (addCharToCmd ch cmd)
-                {state with Input = rest; AstStack = updatedCmd :: restOfStack}
+                {state with Input = rest; ParseTreeStack = updatedCmd :: restOfStack}
 
             | Cmd cmd ->
                 let newCmd = (Literal (ch.ToString())) :: cmd
-                {state with Input = rest; CmdAppendMode = AppendToExisting; AstStack = (Cmd newCmd) :: restOfStack}
+                {state with Input = rest; CmdAppendMode = AppendToExisting; ParseTreeStack = (Cmd newCmd) :: restOfStack}
 
 
     let pushDelimiter ch rest state =
         let litcmd = Delimiter (ch.ToString())
-        match state.AstStack with
+        match state.ParseTreeStack with
         | [] ->
             pushAst (Cmd [litcmd]) rest state
 
         | topOfStack :: restOfStack ->
             match topOfStack with
             | Op _ ->
-                {state with Input = rest; CmdAppendMode = StartNew; AstStack = (Cmd [litcmd]) :: state.AstStack }
+                {state with Input = rest; CmdAppendMode = StartNew; ParseTreeStack = (Cmd [litcmd]) :: state.ParseTreeStack }
 
             | Cmd cmd ->
                 let newCmd = litcmd :: cmd
-                {state with Input = rest; CmdAppendMode = StartNew; AstStack = (Cmd newCmd) :: restOfStack}
+                {state with Input = rest; CmdAppendMode = StartNew; ParseTreeStack = (Cmd newCmd) :: restOfStack}
 
 
-    let rec makeAst (state: ParseState) =
+    let rec createParseTree (state: ParseState) =
         match state.Input with
         | [] ->
             List.map (fun mem ->
                 match mem with
                 | Cmd cmd -> Cmd (cmd |> List.rev)
-                | _ -> mem) state.AstStack
+                | _ -> mem) state.ParseTreeStack
 
         | head :: rest ->
             match head with
             | _ when state.Escape ->
                 // The escape flag was set, so this char loses any special
                 // meaning.
-                makeAst {(pushCommand head rest state) with Escape = false}
+                createParseTree {(pushCommand head rest state) with Escape = false}
 
             | ESCAPE when state.Mode = MatchSpecial ->
                 // Do not push '^', just set escape flag.
-                makeAst {state with Input = rest; Escape = true}
+                createParseTree {state with Input = rest; Escape = true}
 
             | QUOTE when state.Mode = MatchSpecial ->
                 // A quote toggles the matching of special chars.  The default state is to
                 // MATCH special chars.  After the first QUOTE we IGNORE special chars.  This
                 // mode flips each time a QUOTE is seen.
-                makeAst (pushCommand head rest {state with Input = rest; Escape = false; Mode = IgnoreSpecial})
+                createParseTree (pushCommand head rest {state with Input = rest; Escape = false; Mode = IgnoreSpecial})
 
             | QUOTE ->
-                makeAst (pushCommand head rest {state with Input = rest; Mode = MatchSpecial})
+                createParseTree (pushCommand head rest {state with Input = rest; Mode = MatchSpecial})
 
             | _ when state.Mode = IgnoreSpecial ->
-                makeAst (pushCommand head rest state)
+                createParseTree (pushCommand head rest state)
 
             | DELIMITER ->
-                makeAst (pushDelimiter head rest state)
+                createParseTree (pushDelimiter head rest state)
 
             | LPAREN ->
-                makeAst (pushLParen rest state)
+                createParseTree (pushLParen rest state)
 
             | RPAREN ->
-                makeAst (pushRParen rest state)
+                createParseTree (pushRParen rest state)
 
             | AMPERSAND ->
-                makeAst (pushAmpersand rest state)
+                createParseTree (pushAmpersand rest state)
 
             | PIPE ->
-                makeAst (pushPipe rest state)
+                createParseTree (pushPipe rest state)
 
             | LREDIRECT ->
-                makeAst (pushLRedirect rest state)
+                createParseTree (pushLRedirect rest state)
 
             | RREDIRECT ->
-                makeAst (pushRRedirect rest state)
+                createParseTree (pushRRedirect rest state)
 
             | _ ->
-                makeAst (pushCommand head rest state)
+                createParseTree (pushCommand head rest state)
 
 
 
-    (* AST Translation, from INFIX to PREFIX *)
+    (* Parse Tree Translation, from INFIX to PREFIX *)
     let private getPrecedence op =
         match op with
         | OpenParen _ -> 0
@@ -284,7 +284,7 @@ module Parser =
         | None -> Error UnbalancedParenthesis
 
 
-    let rec popGtEqOperators (oper: Operator) (opstack: Operator list) (accum: Ast list) =
+    let rec popGtEqOperators (oper: Operator) (opstack: Operator list) (accum: ParseTree list) =
         match opstack with
         | [] -> (accum, [])
         | head :: rest ->
@@ -302,7 +302,7 @@ module Parser =
                     (accum, opstack)
 
 
-    let rec infixToPrefix (ast: Ast list) (opstack: Operator list) (outstack: Ast list) =
+    let rec infixToPrefix (ast: ParseTree list) (opstack: Operator list) (outstack: ParseTree list) =
 
         match ast with
         | [] ->
@@ -334,20 +334,19 @@ module Parser =
 
     let private toPrefix ast =
 
-        let swapParens astMember =
-            match astMember with
+        let swapParens parseTreeMember =
+            match parseTreeMember with
             | Op OpenParen  -> Op CloseParen
             | Op CloseParen -> Op OpenParen
-            | _ -> astMember
+            | _ -> parseTreeMember
 
-        let swappedAst = List.map swapParens ast
+        let swappedParseTree = List.map swapParens ast
 
-        match (infixToPrefix swappedAst [] []) with
-        | Ok newAst -> Ok newAst
+        match (infixToPrefix swappedParseTree [] []) with
+        | Ok newParseTree -> Ok newParseTree
         | Error reason ->
-            printfn "[AST, toPrefix error!] --> %A" reason
+            printfn "[ParseTree, toPrefix error!] --> %A" reason
             Error reason
-
 
 
     let parse (cmdstr: string) =
@@ -355,7 +354,7 @@ module Parser =
             Mode = MatchSpecial
             Escape = false
             Input = (cmdstr |> List.ofSeq)
-            AstStack = []
+            ParseTreeStack = []
             CmdAppendMode = AppendToExisting
         }
-        makeAst reader |> toPrefix
+        createParseTree reader |> toPrefix

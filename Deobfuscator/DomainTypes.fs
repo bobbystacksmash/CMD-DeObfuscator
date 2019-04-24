@@ -48,12 +48,15 @@ type Token =
         Literal(strA + strB)
 
 
-type Ast =
+type ParseTree =
     | Cmd of Token list
     | Op of Operator
 
 
+
+
 (* FOR loop types *)
+
 type ForLoopHeaderParseStatuses =
     | LooksGood
     | FeatureNotImplemented

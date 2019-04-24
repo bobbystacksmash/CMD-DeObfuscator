@@ -23,7 +23,7 @@ type TestClass () =
 
 
     [<Test>]
-    member this.GenerateAst() =
+    member this.GenerateParseTree() =
 
         let loops = [
             (* FOR Files *)
@@ -56,7 +56,7 @@ type TestClass () =
 
 
     [<Test>]
-    member this.AstVerify() =
+    member this.VerifyParseTree() =
 
         let LP = Op OpenParen
         let RP = Op CloseParen
