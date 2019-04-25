@@ -3,7 +3,9 @@ namespace Deobfuscator
 open Deobfuscator.DomainTypes
 open System.Text.RegularExpressions
 
-                        // | FLAG |
+
+// TODO: Add the parsed arguments block to each
+//       loop type.
 type ForLoopType =      // |======|
     | ForFiles          // |  /F  |
     | ForFileContents   // |  /F  |
@@ -13,20 +15,27 @@ type ForLoopType =      // |======|
     | ForFilesAtPath    // |  /R  |
 
 
-
-
-
-// When parsing a FOR loop header, we use the `InterimForLoopHeader'
-// to hold the various parts of the header as the loop is being parsed.
-// Once we have the loop de-structured in to this type, we are better
-// able to parse the parts of it.
-//
-type InterimForLoopHeader = {
-    Flag: string
-    Var: string
-    Args: string
+type ForLoopExpression = {
+    Header: Token list
+    Set: Token list
 }
 
+type IfExpression = {
+    Test: Token list
+}
+
+
+type Expression =
+    | ForLoopExpr of ForLoopExpression * Expression
+
+
+type Keyword =
+    | Lit of string
+    | For
+    | In
+    | Do
+    | Rem
+    | Echo
 
 
 type ForLoopHeader = {
@@ -92,7 +101,7 @@ module StatementMatcher =
        =================================
     *)
 
-    let private parseForLoopF hdrRest =
+    (*let private parseForLoopF hdrRest =
         printfn "ForLoop/F header -> %A" hdrRest
         Ok LooksGood
 
@@ -112,11 +121,11 @@ module StatementMatcher =
         // Loop types `/D' and `/L' do not have arguments.
         //
         match loopFlag with
-        | (* /F *) ForFiles -> parseForLoopF hdrRest
-        | (* /R *) ForFilesAtPath -> parseForLoopR hdrRest
-        | (* /D *) ForFolders
-        | (* /L *) ForNumberList ->
-            Ok LooksGood
+        | ForFiles -> parseForLoopF hdrRest
+        | ForFilesAtPath -> parseForLoopR hdrRest
+        | ForFolders
+        | ForNumberList ->
+          Ok LooksGood
         | _ ->
             Error FeatureNotImplemented
 
@@ -166,62 +175,6 @@ module StatementMatcher =
             InvalidLoop FlagOrLoopVarExpected
 
 
-    let private (|ForSkip|ForSkipError|ForSkipDefault|) str =
-        let m = Regex.Match(str, @"(?:^|\s)skip=([^\s]+)(?:\b|$)")
-        if m.Success then
-            if Regex.IsMatch(m.Groups.[1].Value, "^\d+$") then
-                ForSkip (m.Groups.[1].Value |> int)
-            else
-                ForSkipError SkipStringNotNumeric
-        else
-            ForSkipDefault 0
-               
-
-    let private (|ForEol|ForEolDefault|) str =
-        let m = Regex.Match(str, @"(?:^|\s)eol=(.)(?:\b|$)", RegexOptions.IgnoreCase)
-        if m.Success then
-            ForEol m.Groups.[1].Value
-        else
-            ForEolDefault ";"
-
-
-    let private tryParseParsingKeywords keywords =
-        // For more details, see:
-        //   https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/for
-        //
-        // Valid syntaxes for the parsing keywords are:
-        //
-        //   eol=<char>         Specifies the EOL char.
-        //
-        //   skip=<num>         Specifies the number of lines to skip
-        //                      at the beginning of the file.
-        //
-        //   delims=<str>       Specifies the delimiter set.  This overwrites
-        //                      the default delimiter set (space & tab).  When using
-        //                      SPC as the delimiter, the `delims' string must come
-        //                      last in the parsing keywords set.
-        //
-        //   tokens=<X,Y,M-N>   Specifies which tokens from each line are to be
-        //                      passed to the FOR loop for each iteration.  As a
-        //                      result, additional variable names are allocated.
-        //                      M-N specifies a range, from the Mth through to Nth
-        //                      tokens.  If the last character in the `tokens='
-        //                      string is an asterisk, an additional variable is
-        //                      allocated, and it receives the remaining text on the
-        //                      line after the last token that is parsed.  This last token
-        //                      includes the whole remaining line, including the EOL char
-        //                      and any chars which come after it.
-        //
-        //   usebackq           Specifies to execute a back-quoted string as a command,
-        //                      use a single-quoted string as a literal string, or, for
-        //                      long file names that contain spaces, allow file names in
-        //                      the given <Set>, to each be enclsed in double quotation
-        //                      marks.
-        //
-        //
-        match keywords with
-
-
 
     let private (|ValidForHeader|InvalidForHeader|) (hdr: InterimForLoopHeader) =
 
@@ -243,7 +196,8 @@ module StatementMatcher =
         match [hdr.Flag.ToUpper(); hdr.Args; hdr.Var] with
         | [_; _; var] when not (isValidForLoopVar var) ->
             // Loop vars must look something like "%A"
-            InvalidForHeader LoopVariableIsNotValid
+            let msg = sprintf "Invalid loop variable '%s' detected." var
+            InvalidForHeader (LoopVariableIsNotValid msg)
 
         | [""; ""; var] ->
             // Matches a 'basic' FOR loop, e.g.: FOR %A IN...
@@ -269,7 +223,7 @@ module StatementMatcher =
             InvalidForHeader FeatureNotImplemented
 
 
-    let private parseForLoop forHdr astRest =
+    let private tryParseForLoop forHdr astRest =
         // The `forHdr' should look something like the examples below.
         // The '|' (pipe) in the `INPUT' examples show the header boundary.
         //
@@ -286,9 +240,14 @@ module StatementMatcher =
             | ValidForHeader valid ->
                 printfn "Got a valid header! %A" valid
                 Error FeatureNotImplemented
+    *)
 
-
-    let (|KeywordFor|KeywordIf|KeywordRem|Other|Invalid|) (command: Token list) =
+    //
+    // Keyword Identification
+    // ----------------------
+    // Handles only high-level identification of keywords.
+    //
+    (*let private (|ForKeyword|IfKeyword|RemKeyword|Other|Invalid|) (command: Token list) =
         let trimmed = trimDelims command
         match trimmed with
         | [] -> Invalid
@@ -297,70 +256,39 @@ module StatementMatcher =
             | Literal instruction ->
                 let trimmedRest = ltrimDelimiters rest
                 match instruction.ToUpper() with
-                (* FOR %A IN...   *)
                 | "FOR" ->
-                    KeywordFor (stripDelimiters rest)
+                    ForKeyword (stripDelimiters rest)
 
-                (* IF "a"=="b"... *)
                 | "IF"  ->
-                    KeywordIf trimmedRest
+                    IfKeyword trimmedRest
 
-                (* REM ...        *)
                 | "REM" ->
-                    KeywordRem trimmedRest
+                    RemKeyword trimmedRest
 
                 | _ -> Other trimmedRest
             | Delimiter _ -> Invalid
+    *)
+
+
+
+
 
 
     (* Walking the AST *)
-    let rec walk ast =
+    let rec private walk ast =
         match ast with
-        | [] -> true
+        | [] -> true // Obviously returning bools isn't useful here.
         | head :: rest ->
             match head with
-            // We have four `Statement' types:
-            //
-            //   1. OperatorStmt
-            //   2. ForLoopStmt
-            //   3. IfStmt
-            //   4. RemStmt
-            //
-            // While walking the AST, we identify the different elements
-            // and determine what Statement type they should be converted
-            // to.  Statements: IF, FOR, and REM receive special handling
-            // and cannot be generated later in the interpretation process.
-            // For example, using Delayed Expansion to expand a var which
-            // contains a valid IF statement will always cause a syntax
-            // error.
-            //
-            // For more details on this behaviour, see:
-            //
-            //   > https://www.dostips.com/forum/viewtopic.php?t=5416
-            //
-            | Op _ ->
-                printfn "OPERATOR"
+            | Op oper ->
+                printfn "OPERATOR -> %A" oper
                 walk rest
 
             | Cmd cmd ->
-                match cmd with
-                | KeywordFor loop ->
-                    parseForLoop loop rest
-                    walk rest
-                | _ ->
-                    // TODO!
-                    walk rest
+                printfn "COMMAND -> %A" cmd
+                walk rest
 
 
-
-
-    let rec enhanceAst ast =
-        let result = walk ast
-        Ok ast
-
-
-    let liftAst maybeAst =
-        match maybeAst with
-        | Ok ast -> enhanceAst ast
-        //| Error reason ->
-        //    Error reason
+    let rec tryConvertParseTreeToAst ptree =
+        let result = walk ptree
+        Ok ptree
